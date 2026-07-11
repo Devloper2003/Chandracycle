@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { issueSessionToken, toSessionUser, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from '@/lib/auth'
+import {
+  issueSessionToken,
+  toSessionUser,
+  SESSION_COOKIE,
+  SESSION_COOKIE_OPTIONS,
+  SessionUser,
+} from '@/lib/auth'
 import { createPublicKey, verify, JwkKey } from 'crypto'
 
 // Real Apple Sign-In backend.
 // Verifies the Apple identityToken (JWT) returned by Apple's Sign In with Apple
 // JS SDK by fetching Apple's public keys and verifying the JWT signature.
+//
+// RESILIENCE: DB operations are wrapped in try/catch. On Vercel serverless
+// (ephemeral SQLite), if the DB is unavailable we fall back to a JWT-only
+// session using Apple's stable `sub` as a deterministic user ID.
 const APPLE_CLIENT_ID = process.env.APPLE_CLIENT_ID || process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || 'com.chandracycle.app'
 const APPLE_KEY_URL = 'https://appleid.apple.com/auth/keys'
 
@@ -48,26 +58,18 @@ function verifyAppleIdToken(idToken: string, jwks: AppleJwk[]): Record<string, u
     const header = JSON.parse(base64UrlDecode(headerB64))
     const payload = JSON.parse(base64UrlDecode(payloadB64))
 
-    // Find matching key
     const jwk = jwks.find((k) => k.kid === header.kid)
     if (!jwk) return null
 
-    // Convert JWK to crypto key
     const keyObj = createPublicKey({ key: jwk as unknown as JwkKey, format: 'jwk' })
 
-    // Verify signature
     const data = `${headerB64}.${payloadB64}`
     const signature = Buffer.from(signatureB64, 'base64url')
     const isValid = verify('sha256', Buffer.from(data), keyObj, signature)
     if (!isValid) return null
 
-    // Verify audience
-    if (payload.aud && payload.aud !== APPLE_CLIENT_ID && !Array.isArray(payload.aud)) {
-      return null
-    }
-    if (Array.isArray(payload.aud) && !payload.aud.includes(APPLE_CLIENT_ID)) {
-      return null
-    }
+    if (payload.aud && payload.aud !== APPLE_CLIENT_ID && !Array.isArray(payload.aud)) return null
+    if (Array.isArray(payload.aud) && !payload.aud.includes(APPLE_CLIENT_ID)) return null
 
     return payload
   } catch {
@@ -75,20 +77,20 @@ function verifyAppleIdToken(idToken: string, jwks: AppleJwk[]): Record<string, u
   }
 }
 
+function appleUserId(sub: string): string {
+  return `apple-${sub}`
+}
+
 export async function POST(request: NextRequest) {
+  let appleSub: string | null = null
+  let email = ''
+  let name = ''
+
   try {
     const body = await request.json().catch(() => ({}))
 
-    // Two flows:
-    // 1. Real Apple Sign-In: client sends `identityToken` (verified JWT from Apple)
-    // 2. Modal-based flow (no APPLE_CLIENT_ID configured): client sends `modalAccount` { email, name }
-    //    The user explicitly entered their Apple ID email and clicked "Allow" in our Apple-styled popup.
-
     const idToken = body.identityToken || body.id_token
     const modalAccount = body.modalAccount as { email?: string; name?: string } | undefined
-
-    let email: string
-    let name: string
 
     if (idToken) {
       // ─── Real Apple Sign-In flow ───────────────────────────────────────────
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+      appleSub = (payload.sub as string) || null
       email = (payload.email as string).toLowerCase()
       const isPrivateEmail = payload.is_private_email === 'true' || payload.is_private_email === true
       name =
@@ -121,34 +124,64 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let user = await db.user.findUnique({ where: { email } })
-    if (!user) {
-      user = await db.user.create({
-        data: {
-          name,
-          email,
-          provider: 'apple',
-          avatar: null,
-          cycleLength: 28,
-          periodLength: 5,
-        },
-      })
-    } else {
-      user = await db.user.update({
-        where: { id: user.id },
-        data: { provider: 'apple', name: name || user.name },
-      })
+    // ─── Try DB operations (may fail on Vercel ephemeral filesystem) ─────────
+    let sessionUser: SessionUser
+
+    try {
+      let user = await db.user.findUnique({ where: { email } })
+      if (!user) {
+        user = await db.user.create({
+          data: {
+            name,
+            email,
+            provider: 'apple',
+            avatar: null,
+            cycleLength: 28,
+            periodLength: 5,
+          },
+        })
+      } else {
+        user = await db.user.update({
+          where: { id: user.id },
+          data: { provider: 'apple', name: name || user.name },
+        })
+      }
+      sessionUser = toSessionUser(user)
+    } catch (dbError) {
+      console.warn(
+        '[apple-auth] DB operation failed, issuing JWT-only session:',
+        dbError instanceof Error ? dbError.message : String(dbError)
+      )
+      const fallbackId =
+        appleSub ? appleUserId(appleSub) : `apple-${Buffer.from(email).toString('hex').slice(0, 24)}`
+      sessionUser = {
+        id: fallbackId,
+        name,
+        email,
+        avatar: null,
+        provider: 'apple',
+        onboardingComplete: false,
+        cycleLength: 28,
+        periodLength: 5,
+        lastPeriodStart: null,
+      }
     }
 
-    const sessionUser = toSessionUser(user)
     const token = issueSessionToken(sessionUser)
     const response = NextResponse.json({ user: sessionUser, token })
     response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS)
     return response
   } catch (error) {
-    console.error('Apple auth error:', error)
+    console.error('[apple-auth] Fatal error:', error)
+    const detail = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { error: 'Apple sign-in failed. Please close the popup and try again.' },
+      {
+        error: 'Apple sign-in failed. Please close the popup and try again.',
+        detail:
+          process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV
+            ? undefined
+            : detail,
+      },
       { status: 500 }
     )
   }

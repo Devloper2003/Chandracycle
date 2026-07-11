@@ -10,7 +10,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
-    const user = await db.user.findUnique({ where: { email: email.toLowerCase() } })
+    let user
+    try {
+      user = await db.user.findUnique({ where: { email: email.toLowerCase() } })
+    } catch (dbError) {
+      console.error('Login DB error:', dbError)
+      return NextResponse.json(
+        {
+          error:
+            'Sign-in is temporarily unavailable. Please use "Continue with Google" instead — it works without a database.',
+        },
+        { status: 503 }
+      )
+    }
     if (!user || !user.password) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
     }
