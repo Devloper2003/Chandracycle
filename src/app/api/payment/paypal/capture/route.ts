@@ -122,15 +122,25 @@ export async function POST(request: NextRequest) {
 
     if (userId) {
       subscriptionEnd = computeSubscriptionEnd(billingCycle)
-      await db.user.update({
-        where: { id: userId },
-        data: {
-          subscriptionTier,
-          subscriptionStatus,
-          subscriptionPlan,
-          subscriptionEnd,
-        },
-      })
+      try {
+        await db.user.update({
+          where: { id: userId },
+          data: {
+            subscriptionTier,
+            subscriptionStatus,
+            subscriptionPlan,
+            subscriptionEnd,
+          },
+        })
+      } catch (dbError) {
+        // DB unavailable (ephemeral Vercel filesystem). Payment was still
+        // captured by PayPal — we just can't persist the subscription status.
+        // Log the error but don't fail the request; the receipt is still valid.
+        console.warn(
+          '[paypal-capture] DB update failed (payment was captured, subscription not persisted):',
+          dbError instanceof Error ? dbError.message : String(dbError)
+        )
+      }
     }
 
     const receipt = {
