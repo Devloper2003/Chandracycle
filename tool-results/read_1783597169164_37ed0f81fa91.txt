@@ -1,0 +1,1367 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Sparkles,
+     7→  Droplet,
+     8→  Sun,
+     9→  Moon,
+    10→  Flame,
+    11→  Star,
+    12→  Heart,
+    13→  Brain,
+    14→  Activity,
+    15→  Calendar as CalendarIcon,
+    16→  TrendingUp,
+    17→  TrendingDown,
+    18→  Plus,
+    19→  Check,
+    20→  X,
+    21→  ChevronRight,
+    22→  Sparkle,
+    23→  Leaf,
+    24→  Apple,
+    25→  Carrot,
+    26→  Fish,
+    27→  Nut,
+    28→  Citrus,
+    29→  Wine,
+    30→  Coffee,
+    31→  Cookie,
+    32→  Stethoscope,
+    33→  Eye,
+    34→  Smile,
+    35→  Frown,
+    36→  Meh,
+    37→  AlertCircle,
+    38→  ShieldCheck,
+    39→  Clock,
+    40→  Droplets,
+    41→  BedDouble,
+    42→  PenLine,
+    43→  Camera,
+    44→  BookOpen,
+    45→  ArrowRight,
+    46→  FlaskConical,
+    47→} from 'lucide-react'
+    48→import {
+    49→  Card,
+    50→  CardContent,
+    51→  CardDescription,
+    52→  CardHeader,
+    53→  CardTitle,
+    54→  CardFooter,
+    55→} from '@/components/ui/card'
+    56→import { Badge } from '@/components/ui/badge'
+    57→import { Button } from '@/components/ui/button'
+    58→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    59→import { Input } from '@/components/ui/input'
+    60→import { Label } from '@/components/ui/label'
+    61→import { Textarea } from '@/components/ui/textarea'
+    62→import { Separator } from '@/components/ui/separator'
+    63→import { Progress } from '@/components/ui/progress'
+    64→import { Switch } from '@/components/ui/switch'
+    65→import { Checkbox } from '@/components/ui/checkbox'
+    66→import { Slider } from '@/components/ui/slider'
+    67→import { ScrollArea } from '@/components/ui/scroll-area'
+    68→import {
+    69→  LineChart,
+    70→  Line,
+    71→  XAxis,
+    72→  YAxis,
+    73→  CartesianGrid,
+    74→  Tooltip as RechartsTooltip,
+    75→  ResponsiveContainer,
+    76→  ReferenceLine,
+    77→  Area,
+    78→  AreaChart,
+    79→} from 'recharts'
+    80→import { cn } from '@/lib/utils'
+    81→import { useAppStore } from '@/lib/store'
+    82→import { toast } from 'sonner'
+    83→
+    84→// ─── Types ──────────────────────────────────────────────────────────────────
+    85→
+    86→type SkinCondition = 'clear' | 'mild' | 'moderate' | 'severe'
+    87→
+    88→type FaceArea = 'forehead' | 'tzone' | 'cheeks' | 'chin' | 'jawline' | 'nose'
+    89→
+    90→interface SkinLog {
+    91→  id: string
+    92→  date: string
+    93→  condition: SkinCondition
+    94→  areas: FaceArea[]
+    95→  newBreakouts: number
+    96→  productsUsed: string[]
+    97→  waterIntake: number
+    98→  sleepHours: number
+    99→  stressLevel: number
+   100→  notes: string
+   101→}
+   102→
+   103→interface RoutineProduct {
+   104→  id: string
+   105→  name: string
+   106→  brand: string
+   107→  category: 'cleanser' | 'toner' | 'treatment' | 'moisturizer' | 'spf' | 'serum'
+   108→  timeOfDay: 'morning' | 'evening' | 'both'
+   109→  consistency: number // 0-100% tracked over 30 days
+   110→}
+   111→
+   112→// ─── Mock Data ───────────────────────────────────────────────────────────────
+   113→
+   114→const SKIN_SCORE_BREAKDOWN = [
+   115→  { label: 'Hydration', value: 78, icon: Droplet, color: 'text-sky-500', bgColor: 'bg-sky-100 dark:bg-sky-950/40' },
+   116→  { label: 'Acne Severity', value: 65, icon: Flame, color: 'text-rose-500', bgColor: 'bg-rose-100 dark:bg-rose-950/40' },
+   117→  { label: 'Oiliness', value: 52, icon: Droplets, color: 'text-amber-500', bgColor: 'bg-amber-100 dark:bg-amber-950/40' },
+   118→  { label: 'Glow / Radiance', value: 84, icon: Sparkles, color: 'text-fuchsia-500', bgColor: 'bg-fuchsia-100 dark:bg-fuchsia-950/40' },
+   119→]
+   120→
+   121→const OVERALL_SCORE = 72
+   122→
+   123→const CONDITION_META: Record<SkinCondition, { label: string; color: string; bgColor: string; emoji: string; description: string }> = {
+   124→  clear: {
+   125→    label: 'Clear',
+   126→    color: 'text-emerald-600 dark:text-emerald-400',
+   127→    bgColor: 'bg-emerald-100 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800',
+   128→    emoji: '✨',
+   129→    description: 'Skin looks healthy and clear today',
+   130→  },
+   131→  mild: {
+   132→    label: 'Mild Breakouts',
+   133→    color: 'text-amber-600 dark:text-amber-400',
+   134→    bgColor: 'bg-amber-100 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800',
+   135→    emoji: '🌱',
+   136→    description: 'A few spots, mostly manageable',
+   137→  },
+   138→  moderate: {
+   139→    label: 'Moderate Acne',
+   140→    color: 'text-orange-600 dark:text-orange-400',
+   141→    bgColor: 'bg-orange-100 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800',
+   142→    emoji: '⚠️',
+   143→    description: 'Visible breakouts in multiple areas',
+   144→  },
+   145→  severe: {
+   146→    label: 'Severe Acne',
+   147→    color: 'text-rose-600 dark:text-rose-400',
+   148→    bgColor: 'bg-rose-100 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800',
+   149→    emoji: '🔴',
+   150→    description: 'Painful, widespread breakouts',
+   151→  },
+   152→}
+   153→
+   154→const FACE_AREAS: { id: FaceArea; label: string; description: string }[] = [
+   155→  { id: 'forehead', label: 'Forehead', description: 'Stress & sleep related' },
+   156→  { id: 'tzone', label: 'T-Zone', description: 'Oiliness & congestion' },
+   157→  { id: 'nose', label: 'Nose', description: 'Blackheads & oil' },
+   158→  { id: 'cheeks', label: 'Cheeks', description: 'Dirty pillowcases, phones' },
+   159→  { id: 'chin', label: 'Chin', description: 'Hormonal breakouts' },
+   160→  { id: 'jawline', label: 'Jawline', description: 'Hormonal (luteal phase)' },
+   161→]
+   162→
+   163→const PRODUCT_CHECKLIST = [
+   164→  { id: 'cleanser', label: 'Cleanser', icon: Droplet },
+   165→  { id: 'toner', label: 'Toner', icon: Sparkles },
+   166→  { id: 'moisturizer', label: 'Moisturizer', icon: Droplets },
+   167→  { id: 'sunscreen', label: 'Sunscreen (SPF)', icon: Sun },
+   168→  { id: 'treatment', label: 'Treatment (Retinol/AHA)', icon: FlaskConical },
+   169→]
+   170→
+   171→const SKIN_TIMELINE: { date: string; day: number; condition: SkinCondition; breakouts: number; emoji: string; color: string }[] = [
+   172→  { date: 'Dec 01', day: 1, condition: 'clear', breakouts: 0, emoji: '✨', color: 'bg-emerald-400' },
+   173→  { date: 'Dec 02', day: 2, condition: 'clear', breakouts: 1, emoji: '✨', color: 'bg-emerald-400' },
+   174→  { date: 'Dec 03', day: 3, condition: 'mild', breakouts: 2, emoji: '🌱', color: 'bg-amber-400' },
+   175→  { date: 'Dec 04', day: 4, condition: 'mild', breakouts: 3, emoji: '🌱', color: 'bg-amber-400' },
+   176→  { date: 'Dec 05', day: 5, condition: 'moderate', breakouts: 5, emoji: '⚠️', color: 'bg-orange-400' },
+   177→  { date: 'Dec 06', day: 6, condition: 'moderate', breakouts: 6, emoji: '⚠️', color: 'bg-orange-400' },
+   178→  { date: 'Dec 07', day: 7, condition: 'severe', breakouts: 9, emoji: '🔴', color: 'bg-rose-500' },
+   179→  { date: 'Dec 08', day: 8, condition: 'moderate', breakouts: 5, emoji: '⚠️', color: 'bg-orange-400' },
+   180→  { date: 'Dec 09', day: 9, condition: 'mild', breakouts: 3, emoji: '🌱', color: 'bg-amber-400' },
+   181→  { date: 'Dec 10', day: 10, condition: 'clear', breakouts: 1, emoji: '✨', color: 'bg-emerald-400' },
+   182→  { date: 'Dec 11', day: 11, condition: 'clear', breakouts: 0, emoji: '✨', color: 'bg-emerald-400' },
+   183→  { date: 'Dec 12', day: 12, condition: 'clear', breakouts: 0, emoji: '✨', color: 'bg-emerald-400' },
+   184→  { date: 'Dec 13', day: 13, condition: 'clear', breakouts: 1, emoji: '✨', color: 'bg-emerald-400' },
+   185→  { date: 'Dec 14', day: 14, condition: 'mild', breakouts: 2, emoji: '🌱', color: 'bg-amber-400' },
+   186→]
+   187→
+   188→// Cycle-skin correlation: breakouts peak 2-3 days before period (day 26-27)
+   189→const CYCLE_SKIN_DATA = Array.from({ length: 28 }, (_, i) => {
+   190→  const day = i + 1
+   191→  let breakouts = 1
+   192→  if (day <= 5) breakouts = 4 + Math.round(Math.sin(day) * 1.5)
+   193→  else if (day >= 6 && day <= 13) breakouts = 1
+   194→  else if (day >= 14 && day <= 17) breakouts = 2 + (day - 14)
+   195→  else if (day >= 22 && day <= 27) breakouts = 3 + Math.round((day - 22) * 1.4)
+   196→  else breakouts = 2
+   197→  return {
+   198→    day,
+   199→    breakouts: Math.max(0, breakouts),
+   200→    hydration: day <= 5 ? 60 : day >= 22 ? 55 : 75 + Math.round(Math.sin(day) * 8),
+   201→    oiliness: day >= 12 && day <= 21 ? 70 : day >= 22 ? 80 : 45,
+   202→    glow: day >= 8 && day <= 18 ? 85 : 65,
+   203→  }
+   204→})
+   205→
+   206→const CURRENT_CYCLE_DAY = 14
+   207→
+   208→const CYCLE_PHASES = [
+   209→  {
+   210→    id: 'menstrual',
+   211→    name: 'Menstrual',
+   212→    days: 'Days 1–5',
+   213→    color: 'from-rose-400 to-rose-600',
+   214→    bgColor: 'bg-rose-50 dark:bg-rose-950/30',
+   215→    borderColor: 'border-rose-200 dark:border-rose-900',
+   216→    skinState: 'Sensitive & Dull',
+   217→    recommendation: 'Be extra gentle. Skip retinoids, use hydrating masks, and focus on barrier repair. Skin is more prone to irritation.',
+   218→    tips: ['Gentle cleanser only', 'Hydrating sheet masks', 'Avoid exfoliation', 'Use ceramide moisturizer'],
+   219→  },
+   220→  {
+   221→    id: 'follicular',
+   222→    name: 'Follicular',
+   223→    days: 'Days 6–13',
+   224→    color: 'from-emerald-400 to-emerald-600',
+   225→    bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
+   226→    borderColor: 'border-emerald-200 dark:border-emerald-900',
+   227→    skinState: 'Glowing & Clear',
+   228→    recommendation: 'Skin is at its best! Great time for treatments, exfoliation, and trying new products. Estrogen boosts collagen production.',
+   229→    tips: ['Try chemical exfoliants', 'Vitamin C serums shine', 'Great time for facials', 'Lighter moisturizer ok'],
+   230→  },
+   231→  {
+   232→    id: 'ovulation',
+   233→    name: 'Ovulation',
+   234→    days: 'Days 14–17',
+   235→    color: 'from-amber-400 to-orange-500',
+   236→    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+   237→    borderColor: 'border-amber-200 dark:border-amber-900',
+   238→    skinState: 'Peak Radiance',
+   239→    recommendation: 'Peak glow from estrogen. Oil production may start increasing. Lighter products work well. Enjoy the radiance!',
+   240→    tips: ['Maintain routine', 'Oil-control if needed', 'Antioxidant serums', 'SPF essential'],
+   241→  },
+   242→  {
+   243→    id: 'luteal',
+   244→    name: 'Luteal',
+   245→    days: 'Days 18–28',
+   246→    color: 'from-purple-400 to-fuchsia-600',
+   247→    bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+   248→    borderColor: 'border-purple-200 dark:border-purple-900',
+   249→    skinState: 'Breakout Prone',
+   250→    recommendation: 'Progesterone increases sebum. Pre-period breakouts common. Use salicylic acid, niacinamide, and don\'t pick!',
+   251→    tips: ['Salicylic acid cleanser', 'Niacinamide serum', 'Avoid picking', 'Double cleanse at night'],
+   252→  },
+   253→]
+   254→
+   255→const ROUTINE_PRODUCTS_INITIAL: RoutineProduct[] = [
+   256→  { id: 'p1', name: 'Gentle Foaming Cleanser', brand: 'CeraVe', category: 'cleanser', timeOfDay: 'both', consistency: 92 },
+   257→  { id: 'p2', name: 'Hydrating Toner', brand: 'Klairs', category: 'toner', timeOfDay: 'both', consistency: 78 },
+   258→  { id: 'p3', name: 'Niacinamide 10% Serum', brand: 'The Ordinary', category: 'serum', timeOfDay: 'both', consistency: 85 },
+   259→  { id: 'p4', name: 'Retinol 0.3%', brand: 'Paula\'s Choice', category: 'treatment', timeOfDay: 'evening', consistency: 64 },
+   260→  { id: 'p5', name: 'Daily Moisturizer SPF 30', brand: 'Neutrogena', category: 'moisturizer', timeOfDay: 'morning', consistency: 88 },
+   261→  { id: 'p6', name: 'Night Recovery Cream', brand: 'Olay', category: 'moisturizer', timeOfDay: 'evening', consistency: 81 },
+   262→  { id: 'p7', name: 'Mineral Sunscreen SPF 50', brand: 'La Roche-Posay', category: 'spf', timeOfDay: 'morning', consistency: 90 },
+   263→]
+   264→
+   265→const PRODUCT_DATABASE: Omit<RoutineProduct, 'consistency'>[] = [
+   266→  { id: 'db1', name: 'Salicylic Acid 2% Solution', brand: 'The Ordinary', category: 'treatment', timeOfDay: 'evening' },
+   267→  { id: 'db2', name: 'Hyaluronic Acid Serum', brand: 'The Inkey List', category: 'serum', timeOfDay: 'both' },
+   268→  { id: 'db3', name: 'Vitamin C 15% Suspension', brand: 'Paula\'s Choice', category: 'serum', timeOfDay: 'morning' },
+   269→  { id: 'db4', name: 'Benzoyl Peroxide 5% Wash', brand: 'PanOxyl', category: 'cleanser', timeOfDay: 'both' },
+   270→  { id: 'db5', name: 'AHA 7% Toning Solution', brand: 'The Ordinary', category: 'toner', timeOfDay: 'evening' },
+   271→  { id: 'db6', name: 'Azelaic Acid 10% Cream', brand: 'The Ordinary', category: 'treatment', timeOfDay: 'both' },
+   272→  { id: 'db7', name: 'Centella Water Gel Cream', brand: 'iUNIK', category: 'moisturizer', timeOfDay: 'both' },
+   273→  { id: 'db8', name: 'Mineral Matte SPF 40', brand: 'Supergoop', category: 'spf', timeOfDay: 'morning' },
+   274→]
+   275→
+   276→const AI_INSIGHTS = [
+   277→  {
+   278→    id: 'pattern',
+   279→    icon: TrendingUp,
+   280→    title: 'Pattern Detected',
+   281→    accent: 'from-rose-500 to-fuchsia-500',
+   282→    insight: 'Your jawline acne consistently appears 3–5 days before your period.',
+   283→    detail: 'This is classic hormonal acne. Progesterone peaks during the luteal phase, stimulating sebum production. Consider using salicylic acid on your jawline starting Day 20.',
+   284→    tag: 'Hormonal Pattern',
+   285→  },
+   286→  {
+   287→    id: 'product',
+   288→    icon: Sparkles,
+   289→    title: 'Product Recommendation',
+   290→    accent: 'from-fuchsia-500 to-pink-500',
+   291→    insight: 'Based on your oily T-zone and hormonal breakouts, try a niacinamide serum.',
+   292→    detail: 'Niacinamide (Vitamin B3) regulates oil production and reduces inflammation. Apply 2–3 drops morning and evening before moisturizer. Look for 5–10% concentration.',
+   293→    tag: 'For Combination Skin',
+   294→  },
+   295→  {
+   296→    id: 'diet',
+   297→    icon: Apple,
+   298→    title: 'Diet–Skin Connection',
+   299→    accent: 'from-emerald-500 to-teal-500',
+   300→    insight: 'Your skin flares on days you log high sugar intake.',
+   301→    detail: 'High-glycemic foods spike insulin, which boosts sebum and inflammation. Try swapping refined sugar for berries, nuts, and dark chocolate (70%+). Omega-3 rich foods also help reduce acne.',
+   302→    tag: 'Nutrition Insight',
+   303→  },
+   304→  {
+   305→    id: 'routine',
+   306→    icon: Check,
+   307→    title: 'Routine Optimization',
+   308→    accent: 'from-purple-500 to-violet-500',
+   309→    insight: 'You\'ve missed your evening retinol 36% of nights this month.',
+   310→    detail: 'Retinol works best with consistency. Try setting a phone reminder, or keep it next to your toothbrush. Start with 2x/week if irritation occurs, then build up.',
+   311→    tag: 'Habit Tracker',
+   312→  },
+   313→]
+   314→
+   315→const BEAUTY_ARTICLES = [
+   316→  {
+   317→    id: 'a1',
+   318→    title: 'Foods for Glowing Skin',
+   319→    excerpt: 'Discover 12 nutrient-rich foods that boost collagen, hydration, and radiance from within.',
+   320→    emoji: '🥑',
+   321→    readTime: '5 min read',
+   322→    category: 'Nutrition',
+   323→    gradient: 'from-emerald-400 to-teal-500',
+   324→  },
+   325→  {
+   326→    id: 'a2',
+   327→    title: 'Cycle-Synced Skincare',
+   328→    excerpt: 'How to adjust your routine across the 4 cycle phases for clearer, calmer skin all month.',
+   329→    emoji: '🌸',
+   330→    readTime: '7 min read',
+   331→    category: 'Hormonal',
+   332→    gradient: 'from-rose-400 to-fuchsia-500',
+   333→  },
+   334→  {
+   335→    id: 'a3',
+   336→    title: 'Hormonal Acne Guide',
+   337→    excerpt: 'Understand why jawline & chin breakouts happen and science-backed ways to treat them.',
+   338→    emoji: '🔬',
+   339→    readTime: '8 min read',
+   340→    category: 'Education',
+   341→    gradient: 'from-purple-400 to-violet-500',
+   342→  },
+   343→  {
+   344→    id: 'a4',
+   345→    title: 'Double Cleansing 101',
+   346→    excerpt: 'The Korean skincare secret to clear pores. Oil cleanser + water cleanser explained.',
+   347→    emoji: '💧',
+   348→    readTime: '4 min read',
+   349→    category: 'Routine',
+   350→    gradient: 'from-sky-400 to-blue-500',
+   351→  },
+   352→  {
+   353→    id: 'a5',
+   354→    title: 'SPF Myths Busted',
+   355→    excerpt: 'Indoor SPF? Reapplication? Mineral vs chemical? Get the facts on sun protection.',
+   356→    emoji: '☀️',
+   357→    readTime: '6 min read',
+   358→    category: 'Protection',
+   359→    gradient: 'from-amber-400 to-orange-500',
+   360→  },
+   361→  {
+   362→    id: 'a6',
+   363→    title: 'Stress & Skin: The Cortisol Connection',
+   364→    excerpt: 'How chronic stress triggers breakouts, dullness, and aging — and 5 ways to break the cycle.',
+   365→    emoji: '🧘‍♀️',
+   366→    readTime: '5 min read',
+   367→    category: 'Wellness',
+   368→    gradient: 'from-indigo-400 to-purple-500',
+   369→  },
+   370→]
+   371→
+   372→// ─── Face Diagram Component ─────────────────────────────────────────────────
+   373→
+   374→function FaceDiagram({ selected, onToggle }: { selected: FaceArea[]; onToggle: (area: FaceArea) => void }) {
+   375→  const isSelected = (area: FaceArea) => selected.includes(area)
+   376→
+   377→  const areas: Record<FaceArea, { cx: number; cy: number; r: number; label: string }> = {
+   378→    forehead: { cx: 100, cy: 38, r: 26, label: 'Forehead' },
+   379→    tzone: { cx: 100, cy: 70, r: 14, label: 'T-Zone' },
+   380→    nose: { cx: 100, cy: 88, r: 10, label: 'Nose' },
+   381→    cheeks: { cx: 70, cy: 95, r: 18, label: 'L Cheek' },
+   382→    chin: { cx: 100, cy: 125, r: 12, label: 'Chin' },
+   383→    jawline: { cx: 55, cy: 125, r: 14, label: 'Jawline' },
+   384→  }
+   385→
+   386→  return (
+   387→    <div className="flex flex-col items-center gap-3">
+   388→      <svg viewBox="0 0 200 170" className="w-full max-w-[260px] h-auto">
+   389→        {/* Face shape */}
+   390→        <ellipse
+   391→          cx="100"
+   392→          cy="90"
+   393→          rx="55"
+   394→          ry="75"
+   395→          fill="url(#faceGrad)"
+   396→          stroke="oklch(0.8 0.05 30)"
+   397→          strokeWidth="2"
+   398→        />
+   399→        <defs>
+   400→          <radialGradient id="faceGrad" cx="50%" cy="40%">
+   401→            <stop offset="0%" stopColor="oklch(0.95 0.04 30)" />
+   402→            <stop offset="100%" stopColor="oklch(0.88 0.05 30)" />
+   403→          </radialGradient>
+   404→        </defs>
+   405→        {/* Hair hint */}
+   406→        <path d="M 45 35 Q 100 5 155 35 L 155 25 Q 100 -5 45 25 Z" fill="oklch(0.35 0.08 30)" opacity="0.85" />
+   407→
+   408→        {/* Clickable areas */}
+   409→        {(['forehead', 'tzone', 'nose', 'cheeks', 'chin', 'jawline'] as FaceArea[]).map((area) => {
+   410→          const meta = areas[area]
+   411→          const sel = isSelected(area)
+   412→          return (
+   413→            <g key={area} onClick={() => onToggle(area)} className="cursor-pointer">
+   414→              {/* Right cheek mirror */}
+   415→              {area === 'cheeks' && (
+   416→                <circle
+   417→                  cx={200 - meta.cx}
+   418→                  cy={meta.cy}
+   419→                  r={meta.r}
+   420→                  fill={sel ? 'oklch(0.7 0.18 350 / 0.5)' : 'oklch(0.7 0.05 30 / 0.15)'}
+   421→                  stroke={sel ? 'oklch(0.55 0.2 350)' : 'oklch(0.6 0.05 30)'}
+   422→                  strokeWidth="1.5"
+   423→                  className="transition-all"
+   424→                />
+   425→              )}
+   426→              {area === 'jawline' && (
+   427→                <circle
+   428→                  cx={200 - meta.cx}
+   429→                  cy={meta.cy}
+   430→                  r={meta.r}
+   431→                  fill={sel ? 'oklch(0.7 0.18 350 / 0.5)' : 'oklch(0.7 0.05 30 / 0.15)'}
+   432→                  stroke={sel ? 'oklch(0.55 0.2 350)' : 'oklch(0.6 0.05 30)'}
+   433→                  strokeWidth="1.5"
+   434→                  className="transition-all"
+   435→                />
+   436→              )}
+   437→              <circle
+   438→                cx={meta.cx}
+   439→                cy={meta.cy}
+   440→                r={meta.r}
+   441→                fill={sel ? 'oklch(0.7 0.18 350 / 0.5)' : 'oklch(0.7 0.05 30 / 0.15)'}
+   442→                stroke={sel ? 'oklch(0.55 0.2 350)' : 'oklch(0.6 0.05 30)'}
+   443→                strokeWidth={sel ? 2.5 : 1.5}
+   444→                className="transition-all"
+   445→              />
+   446→              {sel && (
+   447→                <text
+   448→                  x={meta.cx}
+   449→                  y={meta.cy + 4}
+   450→                  textAnchor="middle"
+   451→                  fontSize="14"
+   452→                  fill="oklch(0.4 0.15 350)"
+   453→                  fontWeight="bold"
+   454→                >
+   455→                  ✓
+   456→                </text>
+   457→              )}
+   458→            </g>
+   459→          )
+   460→        })}
+   461→      </svg>
+   462→      <div className="flex flex-wrap gap-1.5 justify-center max-w-[280px]">
+   463→        {FACE_AREAS.map((area) => (
+   464→          <button
+   465→            key={area.id}
+   466→            onClick={() => onToggle(area.id)}
+   467→            className={cn(
+   468→              'text-[11px] px-2.5 py-1 rounded-full border transition-all',
+   469→              isSelected(area.id)
+   470→                ? 'bg-rose-500 text-white border-rose-500'
+   471→                : 'bg-muted/50 text-muted-foreground border-border hover:border-rose-300'
+   472→            )}
+   473→          >
+   474→            {area.label}
+   475→          </button>
+   476→        ))}
+   477→      </div>
+   478→    </div>
+   479→  )
+   480→}
+   481→
+   482→// ─── Section: Skin Score Dashboard ──────────────────────────────────────────
+   483→
+   484→function SkinScoreDashboard() {
+   485→  const scoreColor = OVERALL_SCORE >= 75 ? 'text-emerald-500' : OVERALL_SCORE >= 50 ? 'text-amber-500' : 'text-rose-500'
+   486→  const scoreGradient = OVERALL_SCORE >= 75
+   487→    ? 'from-emerald-500 to-teal-500'
+   488→    : OVERALL_SCORE >= 50
+   489→    ? 'from-amber-500 to-orange-500'
+   490→    : 'from-rose-500 to-red-500'
+   491→
+   492→  return (
+   493→    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   494→      {/* Overall Score */}
+   495→      <Card className="lg:col-span-1 overflow-hidden border-rose-200/60 dark:border-rose-900/40">
+   496→        <div className={cn('h-2 bg-gradient-to-r', scoreGradient)} />
+   497→        <CardHeader className="pb-2">
+   498→          <CardTitle className="text-base flex items-center gap-2">
+   499→            <Sparkles className="h-4 w-4 text-fuchsia-500" />
+   500→            Skin Health Score
+   501→          </CardTitle>
+   502→          <CardDescription>Today's overall assessment</CardDescription>
+   503→        </CardHeader>
+   504→        <CardContent className="flex flex-col items-center pt-2">
+   505→          <motion.div
+   506→            initial={{ scale: 0.8, opacity: 0 }}
+   507→            animate={{ scale: 1, opacity: 1 }}
+   508→            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+   509→            className="relative h-32 w-32"
+   510→          >
+   511→            <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
+   512→              <circle cx="60" cy="60" r="52" fill="none" stroke="oklch(0.92 0.02 325)" strokeWidth="10" />
+   513→              <motion.circle
+   514→                cx="60" cy="60" r="52" fill="none" stroke="url(#scoreGrad)" strokeWidth="10" strokeLinecap="round"
+   515→                strokeDasharray={2 * Math.PI * 52}
+   516→                initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
+   517→                animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - OVERALL_SCORE / 100) }}
+   518→                transition={{ duration: 1.2, ease: 'easeOut' }}
+   519→              />
+   520→              <defs>
+   521→                <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+   522→                  <stop offset="0%" stopColor="oklch(0.7 0.2 350)" />
+   523→                  <stop offset="100%" stopColor="oklch(0.75 0.2 30)" />
+   524→                </linearGradient>
+   525→              </defs>
+   526→            </svg>
+   527→            <div className="absolute inset-0 flex flex-col items-center justify-center">
+   528→              <span className={cn('text-3xl font-bold', scoreColor)}>{OVERALL_SCORE}</span>
+   529→              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">out of 100</span>
+   530→            </div>
+   531→          </motion.div>
+   532→          <Badge variant="secondary" className="mt-3 bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+   533→            {OVERALL_SCORE >= 75 ? 'Healthy Glow' : OVERALL_SCORE >= 50 ? 'Needs Care' : 'Sensitive Period'}
+   534→          </Badge>
+   535→        </CardContent>
+   536→      </Card>
+   537→
+   538→      {/* Breakdown */}
+   539→      <Card className="lg:col-span-2">
+   540→        <CardHeader className="pb-3">
+   541→          <CardTitle className="text-base">Score Breakdown</CardTitle>
+   542→          <CardDescription>Key skin health indicators</CardDescription>
+   543→        </CardHeader>
+   544→        <CardContent className="space-y-4 pt-2">
+   545→          {SKIN_SCORE_BREAKDOWN.map((item, idx) => (
+   546→            <motion.div
+   547→              key={item.label}
+   548→              initial={{ opacity: 0, x: -10 }}
+   549→              animate={{ opacity: 1, x: 0 }}
+   550→              transition={{ delay: idx * 0.08 }}
+   551→              className="flex items-center gap-3"
+   552→            >
+   553→              <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', item.bgColor)}>
+   554→                <item.icon className={cn('h-4 w-4', item.color)} />
+   555→              </div>
+   556→              <div className="flex-1 min-w-0">
+   557→                <div className="flex items-center justify-between mb-1.5">
+   558→                  <span className="text-sm font-medium">{item.label}</span>
+   559→                  <span className={cn('text-sm font-bold', item.color)}>{item.value}%</span>
+   560→                </div>
+   561→                <div className="h-2 rounded-full bg-muted overflow-hidden">
+   562→                  <motion.div
+   563→                    initial={{ width: 0 }}
+   564→                    animate={{ width: `${item.value}%` }}
+   565→                    transition={{ duration: 0.9, delay: idx * 0.08, ease: 'easeOut' }}
+   566→                    className={cn('h-full rounded-full bg-gradient-to-r', idx === 0 ? 'from-sky-400 to-sky-500' : idx === 1 ? 'from-rose-400 to-rose-500' : idx === 2 ? 'from-amber-400 to-amber-500' : 'from-fuchsia-400 to-fuchsia-500')}
+   567→                  />
+   568→                </div>
+   569→              </div>
+   570→            </motion.div>
+   571→          ))}
+   572→          <Separator />
+   573→          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+   574→            <Activity className="h-3.5 w-3.5" />
+   575→            <span>Score improved <span className="text-emerald-600 font-semibold">+8 points</span> this week</span>
+   576→          </div>
+   577→        </CardContent>
+   578→      </Card>
+   579→    </div>
+   580→  )
+   581→}
+   582→
+   583→// ─── Section: Daily Skin Log ────────────────────────────────────────────────
+   584→
+   585→function DailySkinLog() {
+   586→  const [condition, setCondition] = useState<SkinCondition>('mild')
+   587→  const [areas, setAreas] = useState<FaceArea[]>(['chin', 'jawline'])
+   588→  const [breakouts, setBreakouts] = useState(3)
+   589→  const [products, setProducts] = useState<string[]>(['cleanser', 'moisturizer'])
+   590→  const [water, setWater] = useState(6)
+   591→  const [sleep, setSleep] = useState(7)
+   592→  const [stress, setStress] = useState(5)
+   593→  const [notes, setNotes] = useState('')
+   594→
+   595→  const toggleArea = (area: FaceArea) => {
+   596→    setAreas(prev => prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area])
+   597→  }
+   598→
+   599→  const toggleProduct = (id: string) => {
+   600→    setProducts(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id])
+   601→  }
+   602→
+   603→  const handleSave = () => {
+   604→    toast.success('Skin log saved!', {
+   605→      description: `Logged ${CONDITION_META[condition].label.toLowerCase()} on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+   606→    })
+   607→    setNotes('')
+   608→  }
+   609→
+   610→  return (
+   611→    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   612→      {/* Face Map + Condition */}
+   613→      <Card className="lg:col-span-1 border-rose-200/60 dark:border-rose-900/40">
+   614→        <CardHeader className="pb-3">
+   615→          <CardTitle className="text-base flex items-center gap-2">
+   616→            <Camera className="h-4 w-4 text-rose-500" />
+   617→            Affected Areas
+   618→          </CardTitle>
+   619→          <CardDescription>Tap zones on the face map</CardDescription>
+   620→        </CardHeader>
+   621→        <CardContent>
+   622→          <FaceDiagram selected={areas} onToggle={toggleArea} />
+   623→          <Separator className="my-4" />
+   624→          <div className="space-y-2">
+   625→            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Skin Condition</Label>
+   626→            <div className="grid grid-cols-2 gap-2">
+   627→              {(['clear', 'mild', 'moderate', 'severe'] as SkinCondition[]).map(c => (
+   628→                <button
+   629→                  key={c}
+   630→                  onClick={() => setCondition(c)}
+   631→                  className={cn(
+   632→                    'flex items-center gap-2 rounded-xl border-2 p-2.5 text-left transition-all',
+   633→                    condition === c ? CONDITION_META[c].bgColor : 'bg-muted/30 border-transparent hover:border-border'
+   634→                  )}
+   635→                >
+   636→                  <span className="text-lg">{CONDITION_META[c].emoji}</span>
+   637→                  <div className="min-w-0">
+   638→                    <div className={cn('text-xs font-semibold leading-tight', condition === c && CONDITION_META[c].color)}>
+   639→                      {CONDITION_META[c].label}
+   640→                    </div>
+   641→                  </div>
+   642→                </button>
+   643→              ))}
+   644→            </div>
+   645→            <p className="text-[11px] text-muted-foreground mt-1">{CONDITION_META[condition].description}</p>
+   646→          </div>
+   647→        </CardContent>
+   648→      </Card>
+   649→
+   650→      {/* Right: Sliders + Checklist + Notes */}
+   651→      <Card className="lg:col-span-2">
+   652→        <CardHeader className="pb-3">
+   653→          <CardTitle className="text-base flex items-center gap-2">
+   654→            <PenLine className="h-4 w-4 text-fuchsia-500" />
+   655→            Today's Skin Log
+   656→          </CardTitle>
+   657→          <CardDescription>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardDescription>
+   658→        </CardHeader>
+   659→        <CardContent className="space-y-5">
+   660→          {/* New breakouts + sliders */}
+   661→          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   662→            <div className="space-y-2">
+   663→              <Label className="text-xs flex items-center justify-between">
+   664→                <span>New Breakouts</span>
+   665→                <Badge variant="secondary" className="bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">{breakouts}</Badge>
+   666→              </Label>
+   667→              <Slider value={[breakouts]} onValueChange={(v) => setBreakouts(v[0])} min={0} max={15} step={1} />
+   668→            </div>
+   669→            <div className="space-y-2">
+   670→              <Label className="text-xs flex items-center justify-between">
+   671→                <span className="flex items-center gap-1"><Droplets className="h-3 w-3 text-sky-500" /> Water (glasses)</span>
+   672→                <Badge variant="secondary" className="bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{water}</Badge>
+   673→              </Label>
+   674→              <Slider value={[water]} onValueChange={(v) => setWater(v[0])} min={0} max={12} step={1} />
+   675→            </div>
+   676→            <div className="space-y-2">
+   677→              <Label className="text-xs flex items-center justify-between">
+   678→                <span className="flex items-center gap-1"><BedDouble className="h-3 w-3 text-indigo-500" /> Sleep (hrs)</span>
+   679→                <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">{sleep}h</Badge>
+   680→              </Label>
+   681→              <Slider value={[sleep]} onValueChange={(v) => setSleep(v[0])} min={0} max={12} step={1} />
+   682→            </div>
+   683→          </div>
+   684→
+   685→          {/* Stress */}
+   686→          <div className="space-y-2">
+   687→            <Label className="text-xs flex items-center justify-between">
+   688→              <span className="flex items-center gap-1"><Brain className="h-3 w-3 text-purple-500" /> Stress Level</span>
+   689→              <Badge variant="secondary" className={cn(
+   690→                stress <= 3 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' :
+   691→                stress <= 6 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' :
+   692→                'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+   693→              )}>{stress <= 3 ? 'Low' : stress <= 6 ? 'Moderate' : 'High'} ({stress}/10)</Badge>
+   694→            </Label>
+   695→            <Slider value={[stress]} onValueChange={(v) => setStress(v[0])} min={0} max={10} step={1} />
+   696→          </div>
+   697→
+   698→          <Separator />
+   699→
+   700→          {/* Products checklist */}
+   701→          <div className="space-y-2.5">
+   702→            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Products Used Today</Label>
+   703→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+   704→              {PRODUCT_CHECKLIST.map(p => {
+   705→                const checked = products.includes(p.id)
+   706→                return (
+   707→                  <button
+   708→                    key={p.id}
+   709→                    onClick={() => toggleProduct(p.id)}
+   710→                    className={cn(
+   711→                      'flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-all',
+   712→                      checked ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800' : 'bg-muted/30 border-transparent hover:border-border'
+   713→                    )}
+   714→                  >
+   715→                    <div className={cn(
+   716→                      'flex h-6 w-6 items-center justify-center rounded-md border-2 shrink-0',
+   717→                      checked ? 'bg-rose-500 border-rose-500' : 'border-muted-foreground/30'
+   718→                    )}>
+   719→                      {checked && <Check className="h-3.5 w-3.5 text-white" />}
+   720→                    </div>
+   721→                    <span className={cn('text-sm', checked ? 'font-medium' : 'text-muted-foreground')}>{p.label}</span>
+   722→                  </button>
+   723→                )
+   724→              })}
+   725→            </div>
+   726→          </div>
+   727→
+   728→          <Separator />
+   729→
+   730→          {/* Notes */}
+   731→          <div className="space-y-2">
+   732→            <Label htmlFor="notes" className="text-xs text-muted-foreground uppercase tracking-wider">Notes</Label>
+   733→            <Textarea
+   734→              id="notes"
+   735→              placeholder="Any observations about your skin today... (e.g., 'tried new moisturizer', 'felt particularly oily this morning')"
+   736→              value={notes}
+   737→              onChange={(e) => setNotes(e.target.value)}
+   738→              rows={3}
+   739→              className="resize-none"
+   740→            />
+   741→          </div>
+   742→
+   743→          <div className="flex justify-end gap-2 pt-1">
+   744→            <Button variant="outline" size="sm" onClick={() => { setNotes(''); setAreas([]); setProducts([]) }}>
+   745→              Reset
+   746→            </Button>
+   747→            <Button size="sm" onClick={handleSave} className="bg-gradient-to-r from-rose-500 to-fuchsia-500 hover:opacity-90 text-white">
+   748→              <Check className="h-4 w-4 mr-1.5" /> Save Log
+   749→            </Button>
+   750→          </div>
+   751→        </CardContent>
+   752→      </Card>
+   753→    </div>
+   754→  )
+   755→}
+   756→
+   757→// ─── Section: Cycle-Skin Connection ─────────────────────────────────────────
+   758→
+   759→function CycleSkinConnection() {
+   760→  const [metric, setMetric] = useState<'breakouts' | 'hydration' | 'oiliness' | 'glow'>('breakouts')
+   761→
+   762→  const metricMeta = {
+   763→    breakouts: { label: 'Breakouts', color: '#e11d48', name: 'New Breakouts' },
+   764→    hydration: { label: 'Hydration', color: '#0284c7', name: 'Hydration Level' },
+   765→    oiliness: { label: 'Oiliness', color: '#d97706', name: 'Oiliness' },
+   766→    glow: { label: 'Glow', color: '#c026d3', name: 'Glow / Radiance' },
+   767→  }
+   768→
+   769→  const peakDay = useMemo(() => {
+   770→    return CYCLE_SKIN_DATA.reduce((max, d) => d.breakouts > max.breakouts ? d : max, CYCLE_SKIN_DATA[0])
+   771→  }, [])
+   772→
+   773→  return (
+   774→    <div className="space-y-4">
+   775→      {/* Insight banner */}
+   776→      <Card className="overflow-hidden border-fuchsia-200/60 dark:border-fuchsia-900/40">
+   777→        <div className="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-purple-500 p-0.5">
+   778→          <div className="bg-card rounded-t-[calc(var(--radius)-2px)]">
+   779→            <CardContent className="p-5">
+   780→              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+   781→                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-fuchsia-500 text-white shrink-0">
+   782→                  <Sparkles className="h-6 w-6" />
+   783→                </div>
+   784→                <div className="flex-1">
+   785→                  <div className="flex items-center gap-2 mb-1">
+   786→                    <Badge variant="secondary" className="bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-300">AI Insight</Badge>
+   787→                    <span className="text-xs text-muted-foreground">Pattern detected from 3 cycles</span>
+   788→                  </div>
+   789→                  <h3 className="text-sm sm:text-base font-semibold">
+   790→                    Your skin tends to break out <span className="text-rose-600 dark:text-rose-400">3 days before your period</span> (around day {peakDay.day})
+   791→                  </h3>
+   792→                  <p className="text-xs text-muted-foreground mt-1">
+   793→                    Peak of {peakDay.breakouts} breakouts on day {peakDay.day}. Start preventative care 5 days earlier.
+   794→                  </p>
+   795→                </div>
+   796→              </div>
+   797→            </CardContent>
+   798→          </div>
+   799→        </div>
+   800→      </Card>
+   801→
+   802→      {/* Chart */}
+   803→      <Card>
+   804→        <CardHeader className="pb-3">
+   805→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+   806→            <div>
+   807→              <CardTitle className="text-base">Skin vs. Cycle Day</CardTitle>
+   808→              <CardDescription>Track how your skin changes across your 28-day cycle</CardDescription>
+   809→            </div>
+   810→            <div className="flex gap-1 p-1 rounded-lg bg-muted/50">
+   811→              {(['breakouts', 'hydration', 'oiliness', 'glow'] as const).map(m => (
+   812→                <button
+   813→                  key={m}
+   814→                  onClick={() => setMetric(m)}
+   815→                  className={cn(
+   816→                    'text-xs px-3 py-1.5 rounded-md transition-all',
+   817→                    metric === m ? 'bg-card shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
+   818→                  )}
+   819→                  style={metric === m ? { color: metricMeta[m].color } : undefined}
+   820→                >
+   821→                  {metricMeta[m].label}
+   822→                </button>
+   823→              ))}
+   824→            </div>
+   825→          </div>
+   826→        </CardHeader>
+   827→        <CardContent>
+   828→          <div className="h-64 w-full">
+   829→            <ResponsiveContainer width="100%" height="100%">
+   830→              <AreaChart data={CYCLE_SKIN_DATA} margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
+   831→                <defs>
+   832→                  <linearGradient id="metricGrad" x1="0" y1="0" x2="0" y2="1">
+   833→                    <stop offset="5%" stopColor={metricMeta[metric].color} stopOpacity={0.4} />
+   834→                    <stop offset="95%" stopColor={metricMeta[metric].color} stopOpacity={0} />
+   835→                  </linearGradient>
+   836→                </defs>
+   837→                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.91 0.02 325)" vertical={false} />
+   838→                <XAxis
+   839→                  dataKey="day"
+   840→                  tick={{ fontSize: 10, fill: 'oklch(0.5 0.03 325)' }}
+   841→                  tickLine={false}
+   842→                  axisLine={false}
+   843→                  interval={2}
+   844→                />
+   845→                <YAxis
+   846→                  tick={{ fontSize: 10, fill: 'oklch(0.5 0.03 325)' }}
+   847→                  tickLine={false}
+   848→                  axisLine={false}
+   849→                />
+   850→                <RechartsTooltip
+   851→                  contentStyle={{
+   852→                    backgroundColor: 'oklch(1 0 0)',
+   853→                    border: '1px solid oklch(0.91 0.02 325)',
+   854→                    borderRadius: '8px',
+   855→                    fontSize: '12px',
+   856→                  }}
+   857→                  labelFormatter={(v) => `Cycle Day ${v}`}
+   858→                />
+   859→                <ReferenceLine x={CURRENT_CYCLE_DAY} stroke="oklch(0.55 0.2 350)" strokeDasharray="4 4" label={{ value: 'Today', fontSize: 10, fill: 'oklch(0.55 0.2 350)', position: 'top' }} />
+   860→                <ReferenceLine x={peakDay.day} stroke="oklch(0.65 0.22 25)" strokeDasharray="2 2" label={{ value: 'Peak breakouts', fontSize: 10, fill: 'oklch(0.65 0.22 25)', position: 'top' }} />
+   861→                <Area
+   862→                  type="monotone"
+   863→                  dataKey={metric}
+   864→                  stroke={metricMeta[metric].color}
+   865→                  strokeWidth={2.5}
+   866→                  fill="url(#metricGrad)"
+   867→                  dot={{ r: 2, fill: metricMeta[metric].color }}
+   868→                  activeDot={{ r: 5 }}
+   869→                />
+   870→              </AreaChart>
+   871→            </ResponsiveContainer>
+   872→          </div>
+   873→          <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-muted-foreground">
+   874→            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> Today (Day {CURRENT_CYCLE_DAY})</span>
+   875→            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-orange-500" /> Peak breakout day</span>
+   876→          </div>
+   877→        </CardContent>
+   878→      </Card>
+   879→
+   880→      {/* Phase recommendations */}
+   881→      <div>
+   882→        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+   883→          <Moon className="h-4 w-4 text-purple-500" />
+   884→          Phase-Based Skincare Recommendations
+   885→        </h3>
+   886→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+   887→          {CYCLE_PHASES.map((phase, idx) => {
+   888→            const isCurrent = CURRENT_CYCLE_DAY >= 1 && CURRENT_CYCLE_DAY <= 5 && phase.id === 'menstrual'
+   889→              || CURRENT_CYCLE_DAY >= 6 && CURRENT_CYCLE_DAY <= 13 && phase.id === 'follicular'
+   890→              || CURRENT_CYCLE_DAY >= 14 && CURRENT_CYCLE_DAY <= 17 && phase.id === 'ovulation'
+   891→              || CURRENT_CYCLE_DAY >= 18 && phase.id === 'luteal'
+   892→            return (
+   893→              <motion.div
+   894→                key={phase.id}
+   895→                initial={{ opacity: 0, y: 10 }}
+   896→                animate={{ opacity: 1, y: 0 }}
+   897→                transition={{ delay: idx * 0.06 }}
+   898→              >
+   899→                <Card className={cn('h-full overflow-hidden transition-all', isCurrent && 'ring-2 ring-rose-400', phase.borderColor)}>
+   900→                  <div className={cn('h-1.5 bg-gradient-to-r', phase.color)} />
+   901→                  <CardHeader className="pb-2 pt-3">
+   902→                    <div className="flex items-center justify-between">
+   903→                      <CardTitle className="text-sm">{phase.name}</CardTitle>
+   904→                      {isCurrent && (
+   905→                        <Badge variant="secondary" className="text-[9px] h-5 bg-rose-500 text-white">Current</Badge>
+   906→                      )}
+   907→                    </div>
+   908→                    <CardDescription className="text-[11px]">{phase.days} · {phase.skinState}</CardDescription>
+   909→                  </CardHeader>
+   910→                  <CardContent className="pt-0 space-y-2.5">
+   911→                    <p className="text-xs text-muted-foreground leading-relaxed">{phase.recommendation}</p>
+   912→                    <div className="space-y-1">
+   913→                      {phase.tips.map(tip => (
+   914→                        <div key={tip} className="flex items-start gap-1.5 text-[11px]">
+   915→                          <Check className="h-3 w-3 mt-0.5 text-emerald-500 shrink-0" />
+   916→                          <span>{tip}</span>
+   917→                        </div>
+   918→                      ))}
+   919→                    </div>
+   920→                  </CardContent>
+   921→                </Card>
+   922→              </motion.div>
+   923→            )
+   924→          })}
+   925→        </div>
+   926→      </div>
+   927→    </div>
+   928→  )
+   929→}
+   930→
+   931→// ─── Section: Skincare Routine Builder ──────────────────────────────────────
+   932→
+   933→function SkincareRoutineBuilder() {
+   934→  const [routine, setRoutine] = useState<RoutineProduct[]>(ROUTINE_PRODUCTS_INITIAL)
+   935→  const [showDatabase, setShowDatabase] = useState(false)
+   936→  const [activeTab, setActiveTab] = useState<'morning' | 'evening'>('morning')
+   937→
+   938→  const categoryMeta: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+   939→    cleanser: { label: 'Cleanser', icon: Droplet, color: 'text-sky-500' },
+   940→    toner: { label: 'Toner', icon: Sparkles, color: 'text-purple-500' },
+   941→    serum: { label: 'Serum', icon: Heart, color: 'text-rose-500' },
+   942→    treatment: { label: 'Treatment', icon: FlaskConical, color: 'text-amber-500' },
+   943→    moisturizer: { label: 'Moisturizer', icon: Droplets, color: 'text-emerald-500' },
+   944→    spf: { label: 'Sunscreen', icon: Sun, color: 'text-orange-500' },
+   945→  }
+   946→
+   947→  const filtered = routine.filter(p => p.timeOfDay === activeTab || p.timeOfDay === 'both')
+   948→  const avgConsistency = Math.round(routine.reduce((sum, p) => sum + p.consistency, 0) / routine.length)
+   949→
+   950→  const addProduct = (product: Omit<RoutineProduct, 'consistency'>) => {
+   951→    if (routine.some(p => p.id === product.id)) {
+   952→      toast.error('Already in your routine')
+   953→      return
+   954→    }
+   955→    setRoutine([...routine, { ...product, consistency: 0 }])
+   956→    toast.success(`${product.name} added to routine`)
+   957→    setShowDatabase(false)
+   958→  }
+   959→
+   960→  const removeProduct = (id: string) => {
+   961→    setRoutine(routine.filter(p => p.id !== id))
+   962→    toast.success('Product removed')
+   963→  }
+   964→
+   965→  return (
+   966→    <div className="space-y-4">
+   967→      {/* Stats */}
+   968→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   969→        <Card className="p-3">
+   970→          <div className="flex items-center gap-2">
+   971→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-950/40">
+   972→              <FlaskConical className="h-4 w-4 text-rose-500" />
+   973→            </div>
+   974→            <div>
+   975→              <div className="text-lg font-bold">{routine.length}</div>
+   976→              <div className="text-[10px] text-muted-foreground">Products</div>
+   977→            </div>
+   978→          </div>
+   979→        </Card>
+   980→        <Card className="p-3">
+   981→          <div className="flex items-center gap-2">
+   982→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950/40">
+   983→              <Check className="h-4 w-4 text-emerald-500" />
+   984→            </div>
+   985→            <div>
+   986→              <div className="text-lg font-bold">{avgConsistency}%</div>
+   987→              <div className="text-[10px] text-muted-foreground">Avg Consistency</div>
+   988→            </div>
+   989→          </div>
+   990→        </Card>
+   991→        <Card className="p-3">
+   992→          <div className="flex items-center gap-2">
+   993→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-950/40">
+   994→              <Sun className="h-4 w-4 text-amber-500" />
+   995→            </div>
+   996→            <div>
+   997→              <div className="text-lg font-bold">{routine.filter(p => p.timeOfDay === 'morning' || p.timeOfDay === 'both').length}</div>
+   998→              <div className="text-[10px] text-muted-foreground">AM Steps</div>
+   999→            </div>
+  1000→          </div>
+  1001→        </Card>
+  1002→        <Card className="p-3">
+  1003→          <div className="flex items-center gap-2">
+  1004→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-950/40">
+  1005→              <Moon className="h-4 w-4 text-indigo-500" />
+  1006→            </div>
+  1007→            <div>
+  1008→              <div className="text-lg font-bold">{routine.filter(p => p.timeOfDay === 'evening' || p.timeOfDay === 'both').length}</div>
+  1009→              <div className="text-[10px] text-muted-foreground">PM Steps</div>
+  1010→            </div>
+  1011→          </div>
+  1012→        </Card>
+  1013→      </div>
+  1014→
+  1015→      <Card>
+  1016→        <CardHeader className="pb-3">
+  1017→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+  1018→            <div>
+  1019→              <CardTitle className="text-base">My Skincare Routine</CardTitle>
+  1020→              <CardDescription>Build and track your daily AM/PM routine</CardDescription>
+  1021→            </div>
+  1022→            <Button size="sm" onClick={() => setShowDatabase(!showDatabase)} className="bg-gradient-to-r from-rose-500 to-fuchsia-500 hover:opacity-90 text-white">
+  1023→              <Plus className="h-4 w-4 mr-1.5" /> Add Product
+  1024→            </Button>
+  1025→          </div>
+  1026→        </CardHeader>
+  1027→        <CardContent>
+  1028→          {/* AM/PM toggle */}
+  1029→          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'morning' | 'evening')}>
+  1030→            <TabsList className="grid grid-cols-2 w-full max-w-xs mb-4">
+  1031→              <TabsTrigger value="morning" className="gap-1.5">
+  1032→                <Sun className="h-3.5 w-3.5" /> Morning
+  1033→              </TabsTrigger>
+  1034→              <TabsTrigger value="evening" className="gap-1.5">
+  1035→                <Moon className="h-3.5 w-3.5" /> Evening
+  1036→              </TabsTrigger>
+  1037→            </TabsList>
+  1038→
+  1039→            <AnimatePresence>
+  1040→              {showDatabase && (
+  1041→                <motion.div
+  1042→                  initial={{ opacity: 0, height: 0 }}
+  1043→                  animate={{ opacity: 1, height: 'auto' }}
+  1044→                  exit={{ opacity: 0, height: 0 }}
+  1045→                  className="mb-4 overflow-hidden"
+  1046→                >
+  1047→                  <div className="rounded-xl border border-dashed border-rose-300 dark:border-rose-800 p-3 bg-rose-50/50 dark:bg-rose-950/20">
+  1048→                    <div className="flex items-center justify-between mb-2">
+  1049→                      <span className="text-xs font-semibold text-rose-700 dark:text-rose-300">Product Database</span>
+  1050→                      <Badge variant="secondary" className="text-[10px]">{PRODUCT_DATABASE.length} available</Badge>
+  1051→                    </div>
+  1052→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+  1053→                      {PRODUCT_DATABASE.map(p => {
+  1054→                        const meta = categoryMeta[p.category]
+  1055→                        return (
+  1056→                          <button
+  1057→                            key={p.id}
+  1058→                            onClick={() => addProduct(p)}
+  1059→                            className="flex items-center gap-2 rounded-lg border bg-card p-2 text-left hover:border-rose-400 transition-all"
+  1060→                          >
+  1061→                            <div className={cn('flex h-8 w-8 items-center justify-center rounded-md bg-muted/50', meta.color)}>
+  1062→                              <meta.icon className="h-4 w-4" />
+  1063→                            </div>
+  1064→                            <div className="flex-1 min-w-0">
+  1065→                              <div className="text-xs font-medium truncate">{p.name}</div>
+  1066→                              <div className="text-[10px] text-muted-foreground">{p.brand} · {meta.label}</div>
+  1067→                            </div>
+  1068→                            <Plus className="h-4 w-4 text-rose-500 shrink-0" />
+  1069→                          </button>
+  1070→                        )
+  1071→                      })}
+  1072→                    </div>
+  1073→                  </div>
+  1074→                </motion.div>
+  1075→              )}
+  1076→            </AnimatePresence>
+  1077→
+  1078→            <TabsContent value={activeTab} className="mt-0 space-y-2">
+  1079→              {filtered.length === 0 ? (
+  1080→                <div className="text-center py-8 text-sm text-muted-foreground">
+  1081→                  No products in this routine yet. Click "Add Product" to build it.
+  1082→                </div>
+  1083→              ) : (
+  1084→                filtered.map((p, idx) => {
+  1085→                  const meta = categoryMeta[p.category]
+  1086→                  return (
+  1087→                    <motion.div
+  1088→                      key={p.id}
+  1089→                      initial={{ opacity: 0, x: -10 }}
+  1090→                      animate={{ opacity: 1, x: 0 }}
+  1091→                      transition={{ delay: idx * 0.04 }}
+  1092→                      className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:shadow-sm transition-all group"
+  1093→                    >
+  1094→                      <div className="flex h-8 w-8 items-center justify-center text-xs font-bold text-muted-foreground bg-muted/50 rounded-full shrink-0">
+  1095→                        {idx + 1}
+  1096→                      </div>
+  1097→                      <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg bg-muted/50 shrink-0', meta.color)}>
+  1098→                        <meta.icon className="h-4 w-4" />
+  1099→                      </div>
+  1100→                      <div className="flex-1 min-w-0">
+  1101→                        <div className="flex items-center gap-2">
+  1102→                          <span className="text-sm font-medium truncate">{p.name}</span>
+  1103→                          <Badge variant="outline" className="text-[9px] h-4 px-1.5">{meta.label}</Badge>
+  1104→                        </div>
+  1105→                        <div className="flex items-center gap-2 mt-1">
+  1106→                          <span className="text-[10px] text-muted-foreground">{p.brand}</span>
+  1107→                          <span className="text-[10px] text-muted-foreground">·</span>
+  1108→                          <span className={cn('text-[10px] font-medium', p.consistency >= 80 ? 'text-emerald-600' : p.consistency >= 50 ? 'text-amber-600' : 'text-rose-600')}>
+  1109→                            {p.consistency}% consistent
+  1110→                          </span>
+  1111→                        </div>
+  1112→                        <div className="h-1 rounded-full bg-muted mt-1 overflow-hidden">
+  1113→                          <div
+  1114→                            className={cn('h-full rounded-full', p.consistency >= 80 ? 'bg-emerald-500' : p.consistency >= 50 ? 'bg-amber-500' : 'bg-rose-500')}
+  1115→                            style={{ width: `${p.consistency}%` }}
+  1116→                          />
+  1117→                        </div>
+  1118→                      </div>
+  1119→                      <Button
+  1120→                        variant="ghost"
+  1121→                        size="icon"
+  1122→                        className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-rose-500"
+  1123→                        onClick={() => removeProduct(p.id)}
+  1124→                      >
+  1125→                        <X className="h-3.5 w-3.5" />
+  1126→                      </Button>
+  1127→                    </motion.div>
+  1128→                  )
+  1129→                })
+  1130→              )}
+  1131→            </TabsContent>
+  1132→          </Tabs>
+  1133→        </CardContent>
+  1134→      </Card>
+  1135→    </div>
+  1136→  )
+  1137→}
+  1138→
+  1139→// ─── Section: Skin Timeline ─────────────────────────────────────────────────
+  1140→
+  1141→function SkinTimeline() {
+  1142→  return (
+  1143→    <Card>
+  1144→      <CardHeader className="pb-3">
+  1145→        <div className="flex items-center justify-between">
+  1146→          <div>
+  1147→            <CardTitle className="text-base flex items-center gap-2">
+  1148→              <CalendarIcon className="h-4 w-4 text-rose-500" />
+  1149→              Skin Timeline
+  1150→            </CardTitle>
+  1151→            <CardDescription>Last 14 days · color-coded by condition</CardDescription>
+  1152→          </div>
+  1153→          <div className="flex items-center gap-2 text-[10px]">
+  1154→            {(['clear', 'mild', 'moderate', 'severe'] as SkinCondition[]).map(c => (
+  1155→              <span key={c} className="flex items-center gap-1">
+  1156→                <span className={cn('h-2 w-2 rounded-full', c === 'clear' ? 'bg-emerald-400' : c === 'mild' ? 'bg-amber-400' : c === 'moderate' ? 'bg-orange-400' : 'bg-rose-500')} />
+  1157→                <span className="text-muted-foreground">{CONDITION_META[c].label}</span>
+  1158→              </span>
+  1159→            ))}
+  1160→          </div>
+  1161→        </div>
+  1162→      </CardHeader>
+  1163→      <CardContent>
+  1164→        <div className="grid grid-cols-7 sm:grid-cols-14 gap-1.5">
+  1165→          {SKIN_TIMELINE.map((entry, idx) => (
+  1166→            <motion.div
+  1167→              key={entry.date}
+  1168→              initial={{ opacity: 0, scale: 0.8 }}
+  1169→              animate={{ opacity: 1, scale: 1 }}
+  1170→              transition={{ delay: idx * 0.03 }}
+  1171→              className="group relative"
+  1172→            >
+  1173→              <div className={cn(
+  1174→                'aspect-square rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-md',
+  1175→                CONDITION_META[entry.condition].bgColor
+  1176→              )}>
+  1177→                <span className="text-base sm:text-lg leading-none">{entry.emoji}</span>
+  1178→                <span className="text-[9px] font-semibold mt-0.5 text-muted-foreground">{entry.day}</span>
+  1179→              </div>
+  1180→              {/* Tooltip */}
+  1181→              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded-md bg-popover border text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-md">
+  1182→                {entry.date} · {entry.breakouts} breakouts
+  1183→              </div>
+  1184→            </motion.div>
+  1185→          ))}
+  1186→        </div>
+  1187→        <Separator className="my-4" />
+  1188→        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+  1189→          <span className="flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-emerald-500" /> Improving trend this month</span>
+  1190→          <span className="flex items-center gap-1.5"><Flame className="h-3.5 w-3.5 text-rose-500" /> Worst day: Day 7 (9 breakouts)</span>
+  1191→          <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-500" /> Best streak: 4 clear days</span>
+  1192→        </div>
+  1193→      </CardContent>
+  1194→    </Card>
+  1195→  )
+  1196→}
+  1197→
+  1198→// ─── Section: AI Skin Insights ──────────────────────────────────────────────
+  1199→
+  1200→function AISkinInsights() {
+  1201→  const { setActiveModule } = useAppStore()
+  1202→  return (
+  1203→    <div className="space-y-3">
+  1204→      <div className="flex items-center gap-2 mb-2">
+  1205→        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-rose-500 text-white">
+  1206→          <Brain className="h-4 w-4" />
+  1207→        </div>
+  1208→        <div>
+  1209→          <h3 className="text-sm font-semibold">AI Skin Insights</h3>
+  1210→          <p className="text-[11px] text-muted-foreground">Personalized patterns from your skin & cycle data</p>
+  1211→        </div>
+  1212→      </div>
+  1213→      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+  1214→        {AI_INSIGHTS.map((insight, idx) => (
+  1215→          <motion.div
+  1216→            key={insight.id}
+  1217→            initial={{ opacity: 0, y: 10 }}
+  1218→            animate={{ opacity: 1, y: 0 }}
+  1219→            transition={{ delay: idx * 0.08 }}
+  1220→          >
+  1221→            <Card className="h-full overflow-hidden hover:shadow-md transition-shadow">
+  1222→              <div className={cn('h-1 bg-gradient-to-r', insight.accent)} />
+  1223→              <CardHeader className="pb-2 pt-3">
+  1224→                <div className="flex items-start gap-3">
+  1225→                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br text-white shrink-0', insight.accent)}>
+  1226→                    <insight.icon className="h-4 w-4" />
+  1227→                  </div>
+  1228→                  <div className="flex-1 min-w-0">
+  1229→                    <div className="flex items-center gap-2">
+  1230→                      <CardTitle className="text-sm">{insight.title}</CardTitle>
+  1231→                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-muted/60">{insight.tag}</Badge>
+  1232→                    </div>
+  1233→                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400 mt-1 leading-snug">{insight.insight}</p>
+  1234→                  </div>
+  1235→                </div>
+  1236→              </CardHeader>
+  1237→              <CardContent className="pt-0 pb-3">
+  1238→                <p className="text-xs text-muted-foreground leading-relaxed">{insight.detail}</p>
+  1239→                {insight.id === 'pattern' && (
+  1240→                  <Button
+  1241→                    size="sm"
+  1242→                    variant="outline"
+  1243→                    className="mt-3 w-full border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+  1244→                    onClick={() => setActiveModule('doctors')}
+  1245→                  >
+  1246→                    <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
+  1247→                    Consult Dermatologist
+  1248→                    <ArrowRight className="h-3 w-3 ml-1.5" />
+  1249→                  </Button>
+  1250→                )}
+  1251→              </CardContent>
+  1252→            </Card>
+  1253→          </motion.div>
+  1254→        ))}
+  1255→      </div>
+  1256→    </div>
+  1257→  )
+  1258→}
+  1259→
+  1260→// ─── Section: Beauty Tips Articles ──────────────────────────────────────────
+  1261→
+  1262→function BeautyTips() {
+  1263→  return (
+  1264→    <div className="space-y-3">
+  1265→      <div className="flex items-center gap-2 mb-2">
+  1266→        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white">
+  1267→          <BookOpen className="h-4 w-4" />
+  1268→        </div>
+  1269→        <div>
+  1270→          <h3 className="text-sm font-semibold">Beauty Tips & Articles</h3>
+  1271→          <p className="text-[11px] text-muted-foreground">Expert-curated skincare knowledge</p>
+  1272→        </div>
+  1273→      </div>
+  1274→      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+  1275→        {BEAUTY_ARTICLES.map((article, idx) => (
+  1276→          <motion.div
+  1277→            key={article.id}
+  1278→            initial={{ opacity: 0, y: 10 }}
+  1279→            animate={{ opacity: 1, y: 0 }}
+  1280→            transition={{ delay: idx * 0.06 }}
+  1281→            whileHover={{ y: -3 }}
+  1282→          >
+  1283→            <Card className="h-full overflow-hidden cursor-pointer group hover:shadow-lg transition-shadow">
+  1284→              <div className={cn('h-24 bg-gradient-to-br flex items-center justify-center text-4xl', article.gradient)}>
+  1285→                {article.emoji}
+  1286→              </div>
+  1287→              <CardContent className="p-3.5">
+  1288→                <div className="flex items-center gap-2 mb-1.5">
+  1289→                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">{article.category}</Badge>
+  1290→                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+  1291→                    <Clock className="h-2.5 w-2.5" /> {article.readTime}
+  1292→                  </span>
+  1293→                </div>
+  1294→                <h4 className="text-sm font-semibold leading-tight group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">{article.title}</h4>
+  1295→                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{article.excerpt}</p>
+  1296→                <div className="flex items-center gap-1 mt-3 text-xs font-medium text-rose-600 dark:text-rose-400">
+  1297→                  Read more <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+  1298→                </div>
+  1299→              </CardContent>
+  1300→            </Card>
+  1301→          </motion.div>
+  1302→        ))}
+  1303→      </div>
+  1304→    </div>
+  1305→  )
+  1306→}
+  1307→
+  1308→// ─── Main Module ────────────────────────────────────────────────────────────
+  1309→
+  1310→export default function SkinBeautyModule() {
+  1311→  const [activeTab, setActiveTab] = useState('dashboard')
+  1312→
+  1313→  return (
+  1314→    <div className="space-y-5">
+  1315→      {/* Header */}
+  1316→      <motion.div
+  1317→        initial={{ opacity: 0, y: -10 }}
+  1318→        animate={{ opacity: 1, y: 0 }}
+  1319→        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+  1320→      >
+  1321→        <div className="flex items-center gap-3">
+  1322→          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-400 via-fuchsia-500 to-pink-500 text-white shadow-lg shadow-rose-500/30">
+  1323→            <Sparkles className="h-6 w-6" />
+  1324→          </div>
+  1325→          <div>
+  1326→            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-rose-500 via-fuchsia-500 to-purple-500 bg-clip-text text-transparent">
+  1327→              Skin & Beauty
+  1328→            </h1>
+  1329→            <p className="text-sm text-muted-foreground">Track hormonal acne, sync skincare with your cycle, and uncover your glow</p>
+  1330→          </div>
+  1331→        </div>
+  1332→        <Badge variant="secondary" className="self-start sm:self-auto bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 gap-1">
+  1333→          <Heart className="h-3 w-3" /> Cycle-Synced
+  1334→        </Badge>
+  1335→      </motion.div>
+  1336→
+  1337→      <Tabs value={activeTab} onValueChange={setActiveTab}>
+  1338→        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+  1339→          <TabsTrigger value="dashboard" className="text-xs sm:text-sm py-2">Dashboard</TabsTrigger>
+  1340→          <TabsTrigger value="log" className="text-xs sm:text-sm py-2">Daily Log</TabsTrigger>
+  1341→          <TabsTrigger value="cycle" className="text-xs sm:text-sm py-2">Cycle-Skin</TabsTrigger>
+  1342→          <TabsTrigger value="routine" className="text-xs sm:text-sm py-2">Routine</TabsTrigger>
+  1343→        </TabsList>
+  1344→
+  1345→        <TabsContent value="dashboard" className="mt-4 space-y-5">
+  1346→          <SkinScoreDashboard />
+  1347→          <SkinTimeline />
+  1348→          <AISkinInsights />
+  1349→          <BeautyTips />
+  1350→        </TabsContent>
+  1351→
+  1352→        <TabsContent value="log" className="mt-4">
+  1353→          <DailySkinLog />
+  1354→        </TabsContent>
+  1355→
+  1356→        <TabsContent value="cycle" className="mt-4">
+  1357→          <CycleSkinConnection />
+  1358→        </TabsContent>
+  1359→
+  1360→        <TabsContent value="routine" className="mt-4">
+  1361→          <SkincareRoutineBuilder />
+  1362→        </TabsContent>
+  1363→      </Tabs>
+  1364→    </div>
+  1365→  )
+  1366→}
+  1367→

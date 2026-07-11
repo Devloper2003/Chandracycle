@@ -1,0 +1,612 @@
+    65→  for (let d = 1; d <= cycleLength; d++) {
+    66→    let estrogen = 0
+    67→    let progesterone = 0
+    68→    let lh = 0
+    69→    let fsh = 0
+    70→    let phase = ''
+    71→
+    72→    if (d <= periodEnd) {
+    73→      phase = 'Menstrual'
+    74→      estrogen = 25
+    75→      progesterone = 8
+    76→      lh = 6
+    77→      fsh = 10
+    78→    } else if (d < ovulationDay - 1) {
+    79→      phase = 'Follicular'
+    80→      const progress = (d - periodEnd) / (ovulationDay - 1 - periodEnd)
+    81→      estrogen = 30 + progress * 110
+    82→      progesterone = 8
+    83→      lh = 6
+    84→      fsh = 10 + progress * 4
+    85→    } else if (d >= ovulationDay - 1 && d <= ovulationDay + 1) {
+    86→      phase = 'Ovulation'
+    87→      estrogen = 145
+    88→      progesterone = 15
+    89→      lh = d === ovulationDay ? 90 : d === ovulationDay - 1 ? 50 : 30
+    90→      fsh = 14
+    91→    } else {
+    92→      phase = 'Luteal'
+    93→      const lutealProgress = (d - (ovulationDay + 1)) / (cycleLength - ovulationDay - 1)
+    94→      estrogen = 130 - lutealProgress * 80
+    95→      progesterone = 15 + lutealProgress * 95 - (lutealProgress > 0.6 ? lutealProgress * 50 : 0)
+    96→      lh = 6
+    97→      fsh = 6
+    98→    }
+    99→
+   100→    data.push({
+   101→      day: d,
+   102→      phase,
+   103→      estrogen: Math.round(estrogen * 10) / 10,
+   104→      progesterone: Math.round(progesterone * 10) / 10,
+   105→      lh: Math.round(lh * 10) / 10,
+   106→      fsh: Math.round(fsh * 10) / 10,
+   107→    })
+   108→  }
+   109→  return data
+   110→}
+   111→
+   112→const phaseGradients: Record<string, { from: string; to: string; accent: string; bg: string }> = {
+   113→  Menstrual: { from: '#6b21a8', to: '#be185d', accent: '#a855f7', bg: 'from-purple-900/80 to-rose-900/80' },
+   114→  Follicular: { from: '#7c3aed', to: '#ec4899', accent: '#c084fc', bg: 'from-violet-800/80 to-pink-700/80' },
+   115→  Ovulation: { from: '#8b5cf6', to: '#f43f5e', accent: '#f472b6', bg: 'from-purple-700/80 to-rose-600/80' },
+   116→  Luteal: { from: '#6d28d9', to: '#db2777', accent: '#d946ef', bg: 'from-violet-900/80 to-fuchsia-800/80' },
+   117→}
+   118→
+   119→const phaseDescriptions: Record<string, { title: string; description: string; details: string }> = {
+   120→  Menstrual: {
+   121→    title: 'Menstrual Phase',
+   122→    description: 'Your body is shedding the uterine lining',
+   123→    details: 'Estrogen and progesterone are at their lowest. Your body is resetting for a new cycle. Energy may be lower — this is a time for rest and reflection.',
+   124→  },
+   125→  Follicular: {
+   126→    title: 'Follicular Phase',
+   127→    description: 'Estrogen is rising — energy and creativity surge',
+   128→    details: 'The pituitary releases FSH, stimulating follicle growth. Estrogen climbs steadily, boosting mood, energy, and cognitive function. This is your time to initiate and create.',
+   129→  },
+   130→  Ovulation: {
+   131→    title: 'Ovulation Phase',
+   132→    description: 'Peak estrogen & LH surge — you\'re at your most fertile',
+   133→    details: 'The LH surge triggers egg release. Estrogen peaks, making you feel confident, social, and vibrant. Your communication skills and energy are at their highest.',
+   134→  },
+   135→  Luteal: {
+   136→    title: 'Luteal Phase',
+   137→    description: 'Progesterone rises — your body prepares for potential pregnancy',
+   138→    details: 'Progesterone dominates, promoting calm and nesting behaviors. Estrogen has a secondary rise then falls. You may notice increased appetite, deeper intuition, and need for slower-paced activities.',
+   139→  },
+   140→}
+   141→
+   142→// Educational phase-based insights. These are general guidance, not user data.
+   143→const phaseInsights: { id: string; icon: typeof Activity; title: string; content: string }[] = [
+   144→  {
+   145→    id: 'body',
+   146→    icon: Activity,
+   147→    title: "What's Happening in Your Body",
+   148→    content:
+   149→      'Hormones shift across four phases — menstrual, follicular, ovulation, and luteal. Tracking symptoms against your cycle phase helps you understand which phase affects you most.',
+   150→  },
+   151→  {
+   152→    id: 'activities',
+   153→    icon: Sparkles,
+   154→    title: 'Best Activities for This Phase',
+   155→    content:
+   156→      'Match your activity to your hormone profile. High-estrogen phases (follicular/ovulation) suit intense workouts and social events. Progesterone-dominant luteal phase suits slower, reflective activities.',
+   157→  },
+   158→  {
+   159→    id: 'nutrition',
+   160→    icon: Salad,
+   161→    title: 'Nutrition Recommendations',
+   162→    content:
+   163→      'Support each phase with phase-appropriate foods: iron-rich foods during menstruation, zinc-rich foods around ovulation, complex carbs and B-vitamins in the luteal phase.',
+   164→  },
+   165→  {
+   166→    id: 'exercise',
+   167→    icon: Dumbbell,
+   168→    title: 'Exercise Suggestions',
+   169→    content:
+   170→      'In the follicular/ovulation phase, push for HIIT and strength training. In the luteal phase, favor yoga, walking, and lighter strength work. During menstruation, listen to your body and rest as needed.',
+   171→  },
+   172→  {
+   173→    id: 'selfcare',
+   174→    icon: HandHeart,
+   175→    title: 'Self-Care Tips',
+   176→    content:
+   177→      'Use your cycle as a roadmap. Lean into social energy when estrogen peaks; protect rest and recovery when progesterone dominates. Journaling symptoms daily helps you spot patterns.',
+   178→  },
+   179→]
+   180→
+   181→const symptomCategories = [
+   182→  { id: 'bloating', label: 'Bloating', icon: Droplets },
+   183→  { id: 'cramps', label: 'Cramps', icon: Waves },
+   184→  { id: 'headache', label: 'Headache', icon: Flame },
+   185→  { id: 'fatigue', label: 'Fatigue', icon: Battery },
+   186→  { id: 'mood-swings', label: 'Mood Swings', icon: CloudRain },
+   187→  { id: 'acne', label: 'Acne', icon: Sun },
+   188→  { id: 'cravings', label: 'Cravings', icon: Coffee },
+   189→  { id: 'insomnia', label: 'Insomnia', icon: Moon },
+   190→  { id: 'breast-tenderness', label: 'Breast Tenderness', icon: Heart },
+   191→  { id: 'anxiety', label: 'Anxiety', icon: Brain },
+   192→  { id: 'back-pain', label: 'Back Pain', icon: Activity },
+   193→  { id: 'hot-flashes', label: 'Hot Flashes', icon: ThermometerSun },
+   194→]
+   195→
+   196→// ─── ANIMATION VARIANTS ──────────────────────────────────────────────────────
+   197→
+   198→const containerVariants = {
+   199→  hidden: { opacity: 0 },
+   200→  visible: {
+   201→    opacity: 1,
+   202→    transition: { staggerChildren: 0.08 },
+   203→  },
+   204→}
+   205→
+   206→const itemVariants = {
+   207→  hidden: { opacity: 0, y: 20 },
+   208→  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+   209→}
+   210→
+   211→// ─── EMPTY STATE ─────────────────────────────────────────────────────────────
+   212→
+   213→function EmptyState({
+   214→  icon: Icon,
+   215→  title,
+   216→  description,
+   217→  ctaLabel,
+   218→  onCta,
+   219→}: {
+   220→  icon: typeof Activity
+   221→  title: string
+   222→  description: string
+   223→  ctaLabel?: string
+   224→  onCta?: () => void
+   225→}) {
+   226→  return (
+   227→    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+   228→      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-3">
+   229→        <Icon className="h-6 w-6 text-muted-foreground" />
+   230→      </div>
+   231→      <p className="text-sm font-medium text-foreground">{title}</p>
+   232→      <p className="text-xs text-muted-foreground mt-1 max-w-xs">{description}</p>
+   233→      {ctaLabel && onCta && (
+   234→        <Button size="sm" className="mt-4" onClick={onCta}>
+   235→          {ctaLabel}
+   236→        </Button>
+   237→      )}
+   238→    </div>
+   239→  )
+   240→}
+   241→
+   242→// ─── CUSTOM TOOLTIP ───────────────────────────────────────────────────────────
+   243→
+   244→function CustomChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+   245→  if (!active || !payload?.length) return null
+   246→  return (
+   247→    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-xl px-4 py-3 shadow-xl text-xs">
+   248→      <p className="font-semibold text-foreground mb-1.5">Day {label}</p>
+   249→      {payload.map((entry, i) => (
+   250→        <div key={i} className="flex items-center gap-2 py-0.5">
+   251→          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+   252→          <span className="text-muted-foreground">{entry.name}:</span>
+   253→          <span className="font-mono font-medium text-foreground">{entry.value}</span>
+   254→        </div>
+   255→      ))}
+   256→    </div>
+   257→  )
+   258→}
+   259→
+   260→// ─── Cycle data type ────────────────────────────────────────────────────────
+   261→
+   262→interface CycleEntry {
+   263→  id: string
+   264→  startDate: string
+   265→  endDate?: string | null
+   266→  cycleLength: number
+   267→  periodLength: number
+   268→  ovulationDate?: string | null
+   269→}
+   270→
+   271→function deriveCycleDay(startISO: string, cycleLength: number): number | null {
+   272→  const start = new Date(startISO)
+   273→  start.setHours(0, 0, 0, 0)
+   274→  const today = new Date()
+   275→  today.setHours(0, 0, 0, 0)
+   276→  const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+   277→  if (diff < 1) return null
+   278→  return ((diff - 1) % cycleLength) + 1
+   279→}
+   280→
+   281→function getPhaseForCycleDay(day: number, cycleLength: number): string {
+   282→  const ovulationDay = cycleLength - 14
+   283→  const periodEnd = Math.min(5, Math.floor(cycleLength / 5))
+   284→  if (day <= periodEnd) return 'Menstrual'
+   285→  if (day < ovulationDay - 1) return 'Follicular'
+   286→  if (day >= ovulationDay - 1 && day <= ovulationDay + 1) return 'Ovulation'
+   287→  return 'Luteal'
+   288→}
+   289→
+   290→// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+   291→
+   292→export default function HormoneModule() {
+   293→  const userProfile = useAppStore((s) => s.userProfile)
+   294→  const setActiveModule = useAppStore((s) => s.setActiveModule)
+   295→
+   296→  const [cycles, setCycles] = useState<CycleEntry[]>([])
+   297→  const [loading, setLoading] = useState(true)
+   298→
+   299→  useEffect(() => {
+   300→    if (!userProfile?.id) {
+   301→      setLoading(false)
+   302→      return
+   303→    }
+   304→    let cancelled = false
+   305→    fetch(`/api/cycles?userId=${encodeURIComponent(userProfile.id)}`)
+   306→      .then((r) => (r.ok ? r.json() : []))
+   307→      .then((data: CycleEntry[]) => {
+   308→        if (!cancelled) {
+   309→          setCycles(Array.isArray(data) ? data : [])
+   310→          setLoading(false)
+   311→        }
+   312→      })
+   313→      .catch(() => {
+   314→        if (!cancelled) setLoading(false)
+   315→      })
+   316→    return () => {
+   317→      cancelled = true
+   318→    }
+   319→  }, [userProfile?.id])
+   320→
+   321→  const cycleLength = cycles[0]?.cycleLength ?? userProfile?.cycleLength ?? DEFAULT_CYCLE_LENGTH
+   322→  const latestStart = cycles[0]?.startDate ?? userProfile?.lastPeriodStart
+   323→  const cycleDay = latestStart ? deriveCycleDay(latestStart, cycleLength) : null
+   324→  const currentPhase = cycleDay ? getPhaseForCycleDay(cycleDay, cycleLength) : null
+   325→  const phaseInfo = currentPhase ? phaseDescriptions[currentPhase] : null
+   326→  const gradient = currentPhase ? phaseGradients[currentPhase] : phaseGradients.Follicular
+   327→
+   328→  // Typical (educational) hormone curve — labeled as such, not the user's own readings
+   329→  const typicalCycleData = useMemo(() => generateTypicalCycleData(cycleLength), [cycleLength])
+   330→
+   331→  if (loading) {
+   332→    return (
+   333→      <div className="space-y-6 animate-pulse">
+   334→        <div className="h-32 bg-muted rounded-2xl" />
+   335→        <div className="h-80 bg-muted rounded-2xl" />
+   336→      </div>
+   337→    )
+   338→  }
+   339→
+   340→  return (
+   341→    <motion.div
+   342→      className="space-y-6"
+   343→      variants={containerVariants}
+   344→      initial="hidden"
+   345→      animate="visible"
+   346→    >
+   347→      {/* Section 1: Phase Banner */}
+   348→      <motion.div variants={itemVariants}>
+   349→        <div
+   350→          className="relative overflow-hidden rounded-2xl p-6 md:p-8"
+   351→          style={{ background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})` }}
+   352→        >
+   353→          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/5" />
+   354→          <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-white/5" />
+   355→          <div className="absolute left-1/2 -bottom-6 h-32 w-32 rounded-full bg-white/5" />
+   356→
+   357→          <div className="relative z-10">
+   358→            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+   359→              <div className="space-y-2">
+   360→                <div className="flex items-center gap-2">
+   361→                  <Flower2 className="h-5 w-5 text-white/80" />
+   362→                  <Badge variant="secondary" className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">
+   363→                    {cycleDay ? `Cycle Day ${cycleDay} of ${cycleLength}` : 'No cycle logged yet'}
+   364→                  </Badge>
+   365→                </div>
+   366→                <h2 className="text-2xl md:text-3xl font-bold text-white">
+   367→                  {phaseInfo ? phaseInfo.title : 'Welcome to Hormone Intelligence'}
+   368→                </h2>
+   369→                <p className="text-white/80 text-sm md:text-base max-w-xl">
+   370→                  {phaseInfo
+   371→                    ? phaseInfo.description
+   372→                    : 'Log your period in the Cycle Tracker to see your current hormone phase, predictions, and personalized insights.'}
+   373→                </p>
+   374→              </div>
+   375→              <div className="flex flex-col items-start md:items-end gap-2">
+   376→                {phaseInfo && (
+   377→                  <div className="text-right max-w-xs">
+   378→                    <p className="text-white/90 text-xs leading-relaxed">{phaseInfo.details}</p>
+   379→                  </div>
+   380→                )}
+   381→                {!latestStart && (
+   382→                  <Button
+   383→                    size="sm"
+   384→                    variant="secondary"
+   385→                    className="bg-white text-purple-700 hover:bg-white/90"
+   386→                    onClick={() => setActiveModule('period')}
+   387→                  >
+   388→                    <Plus className="h-4 w-4 mr-1" />
+   389→                    Log your period
+   390→                  </Button>
+   391→                )}
+   392→              </div>
+   393→            </div>
+   394→          </div>
+   395→        </div>
+   396→      </motion.div>
+   397→
+   398→      {/* Section 2: Hormone Trend Charts — educational typical curve */}
+   399→      <motion.div variants={itemVariants}>
+   400→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   401→          <CardHeader className="pb-2">
+   402→            <div className="flex items-center justify-between">
+   403→              <CardTitle className="flex items-center gap-2 text-lg">
+   404→                <TrendingUp className="h-5 w-5 text-purple-500" />
+   405→                Typical Hormone Pattern — {cycleLength}-Day Cycle
+   406→              </CardTitle>
+   407→              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs">
+   408→                Educational
+   409→              </Badge>
+   410→            </div>
+   411→          </CardHeader>
+   412→          <CardContent className="pt-0">
+   413→            <div className="w-full h-[320px] md:h-[380px]">
+   414→              <ResponsiveContainer width="100%" height="100%">
+   415→                <AreaChart data={typicalCycleData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+   416→                  <defs>
+   417→                    <linearGradient id="estrogenGradient" x1="0" y1="0" x2="0" y2="1">
+   418→                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+   419→                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+   420→                    </linearGradient>
+   421→                    <linearGradient id="progesteroneGradient" x1="0" y1="0" x2="0" y2="1">
+   422→                      <stop offset="5%" stopColor="#ec4899" stopOpacity={0.35} />
+   423→                      <stop offset="95%" stopColor="#ec4899" stopOpacity={0.02} />
+   424→                    </linearGradient>
+   425→                    <linearGradient id="lhGradient" x1="0" y1="0" x2="0" y2="1">
+   426→                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+   427→                      <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
+   428→                    </linearGradient>
+   429→                    <linearGradient id="fshGradient" x1="0" y1="0" x2="0" y2="1">
+   430→                      <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.3} />
+   431→                      <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.02} />
+   432→                    </linearGradient>
+   433→                  </defs>
+   434→                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+   435→                  <XAxis
+   436→                    dataKey="day"
+   437→                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+   438→                    tickLine={false}
+   439→                    axisLine={{ stroke: 'hsl(var(--border))' }}
+   440→                    tickFormatter={(value: number) => `D${value}`}
+   441→                  />
+   442→                  <YAxis
+   443→                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+   444→                    tickLine={false}
+   445→                    axisLine={false}
+   446→                  />
+   447→                  <Tooltip content={<CustomChartTooltip />} />
+   448→                  {cycleDay && (
+   449→                    <ReferenceLine
+   450→                      x={cycleDay}
+   451→                      stroke="#a855f7"
+   452→                      strokeWidth={2}
+   453→                      strokeDasharray="5 5"
+   454→                      label={{ value: 'Today', position: 'top', fill: '#a855f7', fontSize: 12, fontWeight: 600 }}
+   455→                    />
+   456→                  )}
+   457→                  <Area type="monotone" dataKey="estrogen" name="Estrogen" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#estrogenGradient)" dot={false} />
+   458→                  <Area type="monotone" dataKey="progesterone" name="Progesterone" stroke="#ec4899" strokeWidth={2.5} fill="url(#progesteroneGradient)" dot={false} />
+   459→                  <Area type="monotone" dataKey="lh" name="LH" stroke="#f97316" strokeWidth={2} fill="url(#lhGradient)" dot={false} />
+   460→                  <Area type="monotone" dataKey="fsh" name="FSH" stroke="#14b8a6" strokeWidth={2} fill="url(#fshGradient)" dot={false} />
+   461→                </AreaChart>
+   462→              </ResponsiveContainer>
+   463→            </div>
+   464→
+   465→            <div className="flex items-center justify-center gap-4 md:gap-8 mt-3 flex-wrap">
+   466→              {['Menstrual', 'Follicular', 'Ovulation', 'Luteal'].map((phase) => (
+   467→                <div key={phase} className="flex items-center gap-1.5">
+   468→                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: phaseGradients[phase].accent }} />
+   469→                  <span className="text-xs text-muted-foreground">{phase}</span>
+   470→                </div>
+   471→              ))}
+   472→            </div>
+   473→            <p className="text-[11px] text-muted-foreground mt-3 text-center max-w-2xl mx-auto">
+   474→              This curve shows a typical textbook hormone pattern for a {cycleLength}-day cycle — it is not your personal data. Your real hormone readings will appear once you have lab results or BBT data logged.
+   475→            </p>
+   476→          </CardContent>
+   477→        </Card>
+   478→      </motion.div>
+   479→
+   480→      {/* Section 3: AI Predictions — empty state until user logs data */}
+   481→      <motion.div variants={itemVariants}>
+   482→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   483→          <CardHeader className="pb-3">
+   484→            <CardTitle className="flex items-center gap-2 text-lg">
+   485→              <Sparkles className="h-5 w-5 text-purple-500" />
+   486→              AI Predictions — Next 7 Days
+   487→            </CardTitle>
+   488→          </CardHeader>
+   489→          <CardContent>
+   490→            <EmptyState
+   491→              icon={Sparkles}
+   492→              title="Personalized predictions coming soon"
+   493→              description="Log a couple of cycles, moods, and symptoms — ChandraCycle will then forecast your mood, energy, sleep, stress, productivity, and cravings for the coming week."
+   494→              ctaLabel="Start tracking"
+   495→              onCta={() => setActiveModule('period')}
+   496→            />
+   497→          </CardContent>
+   498→        </Card>
+   499→      </motion.div>
+   500→
+   501→      {/* Section 4: Phase-Based Insights (educational content) */}
+   502→      <motion.div variants={itemVariants}>
+   503→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   504→          <CardHeader className="pb-3">
+   505→            <CardTitle className="flex items-center gap-2 text-lg">
+   506→              <Leaf className="h-5 w-5 text-emerald-500" />
+   507→              Phase-Based Insights {currentPhase ? `— ${currentPhase} Phase` : ''}
+   508→            </CardTitle>
+   509→          </CardHeader>
+   510→          <CardContent>
+   511→            <Accordion type="single" collapsible className="w-full">
+   512→              {phaseInsights.map((insight, index) => (
+   513→                <AccordionItem key={insight.id} value={insight.id} className="border-border/50">
+   514→                  <AccordionTrigger className="hover:no-underline py-3">
+   515→                    <div className="flex items-center gap-3">
+   516→                      <div
+   517→                        className="h-8 w-8 rounded-lg flex items-center justify-center"
+   518→                        style={{
+   519→                          background: `linear-gradient(135deg, ${gradient.from}20, ${gradient.to}20)`,
+   520→                        }}
+   521→                      >
+   522→                        <insight.icon className="h-4 w-4" style={{ color: gradient.accent }} />
+   523→                      </div>
+   524→                      <span className="text-sm font-medium text-foreground">{insight.title}</span>
+   525→                      {index === 0 && (
+   526→                        <Badge variant="secondary" className="bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300 text-[10px] px-1.5">
+   527→                          Key
+   528→                        </Badge>
+   529→                      )}
+   530→                    </div>
+   531→                  </AccordionTrigger>
+   532→                  <AccordionContent>
+   533→                    <div className="pl-11 pr-2">
+   534→                      <p className="text-sm text-muted-foreground leading-relaxed">{insight.content}</p>
+   535→                    </div>
+   536→                  </AccordionContent>
+   537→                </AccordionItem>
+   538→              ))}
+   539→            </Accordion>
+   540→          </CardContent>
+   541→        </Card>
+   542→      </motion.div>
+   543→
+   544→      {/* Section 5: Hormone Symptom Log — actually saves via API */}
+   545→      <HormoneLog userId={userProfile?.id} />
+   546→    </motion.div>
+   547→  )
+   548→}
+   549→
+   550→// ─── SECTION: HORMONE LOG ────────────────────────────────────────────────────
+   551→
+   552→function HormoneLog({ userId }: { userId: string | undefined }) {
+   553→  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([])
+   554→  const [notes, setNotes] = useState('')
+   555→  const [saved, setSaved] = useState(false)
+   556→  const [saving, setSaving] = useState(false)
+   557→
+   558→  const toggleSymptom = (id: string) => {
+   559→    setSelectedSymptoms((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]))
+   560→    setSaved(false)
+   561→  }
+   562→
+   563→  const handleSave = async () => {
+   564→    if (!userId) return
+   565→    setSaving(true)
+   566→    try {
+   567→      const today = new Date().toISOString().split('T')[0]
+   568→      await Promise.all(
+   569→        selectedSymptoms.map((category) =>
+   570→          fetch('/api/symptoms', {
+   571→            method: 'POST',
+   572→            headers: { 'Content-Type': 'application/json' },
+   573→            body: JSON.stringify({ userId, category, severity: 3, date: today, notes: notes || undefined }),
+   574→          })
+   575→        )
+   576→      )
+   577→      setSaved(true)
+   578→      setTimeout(() => {
+   579→        setSaved(false)
+   580→        setSelectedSymptoms([])
+   581→        setNotes('')
+   582→      }, 2500)
+   583→    } finally {
+   584→      setSaving(false)
+   585→    }
+   586→  }
+   587→
+   588→  return (
+   589→    <motion.div variants={itemVariants}>
+   590→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   591→        <CardHeader className="pb-3">
+   592→          <CardTitle className="flex items-center gap-2 text-lg">
+   593→            <Activity className="h-5 w-5 text-purple-500" />
+   594→            Hormone Symptom Log
+   595→          </CardTitle>
+   596→          <p className="text-xs text-muted-foreground">Track symptoms that correlate with your hormonal changes</p>
+   597→        </CardHeader>
+   598→        <CardContent className="space-y-4">
+   599→          <div className="space-y-1.5">
+   600→            <span className="text-xs font-medium text-muted-foreground">Select symptoms you&apos;re experiencing</span>
+   601→            <div className="flex flex-wrap gap-2">
+   602→              {symptomCategories.map((symptom) => {
+   603→                const isSelected = selectedSymptoms.includes(symptom.id)
+   604→                return (
+   605→                  <motion.button
+   606→                    key={symptom.id}
+   607→                    whileTap={{ scale: 0.95 }}
+   608→                    onClick={() => toggleSymptom(symptom.id)}
+   609→                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 border ${
+   610→                      isSelected
+   611→                        ? 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/40 dark:border-purple-700 dark:text-purple-300 shadow-sm'
+   612→                        : 'bg-background border-border/50 text-muted-foreground hover:border-purple-300 hover:text-purple-600 dark:hover:border-purple-700 dark:hover:text-purple-400'
+   613→                    }`}
+   614→                  >
+   615→                    <symptom.icon className="h-3 w-3" />
+   616→                    {symptom.label}
+   617→                    {isSelected && <CheckCircle2 className="h-3 w-3" />}
+   618→                  </motion.button>
+   619→                )
+   620→              })}
+   621→            </div>
+   622→          </div>
+   623→
+   624→          <div className="space-y-1.5">
+   625→            <span className="text-xs font-medium text-muted-foreground">Additional notes</span>
+   626→            <textarea
+   627→              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 resize-none transition-all"
+   628→              rows={3}
+   629→              placeholder="Describe how you're feeling, any patterns you notice..."
+   630→              value={notes}
+   631→              onChange={(e) => {
+   632→                setNotes(e.target.value)
+   633→                setSaved(false)
+   634→              }}
+   635→            />
+   636→          </div>
+   637→
+   638→          <div className="flex items-center gap-3">
+   639→            <Button
+   640→              onClick={handleSave}
+   641→              disabled={saving || !userId || (selectedSymptoms.length === 0 && !notes)}
+   642→              className="bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-700 hover:to-rose-700 text-white shadow-lg shadow-purple-500/20 transition-all duration-200"
+   643→            >
+   644→              {saved ? (
+   645→                <>
+   646→                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+   647→                  Saved!
+   648→                </>
+   649→              ) : (
+   650→                <>
+   651→                  <Sparkles className="h-4 w-4 mr-1.5" />
+   652→                  Log Symptoms
+   653→                </>
+   654→              )}
+   655→            </Button>
+   656→            {saved && (
+   657→              <motion.p
+   658→                initial={{ opacity: 0, x: -10 }}
+   659→                animate={{ opacity: 1, x: 0 }}
+   660→                className="text-xs text-emerald-600 dark:text-emerald-400"
+   661→              >
+   662→                Symptoms logged successfully — AI will correlate with your hormone data
+   663→              </motion.p>
+   664→            )}
+   665→            {selectedSymptoms.length > 0 && (
+   666→              <span className="text-xs text-muted-foreground">
+   667→                {selectedSymptoms.length} symptom{selectedSymptoms.length !== 1 ? 's' : ''} selected
+   668→              </span>
+   669→            )}
+   670→          </div>
+   671→        </CardContent>
+   672→      </Card>
+   673→    </motion.div>
+   674→  )
+   675→}
+   676→

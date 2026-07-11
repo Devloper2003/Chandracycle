@@ -1,0 +1,1020 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useMemo, useEffect } from 'react'
+     4→import { motion } from 'framer-motion'
+     5→import {
+     6→  Baby,
+     7→  Thermometer,
+     8→  CalendarDays,
+     9→  Sparkles,
+    10→  Heart,
+    11→  Clock,
+    12→  Droplets,
+    13→  ChevronDown,
+    14→  ChevronRight,
+    15→  Check,
+    16→  Save,
+    17→  Activity,
+    18→  Info,
+    19→  Star,
+    20→  Zap,
+    21→  Target,
+    22→  CircleDot,
+    23→  Flame,
+    24→  Leaf,
+    25→  Plus,
+    26→} from 'lucide-react'
+    27→import {
+    28→  Card,
+    29→  CardContent,
+    30→  CardHeader,
+    31→  CardTitle,
+    32→  CardDescription,
+    33→} from '@/components/ui/card'
+    34→import { Badge } from '@/components/ui/badge'
+    35→import { Button } from '@/components/ui/button'
+    36→import { Input } from '@/components/ui/input'
+    37→import { Label } from '@/components/ui/label'
+    38→import { Textarea } from '@/components/ui/textarea'
+    39→import { Checkbox } from '@/components/ui/checkbox'
+    40→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    41→import {
+    42→  ComposedChart,
+    43→  Line,
+    44→  Area,
+    45→  XAxis,
+    46→  YAxis,
+    47→  CartesianGrid,
+    48→  Tooltip,
+    49→  ResponsiveContainer,
+    50→  ReferenceLine,
+    51→} from 'recharts'
+    52→import { useAppStore } from '@/lib/store'
+    53→
+    54→// ─── Configuration (kept — educational content) ─────────────────────────────
+    55→
+    56→const DEFAULT_CYCLE_LENGTH = 28
+    57→
+    58→type FertilityLevel = 'low' | 'medium' | 'high' | 'peak'
+    59→
+    60→type CervicalMucus = 'Dry' | 'Sticky' | 'Creamy' | 'Watery' | 'Egg-white'
+    61→type OPKResult = 'Positive' | 'Negative' | null
+    62→
+    63→const MUCUS_OPTIONS: CervicalMucus[] = ['Dry', 'Sticky', 'Creamy', 'Watery', 'Egg-white']
+    64→
+    65→const CONCEPTION_PHASES = [
+    66→  {
+    67→    id: 'before',
+    68→    title: 'Before Ovulation',
+    69→    subtitle: 'Days 8-13',
+    70→    icon: Leaf,
+    71→    color: 'text-amber-500',
+    72→    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+    73→    borderColor: 'border-amber-200 dark:border-amber-800',
+    74→    tips: [
+    75→      'Begin tracking cervical mucus daily',
+    76→      'Measure BBT every morning before getting up',
+    77→      'Start OPK testing from cycle day 10',
+    78→      'Maintain a healthy diet rich in folic acid',
+    79→      'Consider prenatal vitamins with DHA',
+    80→    ],
+    81→  },
+    82→  {
+    83→    id: 'ovulation',
+    84→    title: 'Ovulation Day',
+    85→    subtitle: 'Day 14',
+    86→    icon: Target,
+    87→    color: 'text-orange-600',
+    88→    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+    89→    borderColor: 'border-orange-200 dark:border-orange-800',
+    90→    tips: [
+    91→      'This is your most fertile day — prioritize intercourse',
+    92→      'Egg-white cervical mucus indicates peak fertility',
+    93→      'Positive OPK confirms LH surge',
+    94→      'The egg lives 12-24 hours after release',
+    95→      'Intercourse every 24-48 hours maximizes chances',
+    96→    ],
+    97→  },
+    98→  {
+    99→    id: 'after',
+   100→    title: 'After Ovulation',
+   101→    subtitle: 'Days 15-28',
+   102→    icon: Heart,
+   103→    color: 'text-rose-500',
+   104→    bgColor: 'bg-rose-50 dark:bg-rose-950/30',
+   105→    borderColor: 'border-rose-200 dark:border-rose-800',
+   106→    tips: [
+   107→      'BBT should remain elevated if conception occurred',
+   108→      'Avoid stress — cortisol can affect implantation',
+   109→      'Continue light exercise and healthy eating',
+   110→      'Wait at least 10 days post-ovulation to test',
+   111→      'Watch for early signs: mild cramping, fatigue',
+   112→    ],
+   113→  },
+   114→]
+   115→
+   116→// ─── Helper Functions ──────────────────────────────────────────────
+   117→
+   118→function getLevelColor(level: FertilityLevel): string {
+   119→  switch (level) {
+   120→    case 'peak':
+   121→      return 'bg-red-400 text-white'
+   122→    case 'high':
+   123→      return 'bg-orange-400 text-white'
+   124→    case 'medium':
+   125→      return 'bg-amber-200 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'
+   126→    case 'low':
+   127→      return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+   128→  }
+   129→}
+   130→
+   131→// Compute the fertility level for a given cycle day
+   132→function getLevelForCycleDay(day: number, ovulationDay: number, fertileStart: number, fertileEnd: number): FertilityLevel {
+   133→  if (day === ovulationDay) return 'peak'
+   134→  if (day >= fertileStart && day <= fertileEnd) {
+   135→    if (day === ovulationDay - 1 || day === ovulationDay + 1) return 'high'
+   136→    if (day === fertileStart || day === fertileEnd) return 'medium'
+   137→    return 'high'
+   138→  }
+   139→  if (day >= ovulationDay - 3 && day < fertileStart) return 'medium'
+   140→  if (day > fertileEnd && day <= fertileEnd + 2) return 'medium'
+   141→  return 'low'
+   142→}
+   143→
+   144→// ─── Animation Variants ────────────────────────────────────────────
+   145→
+   146→const containerVariants = {
+   147→  hidden: { opacity: 0 },
+   148→  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+   149→}
+   150→
+   151→const itemVariants = {
+   152→  hidden: { opacity: 0, y: 20 },
+   153→  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+   154→}
+   155→
+   156→// ─── Empty State ──────────────────────────────────────────────────
+   157→
+   158→function EmptyState({
+   159→  icon: Icon,
+   160→  title,
+   161→  description,
+   162→  ctaLabel,
+   163→  onCta,
+   164→}: {
+   165→  icon: typeof Activity
+   166→  title: string
+   167→  description: string
+   168→  ctaLabel?: string
+   169→  onCta?: () => void
+   170→}) {
+   171→  return (
+   172→    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+   173→      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-3">
+   174→        <Icon className="h-6 w-6 text-muted-foreground" />
+   175→      </div>
+   176→      <p className="text-sm font-medium text-foreground">{title}</p>
+   177→      <p className="text-xs text-muted-foreground mt-1 max-w-xs">{description}</p>
+   178→      {ctaLabel && onCta && (
+   179→        <Button size="sm" className="mt-4" onClick={onCta}>
+   180→          {ctaLabel}
+   181→        </Button>
+   182→      )}
+   183→    </div>
+   184→  )
+   185→}
+   186→
+   187→// ─── Cycle / Fertility data types ──────────────────────────────────
+   188→
+   189→interface CycleEntry {
+   190→  id: string
+   191→  startDate: string
+   192→  cycleLength: number
+   193→  periodLength: number
+   194→  ovulationDate?: string | null
+   195→  fertilityWindowStart?: string | null
+   196→  fertilityWindowEnd?: string | null
+   197→}
+   198→
+   199→interface FertilityEntry {
+   200→  id: string
+   201→  date: string
+   202→  basalTemp?: number | null
+   203→  cervicalMucus?: string | null
+   204→  opkResult?: string | null
+   205→  intercourse?: boolean
+   206→  fertilityScore?: number
+   207→  ovulationConfirmed?: boolean
+   208→  notes?: string | null
+   209→}
+   210→
+   211→function deriveCycleDay(startISO: string, cycleLength: number): number | null {
+   212→  const start = new Date(startISO)
+   213→  start.setHours(0, 0, 0, 0)
+   214→  const today = new Date()
+   215→  today.setHours(0, 0, 0, 0)
+   216→  const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+   217→  if (diff < 1) return null
+   218→  return ((diff - 1) % cycleLength) + 1
+   219→}
+   220→
+   221→// ─── Sub-Components ────────────────────────────────────────────────
+   222→
+   223→function FertilityScoreHero({
+   224→  cycleDay,
+   225→  cycleLength,
+   226→  ovulationDay,
+   227→  fertileStart,
+   228→  fertileEnd,
+   229→  latestFertilityScore,
+   230→  hasCycle,
+   231→  onLogPeriod,
+   232→}: {
+   233→  cycleDay: number | null
+   234→  cycleLength: number
+   235→  ovulationDay: number
+   236→  fertileStart: number
+   237→  fertileEnd: number
+   238→  latestFertilityScore: number | null
+   239→  hasCycle: boolean
+   240→  onLogPeriod: () => void
+   241→}) {
+   242→  if (!hasCycle) {
+   243→    return (
+   244→      <motion.div variants={itemVariants}>
+   245→        <Card className="border-0 bg-gradient-to-br from-orange-50 via-white to-amber-50 dark:from-orange-950/20 dark:via-card dark:to-amber-950/20 shadow-lg overflow-hidden">
+   246→          <CardHeader className="pb-2">
+   247→            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   248→              <Baby className="h-5 w-5" />
+   249→              Fertility Score
+   250→            </CardTitle>
+   251→            <CardDescription>Your daily fertility assessment based on multiple signals</CardDescription>
+   252→          </CardHeader>
+   253→          <CardContent>
+   254→            <EmptyState
+   255→              icon={Baby}
+   256→              title="No cycle logged yet"
+   257→              description="Log your period start date to unlock your fertility score, ovulation predictions, and fertile window calculations."
+   258→              ctaLabel="Log your period"
+   259→              onCta={onLogPeriod}
+   260→            />
+   261→          </CardContent>
+   262→        </Card>
+   263→      </motion.div>
+   264→    )
+   265→  }
+   266→
+   267→  // Compute a fertility score for today based on cycle day position relative to ovulation
+   268→  const day = cycleDay ?? 1
+   269→  const daysToOvulation = ovulationDay - day
+   270→  const inFertileWindow = day >= fertileStart && day <= fertileEnd
+   271→  let score: number
+   272→  if (day === ovulationDay) score = 95
+   273→  else if (inFertileWindow) score = 70
+   274→  else if (Math.abs(daysToOvulation) <= 3) score = 45
+   275→  else score = 20
+   276→  // Override with the user's latest fertility log if available
+   277→  if (latestFertilityScore !== null) score = latestFertilityScore
+   278→
+   279→  const scoreColor = score >= 85 ? '#22c55e' : score >= 60 ? '#f97316' : score >= 30 ? '#f59e0b' : '#ef4444'
+   280→  const scoreLabel = score >= 85 ? 'Excellent' : score >= 60 ? 'Good' : score >= 30 ? 'Fair' : 'Low'
+   281→  const fertileDaysCount = fertileEnd - fertileStart + 1
+   282→
+   283→  const radius = 70
+   284→  const stroke = 10
+   285→  const normalizedRadius = radius - stroke / 2
+   286→  const circumference = normalizedRadius * 2 * Math.PI
+   287→  const strokeDashoffset = circumference - (score / 100) * circumference
+   288→
+   289→  return (
+   290→    <motion.div variants={itemVariants}>
+   291→      <Card className="border-0 bg-gradient-to-br from-orange-50 via-white to-amber-50 dark:from-orange-950/20 dark:via-card dark:to-amber-950/20 shadow-lg overflow-hidden">
+   292→        <CardHeader className="pb-2">
+   293→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   294→            <Baby className="h-5 w-5" />
+   295→            Fertility Score
+   296→          </CardTitle>
+   297→          <CardDescription>Your daily fertility assessment based on cycle position and logged signals</CardDescription>
+   298→        </CardHeader>
+   299→        <CardContent>
+   300→          <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
+   301→            <div className="relative flex-shrink-0">
+   302→              <svg height={radius * 2} width={radius * 2} className="transform -rotate-90">
+   303→                <circle stroke="currentColor" className="text-gray-200 dark:text-gray-700" fill="transparent" strokeWidth={stroke} r={normalizedRadius} cx={radius} cy={radius} />
+   304→                <motion.circle
+   305→                  stroke={scoreColor}
+   306→                  fill="transparent"
+   307→                  strokeWidth={stroke}
+   308→                  strokeLinecap="round"
+   309→                  strokeDasharray={`${circumference} ${circumference}`}
+   310→                  initial={{ strokeDashoffset: circumference }}
+   311→                  animate={{ strokeDashoffset }}
+   312→                  transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+   313→                  r={normalizedRadius}
+   314→                  cx={radius}
+   315→                  cy={radius}
+   316→                />
+   317→              </svg>
+   318→              <div className="absolute inset-0 flex flex-col items-center justify-center">
+   319→                <motion.span
+   320→                  className="text-4xl font-bold"
+   321→                  style={{ color: scoreColor }}
+   322→                  initial={{ opacity: 0, scale: 0.5 }}
+   323→                  animate={{ opacity: 1, scale: 1 }}
+   324→                  transition={{ duration: 0.6, delay: 0.8 }}
+   325→                >
+   326→                  {score}
+   327→                </motion.span>
+   328→                <span className="text-xs text-muted-foreground font-medium mt-0.5">out of 100</span>
+   329→              </div>
+   330→            </div>
+   331→
+   332→            <div className="flex-1 grid grid-cols-1 gap-4 w-full">
+   333→              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm border border-orange-100 dark:border-orange-900/30">
+   334→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/40">
+   335→                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+   336→                </div>
+   337→                <div>
+   338→                  <p className="text-xs text-muted-foreground">Days to Ovulation</p>
+   339→                  <p className="text-xl font-bold text-orange-700 dark:text-orange-400">
+   340→                    {daysToOvulation >= 0 ? daysToOvulation : cycleLength + daysToOvulation}
+   341→                  </p>
+   342→                </div>
+   343→              </div>
+   344→              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm border border-amber-100 dark:border-amber-900/30">
+   345→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+   346→                  <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+   347→                </div>
+   348→                <div>
+   349→                  <p className="text-xs text-muted-foreground">Fertile Days This Cycle</p>
+   350→                  <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{fertileDaysCount}</p>
+   351→                </div>
+   352→              </div>
+   353→              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm border border-green-100 dark:border-green-900/30">
+   354→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+   355→                  <Sparkles className="h-5 w-5 text-green-600 dark:text-green-400" />
+   356→                </div>
+   357→                <div>
+   358→                  <p className="text-xs text-muted-foreground">Fertility Status</p>
+   359→                  <div className="flex items-center gap-2">
+   360→                    <p className="text-xl font-bold text-green-700 dark:text-green-400">{scoreLabel}</p>
+   361→                    <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+   362→                      {inFertileWindow ? 'In Window' : 'Off Window'}
+   363→                    </Badge>
+   364→                  </div>
+   365→                </div>
+   366→              </div>
+   367→            </div>
+   368→          </div>
+   369→
+   370→          <div className="flex flex-wrap items-center gap-3 mt-5 pt-4 border-t border-orange-100 dark:border-orange-900/30">
+   371→            <span className="text-xs text-muted-foreground mr-1">Score Zones:</span>
+   372→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-red-500" /><span className="text-xs text-muted-foreground">0-30</span></div>
+   373→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-amber-500" /><span className="text-xs text-muted-foreground">30-60</span></div>
+   374→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-orange-500" /><span className="text-xs text-muted-foreground">60-85</span></div>
+   375→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-green-500" /><span className="text-xs text-muted-foreground">85-100</span></div>
+   376→          </div>
+   377→        </CardContent>
+   378→      </Card>
+   379→    </motion.div>
+   380→  )
+   381→}
+   382→
+   383→function OvulationCalendar({
+   384→  cycleDay,
+   385→  cycleLength,
+   386→  ovulationDay,
+   387→  fertileStart,
+   388→  fertileEnd,
+   389→}: {
+   390→  cycleDay: number | null
+   391→  cycleLength: number
+   392→  ovulationDay: number
+   393→  fertileStart: number
+   394→  fertileEnd: number
+   395→}) {
+   396→  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+   397→
+   398→  const cycleData = useMemo(() => {
+   399→    return Array.from({ length: cycleLength }, (_, i) => {
+   400→      const day = i + 1
+   401→      return {
+   402→        day,
+   403→        level: getLevelForCycleDay(day, ovulationDay, fertileStart, fertileEnd),
+   404→        isOvulation: day === ovulationDay,
+   405→        isCurrent: day === cycleDay,
+   406→        isFertileWindow: day >= fertileStart && day <= fertileEnd,
+   407→      }
+   408→    })
+   409→  }, [cycleLength, ovulationDay, fertileStart, fertileEnd, cycleDay])
+   410→
+   411→  // Pad to a multiple of 7 for grid
+   412→  const padded = useMemo(() => {
+   413→    const paddedArr = [...cycleData]
+   414→    while (paddedArr.length % 7 !== 0) paddedArr.push(null as unknown as (typeof cycleData)[0])
+   415→    return paddedArr
+   416→  }, [cycleData])
+   417→
+   418→  const rows = useMemo(() => {
+   419→    const result: (typeof cycleData)[number][][] = []
+   420→    for (let i = 0; i < padded.length; i += 7) {
+   421→      result.push(padded.slice(i, i + 7) as (typeof cycleData)[number][])
+   422→    }
+   423→    return result
+   424→  }, [padded])
+   425→
+   426→  return (
+   427→    <motion.div variants={itemVariants}>
+   428→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   429→        <CardHeader className="pb-2">
+   430→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   431→            <CalendarDays className="h-5 w-5" />
+   432→            Ovulation Calendar
+   433→          </CardTitle>
+   434→          <CardDescription>
+   435→            {cycleLength}-day cycle view{cycleDay ? ` — Day ${cycleDay} of ${cycleLength}` : ''}
+   436→          </CardDescription>
+   437→        </CardHeader>
+   438→        <CardContent>
+   439→          <div className="grid grid-cols-7 gap-1 mb-1">
+   440→            {weekDays.map((d) => (
+   441→              <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">
+   442→                {d}
+   443→              </div>
+   444→            ))}
+   445→          </div>
+   446→          <div className="space-y-1">
+   447→            {rows.map((row, rowIndex) => (
+   448→              <div key={rowIndex} className="grid grid-cols-7 gap-1">
+   449→                {row.map((dayData, idx) =>
+   450→                  dayData ? (
+   451→                    <motion.div
+   452→                      key={dayData.day}
+   453→                      initial={{ opacity: 0, scale: 0.8 }}
+   454→                      animate={{ opacity: 1, scale: 1 }}
+   455→                      transition={{ duration: 0.3, delay: rowIndex * 0.1 + (idx * 0.03) }}
+   456→                      className={`relative flex flex-col items-center justify-center py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-default ${getLevelColor(
+   457→                        dayData.level
+   458→                      )} ${dayData.isCurrent ? 'ring-2 ring-orange-500 ring-offset-2 dark:ring-offset-gray-900' : ''} hover:scale-105 hover:shadow-md`}
+   459→                    >
+   460→                      <span className="text-xs">{dayData.day}</span>
+   461→                      {dayData.isOvulation && (
+   462→                        <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[8px] bg-red-500 text-white border-0">
+   463→                          O
+   464→                        </Badge>
+   465→                      )}
+   466→                      {dayData.isCurrent && (
+   467→                        <div className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-orange-500" />
+   468→                      )}
+   469→                    </motion.div>
+   470→                  ) : (
+   471→                    <div key={`empty-${rowIndex}-${idx}`} />
+   472→                  )
+   473→                )}
+   474→              </div>
+   475→            ))}
+   476→          </div>
+   477→
+   478→          <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-orange-100 dark:border-orange-900/30">
+   479→            <span className="text-xs text-muted-foreground mr-1">Fertility Level:</span>
+   480→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800" /><span className="text-xs text-muted-foreground">Low</span></div>
+   481→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-amber-200 dark:bg-amber-900/50" /><span className="text-xs text-muted-foreground">Medium</span></div>
+   482→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-orange-400" /><span className="text-xs text-muted-foreground">High</span></div>
+   483→            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-red-400" /><span className="text-xs text-muted-foreground">Peak</span></div>
+   484→            <div className="flex items-center gap-1.5 ml-2"><div className="w-3 h-3 rounded-sm border-2 border-orange-500" /><span className="text-xs text-muted-foreground">Today</span></div>
+   485→            <div className="flex items-center gap-1.5"><Badge className="h-4 min-w-4 px-1 text-[8px] bg-red-500 text-white border-0">O</Badge><span className="text-xs text-muted-foreground">Ovulation</span></div>
+   486→          </div>
+   487→        </CardContent>
+   488→      </Card>
+   489→    </motion.div>
+   490→  )
+   491→}
+   492→
+   493→function BBTChart({ fertilityEntries }: { fertilityEntries: FertilityEntry[] }) {
+   494→  const bbtData = useMemo(
+   495→    () =>
+   496→      fertilityEntries
+   497→        .filter((e) => e.basalTemp !== null && e.basalTemp !== undefined)
+   498→        .slice(0, 30)
+   499→        .reverse()
+   500→        .map((e) => ({
+   501→          day: new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+   502→          bbt: e.basalTemp as number,
+   503→        })),
+   504→    [fertilityEntries]
+   505→  )
+   506→
+   507→  return (
+   508→    <motion.div variants={itemVariants}>
+   509→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   510→        <CardHeader className="pb-2">
+   511→          <div className="flex items-center justify-between flex-wrap gap-2">
+   512→            <div>
+   513→              <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   514→                <Thermometer className="h-5 w-5" />
+   515→                BBT &amp; Ovulation Chart
+   516→              </CardTitle>
+   517→              <CardDescription>Basal body temperature pattern across your cycle</CardDescription>
+   518→            </div>
+   519→            <Badge variant="outline" className="text-xs border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+   520→              <Droplets className="h-3 w-3 mr-1" />
+   521→              Fertile Window
+   522→            </Badge>
+   523→          </div>
+   524→        </CardHeader>
+   525→        <CardContent>
+   526→          {bbtData.length === 0 ? (
+   527→            <EmptyState
+   528→              icon={Thermometer}
+   529→              title="No BBT readings yet"
+   530→              description="Log your basal body temperature daily using the Fertility Logging form to visualize your ovulation pattern here."
+   531→            />
+   532→          ) : (
+   533→            <div className="h-[300px] w-full">
+   534→              <ResponsiveContainer width="100%" height="100%">
+   535→                <ComposedChart data={bbtData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+   536→                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   537→                  <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={2} className="text-muted-foreground" />
+   538→                  <YAxis domain={[96.5, 98.5]} tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}°F`} className="text-muted-foreground" />
+   539→                  <Tooltip
+   540→                    contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid #f97316', borderRadius: '8px', fontSize: '12px' }}
+   541→                    formatter={(value: number) => [`${value}°F`, 'BBT']}
+   542→                    labelFormatter={(label: string) => `${label}`}
+   543→                  />
+   544→                  <Line
+   545→                    type="monotone"
+   546→                    dataKey="bbt"
+   547→                    stroke="#f97316"
+   548→                    strokeWidth={2.5}
+   549→                    dot={{ r: 3, fill: '#f97316', stroke: '#fff', strokeWidth: 1.5 }}
+   550→                    activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}
+   551→                    name="BBT"
+   552→                  />
+   553→                </ComposedChart>
+   554→              </ResponsiveContainer>
+   555→            </div>
+   556→          )}
+   557→          <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-orange-100 dark:border-orange-900/30">
+   558→            <div className="flex items-center gap-1.5"><div className="w-6 h-0.5 bg-orange-500 rounded" /><span className="text-xs text-muted-foreground">BBT</span></div>
+   559→          </div>
+   560→        </CardContent>
+   561→      </Card>
+   562→    </motion.div>
+   563→  )
+   564→}
+   565→
+   566→function FertilityLoggingForm({
+   567→  userId,
+   568→  onSaved,
+   569→}: {
+   570→  userId: string | undefined
+   571→  onSaved: () => void
+   572→}) {
+   573→  const [basalTemp, setBasalTemp] = useState<string>('')
+   574→  const [selectedMucus, setSelectedMucus] = useState<CervicalMucus | null>(null)
+   575→  const [opkResult, setOpkResult] = useState<OPKResult>(null)
+   576→  const [intercourse, setIntercourse] = useState(false)
+   577→  const [notes, setNotes] = useState('')
+   578→  const [isSaving, setIsSaving] = useState(false)
+   579→  const [saved, setSaved] = useState(false)
+   580→
+   581→  const handleSave = async () => {
+   582→    if (!userId) return
+   583→    setIsSaving(true)
+   584→    try {
+   585→      const today = new Date().toISOString().split('T')[0]
+   586→      await fetch('/api/fertility', {
+   587→        method: 'POST',
+   588→        headers: { 'Content-Type': 'application/json' },
+   589→        body: JSON.stringify({
+   590→          userId,
+   591→          date: today,
+   592→          basalTemp: basalTemp ? parseFloat(basalTemp) : undefined,
+   593→          cervicalMucus: selectedMucus ? selectedMucus.toLowerCase().replace('-', '') : undefined,
+   594→          opkResult: opkResult ? opkResult.toLowerCase() : undefined,
+   595→          intercourse,
+   596→          notes: notes || undefined,
+   597→        }),
+   598→      })
+   599→      setSaved(true)
+   600→      setTimeout(() => {
+   601→        setSaved(false)
+   602→        setBasalTemp('')
+   603→        setSelectedMucus(null)
+   604→        setOpkResult(null)
+   605→        setIntercourse(false)
+   606→        setNotes('')
+   607→        onSaved()
+   608→      }, 1500)
+   609→    } finally {
+   610→      setIsSaving(false)
+   611→    }
+   612→  }
+   613→
+   614→  const isValid = basalTemp || selectedMucus || opkResult
+   615→
+   616→  return (
+   617→    <motion.div variants={itemVariants}>
+   618→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   619→        <CardHeader className="pb-2">
+   620→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   621→            <Activity className="h-5 w-5" />
+   622→            Fertility Logging
+   623→          </CardTitle>
+   624→          <CardDescription>Record your daily fertility signals</CardDescription>
+   625→        </CardHeader>
+   626→        <CardContent className="space-y-5">
+   627→          <div className="space-y-2">
+   628→            <Label className="text-sm font-medium flex items-center gap-2">
+   629→              <Thermometer className="h-4 w-4 text-orange-500" />
+   630→              Basal Body Temperature (°F)
+   631→            </Label>
+   632→            <div className="flex items-center gap-2">
+   633→              <Input
+   634→                type="number"
+   635→                step="0.1"
+   636→                min="95.0"
+   637→                max="100.0"
+   638→                placeholder="97.5"
+   639→                value={basalTemp}
+   640→                onChange={(e) => setBasalTemp(e.target.value)}
+   641→                className="max-w-[160px]"
+   642→              />
+   643→              <span className="text-sm text-muted-foreground">°F</span>
+   644→              {basalTemp && parseFloat(basalTemp) >= 97.8 && (
+   645→                <Badge className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800 text-[10px]">
+   646→                  Elevated
+   647→                </Badge>
+   648→              )}
+   649→            </div>
+   650→          </div>
+   651→
+   652→          <div className="space-y-2">
+   653→            <Label className="text-sm font-medium flex items-center gap-2">
+   654→              <Droplets className="h-4 w-4 text-orange-500" />
+   655→              Cervical Mucus
+   656→            </Label>
+   657→            <div className="flex flex-wrap gap-2">
+   658→              {MUCUS_OPTIONS.map((option) => (
+   659→                <button
+   660→                  key={option}
+   661→                  onClick={() => setSelectedMucus(selectedMucus === option ? null : option)}
+   662→                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border ${
+   663→                    selectedMucus === option
+   664→                      ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200 dark:shadow-orange-900/40'
+   665→                      : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-orange-600 dark:hover:bg-orange-950/30'
+   666→                  }`}
+   667→                >
+   668→                  {option}
+   669→                </button>
+   670→              ))}
+   671→            </div>
+   672→            {selectedMucus && (
+   673→              <p className="text-xs text-muted-foreground">
+   674→                {selectedMucus === 'Egg-white' && '🌟 Most fertile — indicates peak fertility!'}
+   675→                {selectedMucus === 'Watery' && '📈 Fertility increasing — approaching ovulation'}
+   676→                {selectedMucus === 'Creamy' && '📊 Moderate fertility — transition phase'}
+   677→                {selectedMucus === 'Sticky' && '📉 Low fertility — early cycle pattern'}
+   678→                {selectedMucus === 'Dry' && '⬇️ Minimal fertility — typical post-period'}
+   679→              </p>
+   680→            )}
+   681→          </div>
+   682→
+   683→          <div className="space-y-2">
+   684→            <Label className="text-sm font-medium flex items-center gap-2">
+   685→              <Zap className="h-4 w-4 text-orange-500" />
+   686→              OPK Test Result
+   687→            </Label>
+   688→            <div className="flex gap-2">
+   689→              <button
+   690→                onClick={() => setOpkResult(opkResult === 'Positive' ? null : 'Positive')}
+   691→                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
+   692→                  opkResult === 'Positive'
+   693→                    ? 'bg-green-500 text-white border-green-500 shadow-md shadow-green-200 dark:shadow-green-900/40'
+   694→                    : 'bg-white text-gray-600 border-gray-200 hover:border-green-300 hover:bg-green-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-green-600 dark:hover:bg-green-950/30'
+   695→                }`}
+   696→              >
+   697→                <Check className="h-4 w-4" />
+   698→                Positive
+   699→              </button>
+   700→              <button
+   701→                onClick={() => setOpkResult(opkResult === 'Negative' ? null : 'Negative')}
+   702→                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
+   703→                  opkResult === 'Negative'
+   704→                    ? 'bg-gray-400 text-white border-gray-400 shadow-md'
+   705→                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-700'
+   706→                }`}
+   707→              >
+   708→                <CircleDot className="h-4 w-4" />
+   709→                Negative
+   710→              </button>
+   711→            </div>
+   712→            {opkResult === 'Positive' && (
+   713→              <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+   714→                LH surge detected! Ovulation likely within 24-36 hours.
+   715→              </p>
+   716→            )}
+   717→          </div>
+   718→
+   719→          <div className="flex items-center space-x-3 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-orange-100 dark:border-orange-900/30">
+   720→            <Checkbox
+   721→              id="intercourse"
+   722→              checked={intercourse}
+   723→              onCheckedChange={(checked) => setIntercourse(checked === true)}
+   724→              className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+   725→            />
+   726→            <Label htmlFor="intercourse" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+   727→              <Heart className="h-4 w-4 text-rose-400" />
+   728→              Intercourse today
+   729→            </Label>
+   730→          </div>
+   731→
+   732→          <div className="space-y-2">
+   733→            <Label className="text-sm font-medium flex items-center gap-2">
+   734→              <Info className="h-4 w-4 text-orange-500" />
+   735→              Notes
+   736→            </Label>
+   737→            <Textarea
+   738→              placeholder="Any observations, symptoms, or thoughts..."
+   739→              value={notes}
+   740→              onChange={(e) => setNotes(e.target.value)}
+   741→              className="min-h-[80px] resize-none"
+   742→            />
+   743→          </div>
+   744→
+   745→          <div className="flex items-center gap-3">
+   746→            <Button
+   747→              onClick={handleSave}
+   748→              disabled={!isValid || isSaving || !userId}
+   749→              className="bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-200 dark:shadow-orange-900/40"
+   750→            >
+   751→              {isSaving ? (
+   752→                <motion.div
+   753→                  className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full"
+   754→                  animate={{ rotate: 360 }}
+   755→                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+   756→                />
+   757→              ) : saved ? (
+   758→                <>
+   759→                  <Check className="h-4 w-4 mr-2" />
+   760→                  Saved!
+   761→                </>
+   762→              ) : (
+   763→                <>
+   764→                  <Save className="h-4 w-4 mr-2" />
+   765→                  Save Log
+   766→                </>
+   767→              )}
+   768→            </Button>
+   769→            {saved && (
+   770→              <motion.span
+   771→                initial={{ opacity: 0, x: -10 }}
+   772→                animate={{ opacity: 1, x: 0 }}
+   773→                exit={{ opacity: 0 }}
+   774→                className="text-sm text-green-600 dark:text-green-400"
+   775→              >
+   776→                Entry saved successfully
+   777→              </motion.span>
+   778→            )}
+   779→          </div>
+   780→        </CardContent>
+   781→      </Card>
+   782→    </motion.div>
+   783→  )
+   784→}
+   785→
+   786→function ConceptionPlanner({ cycleDay }: { cycleDay: number | null }) {
+   787→  const [activePhase, setActivePhase] = useState<string>('before')
+   788→
+   789→  // Compute conception probability today based on cycle day (very rough heuristic)
+   790→  const conceptionProbability = useMemo(() => {
+   791→    if (!cycleDay) return 0
+   792→    const ovulationDay = DEFAULT_CYCLE_LENGTH - 14
+   793→    if (cycleDay === ovulationDay) return 28
+   794→    if (Math.abs(cycleDay - ovulationDay) === 1) return 20
+   795→    if (Math.abs(cycleDay - ovulationDay) === 2) return 12
+   796→    if (Math.abs(cycleDay - ovulationDay) <= 4) return 6
+   797→    return 2
+   798→  }, [cycleDay])
+   799→
+   800→  return (
+   801→    <motion.div variants={itemVariants}>
+   802→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   803→        <CardHeader className="pb-2">
+   804→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   805→            <Star className="h-5 w-5" />
+   806→            Conception Planner
+   807→          </CardTitle>
+   808→          <CardDescription>Guidance for each phase of your fertility window</CardDescription>
+   809→        </CardHeader>
+   810→        <CardContent className="space-y-5">
+   811→          <div className="p-4 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-100 dark:border-orange-900/30">
+   812→            <div className="flex items-center justify-between mb-2">
+   813→              <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Conception Probability Today</span>
+   814→              <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{conceptionProbability}%</span>
+   815→            </div>
+   816→            <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+   817→              <motion.div
+   818→                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500"
+   819→                initial={{ width: 0 }}
+   820→                animate={{ width: `${conceptionProbability}%` }}
+   821→                transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
+   822→              />
+   823→            </div>
+   824→            <p className="text-xs text-muted-foreground mt-1.5">
+   825→              {cycleDay
+   826→                ? `Based on cycle day ${cycleDay} relative to predicted ovulation`
+   827→                : 'Log your period to estimate conception probability for today'}
+   828→            </p>
+   829→          </div>
+   830→
+   831→          <Tabs value={activePhase} onValueChange={setActivePhase}>
+   832→            <TabsList className="w-full grid grid-cols-3 bg-orange-50 dark:bg-orange-950/30">
+   833→              {CONCEPTION_PHASES.map((phase) => (
+   834→                <TabsTrigger
+   835→                  key={phase.id}
+   836→                  value={phase.id}
+   837→                  className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
+   838→                >
+   839→                  <phase.icon className={`h-3.5 w-3.5 mr-1 ${phase.color}`} />
+   840→                  <span className="hidden sm:inline">{phase.title}</span>
+   841→                  <span className="sm:hidden">{phase.subtitle.split(' ')[0]}</span>
+   842→                </TabsTrigger>
+   843→              ))}
+   844→            </TabsList>
+   845→
+   846→            {CONCEPTION_PHASES.map((phase) => (
+   847→              <TabsContent key={phase.id} value={phase.id} className="mt-4">
+   848→                <motion.div
+   849→                  initial={{ opacity: 0, y: 10 }}
+   850→                  animate={{ opacity: 1, y: 0 }}
+   851→                  transition={{ duration: 0.3 }}
+   852→                  className={`p-4 rounded-xl border ${phase.borderColor} ${phase.bgColor}`}
+   853→                >
+   854→                  <div className="flex items-center gap-2 mb-3">
+   855→                    <phase.icon className={`h-5 w-5 ${phase.color}`} />
+   856→                    <div>
+   857→                      <h4 className="font-semibold text-sm">{phase.title}</h4>
+   858→                      <p className="text-xs text-muted-foreground">{phase.subtitle}</p>
+   859→                    </div>
+   860→                  </div>
+   861→                  <ul className="space-y-2">
+   862→                    {phase.tips.map((tip, idx) => (
+   863→                      <motion.li
+   864→                        key={idx}
+   865→                        initial={{ opacity: 0, x: -10 }}
+   866→                        animate={{ opacity: 1, x: 0 }}
+   867→                        transition={{ delay: idx * 0.08 }}
+   868→                        className="flex items-start gap-2 text-sm"
+   869→                      >
+   870→                        <ChevronRight className={`h-4 w-4 mt-0.5 flex-shrink-0 ${phase.color}`} />
+   871→                        <span>{tip}</span>
+   872→                      </motion.li>
+   873→                    ))}
+   874→                  </ul>
+   875→                </motion.div>
+   876→              </TabsContent>
+   877→            ))}
+   878→          </Tabs>
+   879→        </CardContent>
+   880→      </Card>
+   881→    </motion.div>
+   882→  )
+   883→}
+   884→
+   885→// ─── Main Component ────────────────────────────────────────────────
+   886→
+   887→export default function FertilityModule() {
+   888→  const userProfile = useAppStore((s) => s.userProfile)
+   889→  const setActiveModule = useAppStore((s) => s.setActiveModule)
+   890→
+   891→  const [cycles, setCycles] = useState<CycleEntry[]>([])
+   892→  const [fertilityEntries, setFertilityEntries] = useState<FertilityEntry[]>([])
+   893→  const [loading, setLoading] = useState(true)
+   894→  const [refreshKey, setRefreshKey] = useState(0)
+   895→
+   896→  useEffect(() => {
+   897→    if (!userProfile?.id) {
+   898→      setLoading(false)
+   899→      return
+   900→    }
+   901→    let cancelled = false
+   902→    setLoading(true)
+   903→    Promise.all([
+   904→      fetch(`/api/cycles?userId=${encodeURIComponent(userProfile.id)}`).then((r) => (r.ok ? r.json() : [])),
+   905→      fetch(`/api/fertility?userId=${encodeURIComponent(userProfile.id)}`).then((r) => (r.ok ? r.json() : [])),
+   906→    ])
+   907→      .then(([cyc, fert]: [CycleEntry[], FertilityEntry[]]) => {
+   908→        if (!cancelled) {
+   909→          setCycles(Array.isArray(cyc) ? cyc : [])
+   910→          setFertilityEntries(Array.isArray(fert) ? fert : [])
+   911→          setLoading(false)
+   912→        }
+   913→      })
+   914→      .catch(() => {
+   915→        if (!cancelled) setLoading(false)
+   916→      })
+   917→    return () => {
+   918→      cancelled = true
+   919→    }
+   920→  }, [userProfile?.id, refreshKey])
+   921→
+   922→  const cycleLength = cycles[0]?.cycleLength ?? userProfile?.cycleLength ?? DEFAULT_CYCLE_LENGTH
+   923→  const latestStart = cycles[0]?.startDate ?? userProfile?.lastPeriodStart
+   924→  const cycleDay = latestStart ? deriveCycleDay(latestStart, cycleLength) : null
+   925→  const hasCycle = !!latestStart
+   926→
+   927→  // Ovulation day = cycleLength - 14
+   928→  const ovulationDay = cycleLength - 14
+   929→  const fertileStart = ovulationDay - 5
+   930→  const fertileEnd = ovulationDay
+   931→
+   932→  const latestFertilityScore =
+   933→    fertilityEntries.length > 0 && fertilityEntries[0].fertilityScore !== undefined
+   934→      ? fertilityEntries[0].fertilityScore
+   935→      : null
+   936→
+   937→  const refresh = () => setRefreshKey((k) => k + 1)
+   938→
+   939→  if (loading) {
+   940→    return (
+   941→      <div className="space-y-6 animate-pulse">
+   942→        <div className="h-32 bg-muted rounded-2xl" />
+   943→        <div className="h-80 bg-muted rounded-2xl" />
+   944→      </div>
+   945→    )
+   946→  }
+   947→
+   948→  return (
+   949→    <motion.div className="space-y-6" variants={containerVariants} initial="hidden" animate="visible">
+   950→      {/* Header */}
+   951→      <motion.div variants={itemVariants} className="flex items-center gap-3">
+   952→        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-900/40">
+   953→          <Baby className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+   954→        </div>
+   955→        <div>
+   956→          <h2 className="text-2xl font-bold text-orange-800 dark:text-orange-300">Fertility Planner</h2>
+   957→          <p className="text-sm text-muted-foreground">Track, predict, and optimize your fertility journey</p>
+   958→        </div>
+   959→        {cycleDay && (
+   960→          <Badge className="ml-auto bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800 text-xs">
+   961→            <Flame className="h-3 w-3 mr-1" />
+   962→            Day {cycleDay}
+   963→          </Badge>
+   964→        )}
+   965→      </motion.div>
+   966→
+   967→      <FertilityScoreHero
+   968→        cycleDay={cycleDay}
+   969→        cycleLength={cycleLength}
+   970→        ovulationDay={ovulationDay}
+   971→        fertileStart={fertileStart}
+   972→        fertileEnd={fertileEnd}
+   973→        latestFertilityScore={latestFertilityScore}
+   974→        hasCycle={hasCycle}
+   975→        onLogPeriod={() => setActiveModule('period')}
+   976→      />
+   977→
+   978→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   979→        <OvulationCalendar
+   980→          cycleDay={cycleDay}
+   981→          cycleLength={cycleLength}
+   982→          ovulationDay={ovulationDay}
+   983→          fertileStart={fertileStart}
+   984→          fertileEnd={fertileEnd}
+   985→        />
+   986→        <BBTChart fertilityEntries={fertilityEntries} />
+   987→      </div>
+   988→
+   989→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   990→        <FertilityLoggingForm userId={userProfile?.id} onSaved={refresh} />
+   991→        <ConceptionPlanner cycleDay={cycleDay} />
+   992→      </div>
+   993→
+   994→      {/* AI Fertility Insights — empty state */}
+   995→      <motion.div variants={itemVariants}>
+   996→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   997→          <CardHeader className="pb-2">
+   998→            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   999→              <Sparkles className="h-5 w-5" />
+  1000→              AI Fertility Insights
+  1001→            </CardTitle>
+  1002→            <CardDescription>Personalized analysis based on your data</CardDescription>
+  1003→          </CardHeader>
+  1004→          <CardContent>
+  1005→            <EmptyState
+  1006→              icon={Sparkles}
+  1007→              title="Personalized fertility insights coming soon"
+  1008→              description="Log BBT, cervical mucus, and OPK results over a couple of cycles — ChandraCycle will surface patterns like ovulation confirmation, mucus transition signals, and cycle regularity here."
+  1009→              ctaLabel="Log today's fertility signals"
+  1010→              onCta={() => {
+  1011→                /* Form is on the same page; user can scroll up */
+  1012→              }}
+  1013→            />
+  1014→          </CardContent>
+  1015→        </Card>
+  1016→      </motion.div>
+  1017→    </motion.div>
+  1018→  )
+  1019→}
+  1020→

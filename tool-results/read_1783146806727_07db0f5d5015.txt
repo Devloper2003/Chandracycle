@@ -1,0 +1,832 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useMemo, type FormEvent } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { toast } from 'sonner'
+     6→     6→import { useAppStore, PRICING } from '@/lib/store'
+     7→     7→import { Button } from '@/components/ui/button'
+     8→     8→import { Input } from '@/components/ui/input'
+     9→     9→import { Label } from '@/components/ui/label'
+    10→    10→import { Checkbox } from '@/components/ui/checkbox'
+    11→    11→import { Separator } from '@/components/ui/separator'
+    12→    12→import {
+    13→    13→  Sparkles,
+    14→    14→  Crown,
+    15→    15→  Heart,
+    16→    16→  Eye,
+    17→    17→  EyeOff,
+    18→    18→  Loader2,
+    19→    19→  Mail,
+    20→    20→  Lock,
+    21→    21→  User,
+    22→    22→  Shield,
+    23→    23→  Check,
+    24→    24→  ArrowRight,
+    25→    25→  Star,
+    26→    26→  Quote,
+    27→    27→  CalendarHeart,
+    28→    28→} from 'lucide-react'
+    29→    29→
+    30→    30→// ─── Types ───────────────────────────────────────────────────────────────────
+    31→    31→type Mode = 'signin' | 'signup'
+    32→    32→type OAuthProvider = 'google' | 'apple' | null
+    33→    33→
+    34→    34→interface ApiUser {
+    35→    35→  id: string
+    36→    36→  name: string | null
+    37→    37→  email: string
+    38→    38→  avatar?: string | null
+    39→    39→  authProvider: 'email' | 'google' | 'apple'
+    40→    40→}
+    41→    41→interface ApiSubscription {
+    42→    42→  tier: 'basic' | 'premium'
+    43→    43→  status: 'none' | 'trialing' | 'active' | 'expired' | 'cancelled'
+    44→    44→  plan: 'monthly' | 'yearly' | null
+    45→    45→  trialStartDate: string | null
+    46→    46→  trialEndDate: string | null
+    47→    47→  subscriptionEnd: string | null
+    48→    48→}
+    49→    49→interface AuthApiResponse {
+    50→    50→  user: ApiUser
+    51→    51→  subscription: ApiSubscription
+    52→    52→  token: string
+    53→    53→}
+    54→    54→
+    55→    55→// ─── Helpers ─────────────────────────────────────────────────────────────────
+    56→    56→const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    57→    57→
+    58→    58→function buildMockJwt(payload: Record<string, unknown>): string {
+    59→    59→  // Build a 3-part dot-separated token whose middle segment is base64 JSON.
+    60→    60→  // The API decodes parts[1] via Buffer.from(parts[1], 'base64').
+    61→    61→  if (typeof window === 'undefined') return ''
+    62→    62→  const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }))
+    63→    63→  const body = btoa(JSON.stringify(payload))
+    64→    64→  const signature = btoa('aaranya-mock-signature')
+    65→    65→  return `${header}.${body}.${signature}`
+    66→    66→}
+    67→    67→
+    68→    68→// ─── Branding atoms ──────────────────────────────────────────────────────────
+    69→    69→function LotusLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+    70→    70→  const dims =
+    71→    71→    size === 'lg'
+    72→    72→      ? 'h-16 w-16 text-3xl rounded-2xl'
+    73→    73→      : size === 'sm'
+    74→    74→        ? 'h-9 w-9 text-lg rounded-xl'
+    75→    75→        : 'h-12 w-12 text-2xl rounded-2xl'
+    76→    76→  return (
+    77→    77→    <div
+    78→    78→      className={`relative inline-flex items-center justify-center bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-600 text-white font-serif font-bold shadow-lg shadow-rose-500/30 ${dims}`}
+    79→    79→      aria-hidden="true"
+    80→    80→    >
+    81→    81→      <span className="drop-shadow-sm">A</span>
+    82→    82→      <Sparkles className="absolute -top-1 -right-1 h-3.5 w-3.5 text-amber-200 fill-amber-200" />
+    83→    83→    </div>
+    84→    84→  )
+    85→    85→}
+    86→    86→
+    87→    87→function GoogleIcon() {
+    88→    88→  return (
+    89→    89→    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+    90→    90→      <path
+    91→    91→        fill="#4285F4"
+    92→    92→        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    93→    93→      />
+    94→    94→      <path
+    95→    95→        fill="#34A853"
+    96→    96→        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    97→    97→      />
+    98→    98→      <path
+    99→    99→        fill="#FBBC05"
+   100→   100→        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+   101→   101→      />
+   102→   102→      <path
+   103→   103→        fill="#EA4335"
+   104→   104→        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+   105→   105→      />
+   106→   106→    </svg>
+   107→   107→  )
+   108→   108→}
+   109→   109→
+   110→   110→function AppleIcon() {
+   111→   111→  return (
+   112→   112→    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+   113→   113→      <path d="M17.05 12.04c-.03-2.6 2.13-3.85 2.22-3.91-1.21-1.77-3.09-2.01-3.76-2.04-1.6-.16-3.12.94-3.93.94-.81 0-2.06-.92-3.39-.89-1.74.03-3.35 1.01-4.25 2.57-1.81 3.14-.46 7.78 1.3 10.33.86 1.25 1.88 2.65 3.22 2.6 1.29-.05 1.78-.83 3.34-.83 1.56 0 2 .83 3.37.81 1.39-.03 2.27-1.27 3.12-2.53.98-1.45 1.39-2.85 1.41-2.92-.03-.01-2.7-1.04-2.73-4.13M14.6 4.59c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44" />
+   114→   114→    </svg>
+   115→   115→  )
+   116→   116→}
+   117→   117→
+   118→   118→// ─── Hero (left panel, desktop only) ─────────────────────────────────────────
+   119→   119→function HeroPanel() {
+   120→   120→  const features = [
+   121→   121→    {
+   122→   122→      icon: Sparkles,
+   123→   123→      title: 'AI-Powered Health Insights',
+   124→   124→      desc: 'Personalised predictions for cycles, fertility, hormones & mood.',
+   125→   125→    },
+   126→   126→    {
+   127→   127→      icon: Crown,
+   128→   128→      title: '20 Premium Modules',
+   129→   129→      desc: 'PCOS, pregnancy, menopause, diet, fitness & more — all in one app.',
+   130→   130→    },
+   131→   131→    {
+   132→   132→      icon: Heart,
+   133→   133→      title: 'Built for Indian Women',
+   134→   134→      desc: 'Trusted by 50,000+ women across India. HIPAA-compliant & private.',
+   135→   135→    },
+   136→   136→  ]
+   137→   137→
+   138→   138→  return (
+   139→   139→    <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-rose-500 via-pink-600 to-fuchsia-700 p-12 xl:p-16">
+   140→   140→      {/* Decorative floating blobs */}
+   141→   141→      <motion.div
+   142→   142→        aria-hidden
+   143→   143→        className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white/20 blur-3xl"
+   144→   144→        animate={{ y: [0, 30, 0], x: [0, 20, 0] }}
+   145→   145→        transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
+   146→   146→      />
+   147→   147→      <motion.div
+   148→   148→        aria-hidden
+   149→   149→        className="absolute bottom-0 right-0 h-[28rem] w-[28rem] rounded-full bg-fuchsia-300/30 blur-3xl"
+   150→   150→        animate={{ y: [0, -40, 0], x: [0, -25, 0] }}
+   151→   151→        transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+   152→   152→      />
+   153→   153→      <motion.div
+   154→   154→        aria-hidden
+   155→   155→        className="absolute top-1/3 right-1/4 h-64 w-64 rounded-full bg-amber-200/20 blur-3xl"
+   156→   156→        animate={{ y: [0, 25, 0], scale: [1, 1.1, 1] }}
+   157→   157→        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+   158→   158→      />
+   159→   159→
+   160→   160→      {/* Top: brand + tagline */}
+   161→   161→      <div className="relative z-10">
+   162→   162→        <div className="flex items-center gap-3">
+   163→   163→          <LotusLogo size="lg" />
+   164→   164→          <div>
+   165→   165→            <h1 className="text-3xl font-bold text-white tracking-tight">Aaranya</h1>
+   166→   166→            <p className="text-rose-100 text-sm font-medium">AI Women&apos;s Health Companion</p>
+   167→   167→          </div>
+   168→   168→        </div>
+   169→   169→
+   170→   170→        <motion.h2
+   171→   171→          initial={{ opacity: 0, y: 20 }}
+   172→   172→          animate={{ opacity: 1, y: 0 }}
+   173→   173→          transition={{ delay: 0.2, duration: 0.6 }}
+   174→   174→          className="mt-10 max-w-md text-4xl xl:text-5xl font-bold text-white leading-tight"
+   175→   175→        >
+   176→   176→          Your body, decoded by AI.
+   177→   177→        </motion.h2>
+   178→   178→        <motion.p
+   179→   179→          initial={{ opacity: 0, y: 20 }}
+   180→   180→          animate={{ opacity: 1, y: 0 }}
+   181→   181→          transition={{ delay: 0.35, duration: 0.6 }}
+   182→   182→          className="mt-4 max-w-md text-rose-50/90 text-lg"
+   183→   183→        >
+   184→   184→          Track your cycle, hormones, fertility & mental wellness — all guided by an AI coach that
+   185→   185→          understands you.
+   186→   186→        </motion.p>
+   187→   187→      </div>
+   188→   188→
+   189→   189→      {/* Middle: feature bullets */}
+   190→   190→      <div className="relative z-10 my-10 space-y-5">
+   191→   191→        {features.map((f, i) => (
+   192→   192→          <motion.div
+   193→   193→            key={f.title}
+   194→   194→            initial={{ opacity: 0, x: -20 }}
+   195→   195→            animate={{ opacity: 1, x: 0 }}
+   196→   196→            transition={{ delay: 0.5 + i * 0.15, duration: 0.5 }}
+   197→   197→            className="flex items-start gap-4"
+   198→   198→          >
+   199→   199→            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm border border-white/20">
+   200→   200→              <f.icon className="h-5 w-5 text-white" />
+   201→   201→            </div>
+   202→   202→            <div>
+   203→   203→              <p className="font-semibold text-white">{f.title}</p>
+   204→   204→              <p className="text-sm text-rose-50/80">{f.desc}</p>
+   205→   205→            </div>
+   206→   206→          </motion.div>
+   207→   207→        ))}
+   208→   208→      </div>
+   209→   209→
+   210→   210→      {/* Bottom: testimonial + social proof */}
+   211→   211→      <div className="relative z-10 space-y-5">
+   212→   212→        <motion.blockquote
+   213→   213→          initial={{ opacity: 0, y: 20 }}
+   214→   214→          animate={{ opacity: 1, y: 0 }}
+   215→   215→          transition={{ delay: 1, duration: 0.6 }}
+   216→   216→          className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-5"
+   217→   217→        >
+   218→   218→          <Quote className="h-5 w-5 text-rose-100 mb-2" />
+   219→   219→          <p className="text-white text-sm leading-relaxed italic">
+   220→   220→            &ldquo;Aaranya helped me understand my PCOS patterns in 2 weeks. The AI coach feels like a
+   221→   221→            real doctor in my pocket.&rdquo;
+   222→   222→          </p>
+   223→   223→          <div className="mt-3 flex items-center gap-3">
+   224→   224→            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-semibold text-white">
+   225→   225→              P
+   226→   226→            </div>
+   227→   227→            <div className="text-xs">
+   228→   228→              <p className="font-semibold text-white">Priya S.</p>
+   229→   229→              <p className="text-rose-100/80">Bengaluru • Premium member</p>
+   230→   230→            </div>
+   231→   231→          </div>
+   232→   232→        </motion.blockquote>
+   233→   233→
+   234→   234→        <div className="flex items-center gap-3">
+   235→   235→          <div className="flex">
+   236→   236→            {[0, 1, 2, 3, 4].map((i) => (
+   237→   237→              <Star key={i} className="h-4 w-4 fill-amber-300 text-amber-300" />
+   238→   238→            ))}
+   239→   239→          </div>
+   240→   240→          <p className="text-sm text-rose-50/90 font-medium">
+   241→   241→            Trusted by 50,000+ women across India
+   242→   242→          </p>
+   243→   243→        </div>
+   244→   244→      </div>
+   245→   245→    </div>
+   246→   246→  )
+   247→   247→}
+   248→   248→
+   249→   249→// ─── Pricing teaser ──────────────────────────────────────────────────────────
+   250→   250→function PricingTeaser({ compact = false }: { compact?: boolean }) {
+   251→   251→  const monthlyTotal = PRICING.monthly.base + Math.round(PRICING.monthly.base * PRICING.monthly.gstRate)
+   252→   252→  const yearlyTotal = PRICING.yearly.base + Math.round(PRICING.yearly.base * PRICING.yearly.gstRate)
+   253→   253→
+   254→   254→  if (compact) {
+   255→   255→    return (
+   256→   256→      <p className="text-center text-xs text-muted-foreground">
+   257→   257→        <span className="font-semibold text-rose-600">7-day free trial</span> • then ₹{monthlyTotal}/mo
+   258→   258→        or ₹{yearlyTotal}/yr (incl. 18% GST)
+   259→   259→      </p>
+   260→   260→    )
+   261→   261→  }
+   262→   262→
+   263→   263→  return (
+   264→   264→    <div className="rounded-xl border border-rose-100 bg-gradient-to-br from-rose-50 to-pink-50 p-4">
+   265→   265→      <div className="flex items-center gap-2 mb-2">
+   266→   266→        <CalendarHeart className="h-4 w-4 text-rose-600" />
+   267→   267→        <p className="text-sm font-semibold text-rose-700">7-day free trial included</p>
+   268→   268→      </div>
+   269→   269→      <div className="grid grid-cols-2 gap-3">
+   270→   270→        <div className="rounded-lg bg-white/70 p-3 border border-rose-100">
+   271→   271→          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+   272→   272→            Monthly
+   273→   273→          </p>
+   274→   274→          <p className="text-lg font-bold text-rose-700">
+   275→   275→            ₹{monthlyTotal}
+   276→   276→            <span className="text-xs font-normal text-muted-foreground">/mo</span>
+   277→   277→          </p>
+   278→   278→          <p className="text-[10px] text-muted-foreground">₹50 + 18% GST</p>
+   279→   279→        </div>
+   280→   280→        <div className="rounded-lg bg-white/70 p-3 border border-rose-100 relative">
+   281→   281→          <span className="absolute -top-2 right-2 rounded-full bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5">
+   282→   282→            SAVE 17%
+   283→   283→          </span>
+   284→   284→          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+   285→   285→            Yearly
+   286→   286→          </p>
+   287→   287→          <p className="text-lg font-bold text-rose-700">
+   288→   288→            ₹{yearlyTotal}
+   289→   289→            <span className="text-xs font-normal text-muted-foreground">/yr</span>
+   290→   290→          </p>
+   291→   291→          <p className="text-[10px] text-muted-foreground">₹500 + 18% GST</p>
+   292→   292→        </div>
+   293→   293→      </div>
+   294→   294→    </div>
+   295→   295→  )
+   296→   296→}
+   297→   297→
+   298→   298→// ─── Success overlay ─────────────────────────────────────────────────────────
+   299→   299→function SuccessOverlay({ message }: { message: string }) {
+   300→   300→  return (
+   301→   301→    <motion.div
+   302→   302→      initial={{ opacity: 0 }}
+   303→   303→      animate={{ opacity: 1 }}
+   304→   304→      className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl bg-white/85 backdrop-blur-md"
+   305→   305→    >
+   306→   306→      <motion.div
+   307→   307→        initial={{ scale: 0, rotate: -30 }}
+   308→   308→        animate={{ scale: 1, rotate: 0 }}
+   309→   309→        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+   310→   310→        className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-600 shadow-xl shadow-rose-500/40"
+   311→   311→      >
+   312→   312→        <motion.svg
+   313→   313→          viewBox="0 0 24 24"
+   314→   314→          className="h-10 w-10 text-white"
+   315→   315→          fill="none"
+   316→   316→          stroke="currentColor"
+   317→   317→          strokeWidth="3"
+   318→   318→          strokeLinecap="round"
+   319→   319→          strokeLinejoin="round"
+   320→   320→        >
+   321→   321→          <motion.path
+   322→   322→            d="M5 13l4 4L19 7"
+   323→   323→            initial={{ pathLength: 0 }}
+   324→   324→            animate={{ pathLength: 1 }}
+   325→   325→            transition={{ duration: 0.4, delay: 0.2 }}
+   326→   326→          />
+   327→   327→        </motion.svg>
+   328→   328→      </motion.div>
+   329→   329→      <motion.p
+   330→   330→        initial={{ opacity: 0, y: 10 }}
+   331→   331→        animate={{ opacity: 1, y: 0 }}
+   332→   332→        transition={{ delay: 0.4 }}
+   333→   333→        className="mt-5 text-lg font-semibold text-rose-700"
+   334→   334→      >
+   335→   335→        {message}
+   336→   336→      </motion.p>
+   337→   337→      <motion.div
+   338→   338→        initial={{ opacity: 0 }}
+   339→   339→        animate={{ opacity: 1 }}
+   340→   340→        transition={{ delay: 0.6 }}
+   341→   341→        className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
+   342→   342→      >
+   343→   343→        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+   344→   344→        Taking you to your dashboard…
+   345→   345→      </motion.div>
+   346→   346→    </motion.div>
+   347→   347→  )
+   348→   348→}
+   349→   349→
+   350→   350→// ─── Main AuthScreen ─────────────────────────────────────────────────────────
+   351→   351→export default function AuthScreen() {
+   352→   352→  const setAuth = useAppStore((s) => s.setAuth)
+   353→   353→  const setSubscription = useAppStore((s) => s.setSubscription)
+   354→   354→  const startTrial = useAppStore((s) => s.startTrial)
+   355→   355→
+   356→   356→  const [mode, setMode] = useState<Mode>('signup')
+   357→   357→  const [name, setName] = useState('')
+   358→   358→  const [email, setEmail] = useState('')
+   359→   359→  const [password, setPassword] = useState('')
+   360→   360→  const [showPassword, setShowPassword] = useState(false)
+   361→   361→  const [agreed, setAgreed] = useState(false)
+   362→   362→
+   363→   363→  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({})
+   364→   364→  const [submitting, setSubmitting] = useState(false)
+   365→   365→  const [oauthLoading, setOauthLoading] = useState<OAuthProvider>(null)
+   366→   366→  const [success, setSuccess] = useState<string | null>(null)
+   367→   367→
+   368→   368→  // ─── Apply a successful auth response to the store ──────────────────────
+   369→   369→  function applyAuth(data: AuthApiResponse, successMsg: string, isSignup: boolean) {
+   370→   370→    try {
+   371→   371→      localStorage.setItem('aaranya-token', data.token)
+   372→   372→    } catch {
+   373→   373→      // localStorage may be unavailable (private mode); ignore.
+   374→   374→    }
+   375→   375→    setAuth({
+   376→   376→      id: data.user.id,
+   377→   377→      name: data.user.name || data.user.email.split('@')[0],
+   378→   378→      email: data.user.email,
+   379→   379→      avatar: data.user.avatar || undefined,
+   380→   380→      authProvider: data.user.authProvider,
+   381→   381→    })
+   382→   382→    setSubscription({
+   383→   383→      tier: data.subscription.tier,
+   384→   384→      status: data.subscription.status,
+   385→   385→      plan: data.subscription.plan,
+   386→   386→      trialStartDate: data.subscription.trialStartDate,
+   387→   387→      trialEndDate: data.subscription.trialEndDate,
+   388→   388→      subscriptionEnd: data.subscription.subscriptionEnd,
+   389→   389→    })
+   390→   390→    // Defensive: if API didn't start the trial on a fresh signup, start it locally.
+   391→   391→    if (
+   392→   392→      isSignup &&
+   393→   393→      data.subscription.status !== 'trialing' &&
+   394→   394→      data.subscription.status !== 'active'
+   395→   395→    ) {
+   396→   396→      startTrial()
+   397→   397→    }
+   398→   398→    toast.success(successMsg)
+   399→   399→    setSuccess(successMsg)
+   400→   400→  }
+   401→   401→
+   402→   402→  // ─── Email/password submit ──────────────────────────────────────────────
+   403→   403→  function validate(): boolean {
+   404→   404→    const next: typeof errors = {}
+   405→   405→    if (mode === 'signup' && name.trim().length < 2) {
+   406→   406→      next.name = 'Please enter your name'
+   407→   407→    }
+   408→   408→    if (!EMAIL_REGEX.test(email)) {
+   409→   409→      next.email = 'Enter a valid email address'
+   410→   410→    }
+   411→   411→    if (password.length < 6) {
+   412→   412→      next.password = 'Password must be at least 6 characters'
+   413→   413→    }
+   414→   414→    setErrors(next)
+   415→   415→    return Object.keys(next).length === 0
+   416→   416→  }
+   417→   417→
+   418→   418→  async function handleEmailSubmit(e: FormEvent) {
+   419→   419→    e.preventDefault()
+   420→   420→    if (submitting) return
+   421→   421→    if (!validate()) return
+   422→   422→    if (mode === 'signup' && !agreed) {
+   423→   423→      toast.error('Please accept the Terms & Privacy Policy to continue')
+   424→   424→      return
+   425→   425→    }
+   426→   426→    setSubmitting(true)
+   427→   427→    try {
+   428→   428→      const isSignup = mode === 'signup'
+   429→   429→      const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login'
+   430→   430→      const body = isSignup
+   431→   431→        ? { name: name.trim(), email: email.trim(), password, provider: 'email' }
+   432→   432→        : { email: email.trim(), password }
+   433→   433→
+   434→   434→      const res = await fetch(endpoint, {
+   435→   435→        method: 'POST',
+   436→   436→        headers: { 'Content-Type': 'application/json' },
+   437→   437→        body: JSON.stringify(body),
+   438→   438→      })
+   439→   439→      const data = await res.json().catch(() => ({}))
+   440→   440→      if (!res.ok) {
+   441→   441→        toast.error(data?.error || (isSignup ? 'Sign up failed' : 'Sign in failed'))
+   442→   442→        return
+   443→   443→      }
+   444→   444→      applyAuth(
+   445→   445→        data as AuthApiResponse,
+   446→   446→        isSignup ? 'Welcome to Aaranya! Your 7-day free trial has started.' : 'Welcome back!',
+   447→   447→        isSignup,
+   448→   448→      )
+   449→   449→    } catch {
+   450→   450→      toast.error('Network error. Please try again.')
+   451→   451→    } finally {
+   452→   452→      setSubmitting(false)
+   453→   453→    }
+   454→   454→  }
+   455→   455→
+   456→   456→  // ─── OAuth (simulated) ──────────────────────────────────────────────────
+   457→   457→  async function handleOAuth(provider: 'google' | 'apple') {
+   458→   458→    if (oauthLoading || submitting) return
+   459→   459→    setOauthLoading(provider)
+   460→   460→    // Simulate the OAuth handshake latency.
+   461→   461→    await new Promise((r) => setTimeout(r, 900))
+   462→   462→    try {
+   463→   463→      const payload =
+   464→   464→        provider === 'google'
+   465→   465→          ? { email: 'demo.google.user@gmail.com', name: 'Priya Google', sub: 'google-demo-1' }
+   466→   466→          : { email: 'demo.apple.user@icloud.com', name: 'Priya Apple', sub: 'apple-demo-1' }
+   467→   467→
+   468→   468→      const token = buildMockJwt(payload)
+   469→   469→      const endpoint = provider === 'google' ? '/api/auth/google' : '/api/auth/apple'
+   470→   470→      const fieldName = provider === 'google' ? 'idToken' : 'identityToken'
+   471→   471→
+   472→   472→      const res = await fetch(endpoint, {
+   473→   473→        method: 'POST',
+   474→   474→        headers: { 'Content-Type': 'application/json' },
+   475→   475→        body: JSON.stringify({ [fieldName]: token }),
+   476→   476→      })
+   477→   477→      const data = await res.json().catch(() => ({}))
+   478→   478→      if (!res.ok) {
+   479→   479→        toast.error(data?.error || `Sign in with ${provider === 'google' ? 'Google' : 'Apple'} failed`)
+   480→   480→        return
+   481→   481→      }
+   482→   482→      const isNew = data.subscription?.status === 'trialing'
+   483→   483→      applyAuth(
+   484→   484→        data as AuthApiResponse,
+   485→   485→        isNew
+   486→   486→          ? `Welcome to Aaranya! Signed in with ${provider === 'google' ? 'Google' : 'Apple'} — 7-day trial active.`
+   487→   487→          : `Welcome back! Signed in with ${provider === 'google' ? 'Google' : 'Apple'}.`,
+   488→   488→        isNew,
+   489→   489→      )
+   490→   490→    } catch {
+   491→   491→      toast.error('Network error. Please try again.')
+   492→   492→    } finally {
+   493→   493→      setOauthLoading(null)
+   494→   494→    }
+   495→   495→  }
+   496→   496→
+   497→   497→  // ─── Continue as guest ──────────────────────────────────────────────────
+   498→   498→  function handleGuest() {
+   499→   499→    if (submitting || oauthLoading) return
+   500→   500→    setAuth({ id: 'guest', name: 'Guest', email: '', authProvider: 'email' })
+   501→   501→    toast('Continuing as guest — basic features only', {
+   502→   502→      description: 'Upgrade anytime to unlock all 20 premium modules.',
+   503→   503→    })
+   504→   504→    setSuccess('Continuing as guest')
+   505→   505→  }
+   506→   506→
+   507→   507→  // ─── Derived ────────────────────────────────────────────────────────────
+   508→   508→  const submitLabel = useMemo(() => {
+   509→   509→    if (submitting) return ''
+   510→   510→    return mode === 'signup' ? 'Create account & start free trial' : 'Sign in'
+   511→   511→  }, [submitting, mode])
+   512→   512→
+   513→   513→  return (
+   514→   514→    <div className="min-h-screen w-full bg-gradient-to-br from-rose-50 via-white to-pink-50 flex flex-col lg:grid lg:grid-cols-2">
+   515→   515→      {/* ─── Left hero (desktop) ─── */}
+   516→   516→      <HeroPanel />
+   517→   517→
+   518→   518→      {/* ─── Right auth panel ─── */}
+   519→   519→      <div className="relative flex flex-1 items-center justify-center p-5 sm:p-8 lg:p-12">
+   520→   520→        {/* Mobile background blobs */}
+   521→   521→        <div
+   522→   522→          aria-hidden
+   523→   523→          className="pointer-events-none absolute inset-0 overflow-hidden lg:hidden"
+   524→   524→        >
+   525→   525→          <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-rose-200/40 blur-3xl" />
+   526→   526→          <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-pink-200/40 blur-3xl" />
+   527→   527→        </div>
+   528→   528→
+   529→   529→        <motion.div
+   530→   530→          initial={{ opacity: 0, y: 20 }}
+   531→   531→          animate={{ opacity: 1, y: 0 }}
+   532→   532→          transition={{ duration: 0.5 }}
+   533→   533→          className="relative z-10 w-full max-w-md"
+   534→   534→        >
+   535→   535→          <div className="glass rounded-3xl shadow-2xl shadow-rose-500/10 p-6 sm:p-8 relative overflow-hidden">
+   536→   536→            {success && <SuccessOverlay message={success} />}
+   537→   537→
+   538→   538→            {/* Mobile branding header */}
+   539→   539→            <div className="flex flex-col items-center text-center mb-6 lg:hidden">
+   540→   540→              <div className="flex items-center gap-3">
+   541→   541→                <LotusLogo size="md" />
+   542→   542→                <div className="text-left">
+   543→   543→                  <h1 className="text-2xl font-bold gradient-text leading-none">Aaranya</h1>
+   544→   544→                  <p className="text-[11px] text-muted-foreground">AI Women&apos;s Health Companion</p>
+   545→   545→                </div>
+   546→   546→              </div>
+   547→   547→            </div>
+   548→   548→
+   549→   549→            {/* Desktop compact header */}
+   550→   550→            <div className="hidden lg:flex items-center gap-3 mb-6">
+   551→   551→              <LotusLogo size="sm" />
+   552→   552→              <div>
+   553→   553→                <h2 className="text-lg font-bold text-rose-700 leading-none">Aaranya</h2>
+   554→   554→                <p className="text-[11px] text-muted-foreground">AI Women&apos;s Health Companion</p>
+   555→   555→              </div>
+   556→   556→            </div>
+   557→   557→
+   558→   558→            {/* Heading + sub */}
+   559→   559→            <div className="mb-5">
+   560→   560→              <h2 className="text-2xl font-bold text-foreground">
+   561→   561→                {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+   562→   562→              </h2>
+   563→   563→              <p className="text-sm text-muted-foreground mt-1">
+   564→   564→                {mode === 'signup'
+   565→   565→                  ? 'Start your 7-day free trial. No card required.'
+   566→   566→                  : 'Sign in to continue your wellness journey.'}
+   567→   567→              </p>
+   568→   568→            </div>
+   569→   569→
+   570→   570→            {/* Tab switcher */}
+   571→   571→            <div className="relative grid grid-cols-2 gap-1 p-1 mb-6 rounded-xl bg-rose-50 border border-rose-100">
+   572→   572→              <motion.div
+   573→   573→                className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-sm"
+   574→   574→                animate={{ left: mode === 'signup' ? 4 : 'calc(50% + 0px)' }}
+   575→   575→                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+   576→   576→              />
+   577→   577→              {(['signup', 'signin'] as Mode[]).map((m) => (
+   578→   578→                <button
+   579→   579→                  key={m}
+   580→   580→                  type="button"
+   581→   581→                  onClick={() => {
+   582→   582→                    setMode(m)
+   583→   583→                    setErrors({})
+   584→   584→                  }}
+   585→   585→                  aria-pressed={mode === m}
+   586→   586→                  className={`relative z-10 py-2 text-sm font-medium rounded-lg transition-colors ${
+   587→   587→                    mode === m ? 'text-rose-700' : 'text-muted-foreground hover:text-rose-600'
+   588→   588→                  }`}
+   589→   589→                >
+   590→   590→                  {m === 'signup' ? 'Sign Up' : 'Sign In'}
+   591→   591→                </button>
+   592→   592→              ))}
+   593→   593→            </div>
+   594→   594→
+   595→   595→            {/* OAuth buttons */}
+   596→   596→            <div className="space-y-2.5 mb-4">
+   597→   597→              <Button
+   598→   598→                type="button"
+   599→   599→                variant="outline"
+   600→   600→                size="lg"
+   601→   601→                onClick={() => handleOAuth('google')}
+   602→   602→                disabled={submitting || oauthLoading !== null}
+   603→   603→                className="w-full bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 h-11"
+   604→   604→              >
+   605→   605→                {oauthLoading === 'google' ? (
+   606→   606→                  <Loader2 className="h-4 w-4 animate-spin" />
+   607→   607→                ) : (
+   608→   608→                  <GoogleIcon />
+   609→   609→                )}
+   610→   610→                Continue with Google
+   611→   611→              </Button>
+   612→   612→              <Button
+   613→   613→                type="button"
+   614→   614→                size="lg"
+   615→   615→                onClick={() => handleOAuth('apple')}
+   616→   616→                disabled={submitting || oauthLoading !== null}
+   617→   617→                className="w-full bg-black hover:bg-zinc-800 text-white border border-zinc-800 h-11"
+   618→   618→              >
+   619→   619→                {oauthLoading === 'apple' ? (
+   620→   620→                  <Loader2 className="h-4 w-4 animate-spin" />
+   621→   621→                ) : (
+   622→   622→                  <AppleIcon />
+   623→   623→                )}
+   624→   624→                Continue with Apple
+   625→   625→              </Button>
+   626→   626→            </div>
+   627→   627→            <p className="text-center text-[10px] text-muted-foreground/80 mb-4">
+   628→   628→              <Shield className="inline h-3 w-3 mr-1 -mt-0.5" />
+   629→   629→              Demo mode — real Google/Apple OAuth will be used in production.
+   630→   630→            </p>
+   631→   631→
+   632→   632→            {/* Divider */}
+   633→   633→            <div className="flex items-center gap-3 mb-4">
+   634→   634→              <Separator className="flex-1 bg-rose-100" />
+   635→   635→              <span className="text-xs text-muted-foreground font-medium">or continue with email</span>
+   636→   636→              <Separator className="flex-1 bg-rose-100" />
+   637→   637→            </div>
+   638→   638→
+   639→   639→            {/* Form */}
+   640→   640→            <form onSubmit={handleEmailSubmit} noValidate className="space-y-4">
+   641→   641→              <AnimatePresence mode="wait" initial={false}>
+   642→   642→                {mode === 'signup' && (
+   643→   643→                  <motion.div
+   644→   644→                    key="name"
+   645→   645→                    initial={{ opacity: 0, height: 0 }}
+   646→   646→                    animate={{ opacity: 1, height: 'auto' }}
+   647→   647→                    exit={{ opacity: 0, height: 0 }}
+   648→   648→                    transition={{ duration: 0.25 }}
+   649→   649→                    className="space-y-1.5 overflow-hidden"
+   650→   650→                  >
+   651→   651→                    <Label htmlFor="auth-name" className="text-sm font-medium">
+   652→   652→                      Full name
+   653→   653→                    </Label>
+   654→   654→                    <div className="relative">
+   655→   655→                      <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   656→   656→                      <Input
+   657→   657→                        id="auth-name"
+   658→   658→                        type="text"
+   659→   659→                        autoComplete="name"
+   660→   660→                        placeholder="Priya Sharma"
+   661→   661→                        value={name}
+   662→   662→                        onChange={(e) => setName(e.target.value)}
+   663→   663→                        aria-invalid={!!errors.name}
+   664→   664→                        aria-describedby={errors.name ? 'auth-name-err' : undefined}
+   665→   665→                        className="pl-9 h-11"
+   666→   666→                      />
+   667→   667→                    </div>
+   668→   668→                    {errors.name && (
+   669→   669→                      <p id="auth-name-err" className="text-xs text-rose-600">
+   670→   670→                        {errors.name}
+   671→   671→                      </p>
+   672→   672→                    )}
+   673→   673→                  </motion.div>
+   674→   674→                )}
+   675→   675→              </AnimatePresence>
+   676→   676→
+   677→   677→              <div className="space-y-1.5">
+   678→   678→                <Label htmlFor="auth-email" className="text-sm font-medium">
+   679→   679→                  Email address
+   680→   680→                </Label>
+   681→   681→                <div className="relative">
+   682→   682→                  <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   683→   683→                  <Input
+   684→   684→                    id="auth-email"
+   685→   685→                    type="email"
+   686→   686→                    autoComplete="email"
+   687→   687→                    placeholder="you@example.com"
+   688→   688→                    value={email}
+   689→   689→                    onChange={(e) => setEmail(e.target.value)}
+   690→   690→                    aria-invalid={!!errors.email}
+   691→   691→                    aria-describedby={errors.email ? 'auth-email-err' : undefined}
+   692→   692→                    className="pl-9 h-11"
+   693→   693→                  />
+   694→   694→                </div>
+   695→   695→                {errors.email && (
+   696→   696→                  <p id="auth-email-err" className="text-xs text-rose-600">
+   697→   697→                    {errors.email}
+   698→   698→                  </p>
+   699→   699→                )}
+   700→   700→              </div>
+   701→   701→
+   702→   702→              <div className="space-y-1.5">
+   703→   703→                <div className="flex items-center justify-between">
+   704→   704→                  <Label htmlFor="auth-password" className="text-sm font-medium">
+   705→   705→                    Password
+   706→   706→                  </Label>
+   707→   707→                  {mode === 'signin' && (
+   708→   708→                    <button
+   709→   709→                      type="button"
+   710→   710→                      onClick={() => toast.info('Password reset link will be emailed in production.')}
+   711→   711→                      className="text-xs text-rose-600 hover:text-rose-700 hover:underline font-medium"
+   712→   712→                    >
+   713→   713→                      Forgot password?
+   714→   714→                    </button>
+   715→   715→                  )}
+   716→   716→                </div>
+   717→   717→                <div className="relative">
+   718→   718→                  <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   719→   719→                  <Input
+   720→   720→                    id="auth-password"
+   721→   721→                    type={showPassword ? 'text' : 'password'}
+   722→   722→                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+   723→   723→                    placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'}
+   724→   724→                    value={password}
+   725→   725→                    onChange={(e) => setPassword(e.target.value)}
+   726→   726→                    aria-invalid={!!errors.password}
+   727→   727→                    aria-describedby={errors.password ? 'auth-password-err' : undefined}
+   728→   728→                    className="pl-9 pr-10 h-11"
+   729→   729→                  />
+   730→   730→                  <button
+   731→   731→                    type="button"
+   732→   732→                    onClick={() => setShowPassword((s) => !s)}
+   733→   733→                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+   734→   734→                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-rose-600 transition-colors p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+   735→   735→                  >
+   736→   736→                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+   737→   737→                  </button>
+   738→   738→                </div>
+   739→   739→                {errors.password ? (
+   740→   740→                  <p id="auth-password-err" className="text-xs text-rose-600">
+   741→   741→                    {errors.password}
+   742→   742→                  </p>
+   743→   743→                ) : (
+   744→   744→                  mode === 'signup' && (
+   745→   745→                    <p className="text-[11px] text-muted-foreground">
+   746→   746→                      Use 6+ characters. Mix letters & numbers for strength.
+   747→   747→                    </p>
+   748→   748→                  )
+   749→   749→                )}
+   750→   750→              </div>
+   751→   751→
+   752→   752→              {/* Terms checkbox (signup only) */}
+   753→   753→              {mode === 'signup' && (
+   754→   754→                <div className="flex items-start gap-2.5 pt-1">
+   755→   755→                  <Checkbox
+   756→   756→                    id="auth-agree"
+   757→   757→                    checked={agreed}
+   758→   758→                    onCheckedChange={(v) => setAgreed(v === true)}
+   759→   759→                    className="mt-0.5 data-[state=checked]:bg-rose-600 data-[state=checked]:border-rose-600"
+   760→   760→                  />
+   761→   761→                  <Label htmlFor="auth-agree" className="text-xs text-muted-foreground leading-relaxed font-normal cursor-pointer">
+   762→   762→                    I agree to Aaranya&apos;s{' '}
+   763→   763→                    <span className="text-rose-600 font-medium">Terms of Service</span> and{' '}
+   764→   764→                    <span className="text-rose-600 font-medium">Privacy Policy</span>. My health data
+   765→   765→                    is encrypted & HIPAA-compliant.
+   766→   766→                  </Label>
+   767→   767→                </div>
+   768→   768→              )}
+   769→   769→
+   770→   770→              {/* Submit */}
+   771→   771→              <Button
+   772→   772→                type="submit"
+   773→   773→                size="lg"
+   774→   774→                disabled={submitting || oauthLoading !== null}
+   775→   775→                className="w-full h-11 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg shadow-rose-500/25 transition-all hover:shadow-rose-500/40 hover:-translate-y-0.5 disabled:translate-y-0"
+   776→   776→              >
+   777→   777→                {submitting ? (
+   778→   778→                  <>
+   779→   779→                    <Loader2 className="h-4 w-4 animate-spin" />
+   780→   780→                    Please wait…
+   781→   781→                  </>
+   782→   782→                ) : (
+   783→   783→                  <>
+   784→   784→                    {submitLabel}
+   785→   785→                    <ArrowRight className="h-4 w-4" />
+   786→   786→                  </>
+   787→   787→                )}
+   788→   788→              </Button>
+   789→   789→            </form>
+   790→   790→
+   791→   791→            {/* Pricing teaser */}
+   792→   792→            <div className="mt-5">
+   793→   793→              <PricingTeaser />
+   794→   794→            </div>
+   795→   795→
+   796→   796→            {/* Continue as guest */}
+   797→   797→            <div className="mt-4 text-center">
+   798→   798→              <button
+   799→   799→                type="button"
+   800→   800→                onClick={handleGuest}
+   801→   801→                disabled={submitting || oauthLoading !== null}
+   802→   802→                className="text-sm text-muted-foreground hover:text-rose-600 font-medium transition-colors disabled:opacity-50"
+   803→   803→              >
+   804→   804→                Continue as guest{' '}
+   805→   805→                <span className="text-xs text-muted-foreground/70">(basic access only)</span>
+   806→   806→              </button>
+   807→   807→            </div>
+   808→   808→
+   809→   809→            {/* Footer */}
+   810→   810→            <div className="mt-6 pt-4 border-t border-rose-100">
+   811→   811→              <p className="flex items-start gap-1.5 text-[10px] text-muted-foreground/80 leading-relaxed">
+   812→   812→                <Shield className="h-3.5 w-3.5 mt-0.5 shrink-0 text-rose-500" />
+   813→   813→                <span>
+   814→   814→                  By continuing you agree to our{' '}
+   815→   815→                  <span className="font-medium text-muted-foreground">Terms &amp; Privacy Policy</span>.
+   816→   816→                  Your data is HIPAA-compliant and end-to-end encrypted.
+   817→   817→                </span>
+   818→   818→              </p>
+   819→   819→            </div>
+   820→   820→          </div>
+   821→   821→
+   822→   822→          {/* Below-card compact recap */}
+   823→   823→          <p className="mt-4 text-center text-xs text-muted-foreground">
+   824→   824→            <Check className="inline h-3 w-3 text-emerald-500 mr-1 -mt-0.5" />
+   825→   825→            7-day free trial • Cancel anytime • No card required
+   826→   826→          </p>
+   827→   827→        </motion.div>
+   828→   828→      </div>
+   829→   829→    </div>
+   830→   830→  )
+   831→   831→}
+   832→   832→

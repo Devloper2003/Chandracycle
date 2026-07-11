@@ -1,0 +1,1448 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Card,
+     7→  CardContent,
+     8→  CardFooter,
+     9→  CardHeader,
+    10→  CardTitle,
+    11→  CardDescription,
+    12→} from '@/components/ui/card'
+    13→import { Badge } from '@/components/ui/badge'
+    14→import { Button } from '@/components/ui/button'
+    15→import { Input } from '@/components/ui/input'
+    16→import { Separator } from '@/components/ui/separator'
+    17→import { ScrollArea } from '@/components/ui/scroll-area'
+    18→import {
+    19→  Sheet,
+    20→  SheetContent,
+    21→  SheetHeader,
+    22→  SheetTitle,
+    23→  SheetDescription,
+    24→  SheetFooter,
+    25→} from '@/components/ui/sheet'
+    26→import { cn } from '@/lib/utils'
+    27→import { toast } from 'sonner'
+    28→import {
+    29→  ShoppingBag,
+    30→  ShoppingCart,
+    31→  Search,
+    32→  Star,
+    33→  Heart,
+    34→  Plus,
+    35→  Minus,
+    36→  Trash2,
+    37→  Tag,
+    38→  Truck,
+    39→  ShieldCheck,
+    40→  CheckCircle2,
+    41→  ArrowRight,
+    42→  Sparkles,
+    43→  TrendingUp,
+    44→  X,
+    45→  ChevronRight,
+    46→  ChevronLeft,
+    47→  Flame,
+    48→  Clock,
+    49→  Gift,
+    50→  Award,
+    51→  Package,
+    52→  CreditCard,
+    53→  RotateCcw,
+    54→  BadgePercent,
+    55→  Leaf,
+    56→  Baby,
+    57→  Dumbbell,
+    58→  Droplet,
+    59→  Pill,
+    60→  Flower2,
+    61→  ThermometerSun,
+    62→  FlaskConical,
+    63→  BookOpen,
+    64→  Wind,
+    65→  Activity,
+    66→} from 'lucide-react'
+    67→
+    68→// ─── Types ───────────────────────────────────────────────────────────────────
+    69→
+    70→type CategoryId =
+    71→  | 'all'
+    72→  | 'period'
+    73→  | 'supplements'
+    74→  | 'skincare'
+    75→  | 'fertility'
+    76→  | 'pregnancy'
+    77→  | 'wellness'
+    78→  | 'fitness'
+    79→
+    80→interface Product {
+    81→  id: string
+    82→  name: string
+    83→  brand: string
+    84→  category: Exclude<CategoryId, 'all'>
+    85→  categoryLabel: string
+    86→  price: number
+    87→  originalPrice: number
+    88→  rating: number
+    89→  reviews: number
+    90→  emoji: string
+    91→  gradient: string
+    92→  description: string
+    93→  bestSeller?: boolean
+    94→  aiRecommended?: boolean
+    95→  trending?: boolean
+    96→}
+    97→
+    98→interface CartItem {
+    99→  product: Product
+   100→  quantity: number
+   101→}
+   102→
+   103→// ─── Static Data ─────────────────────────────────────────────────────────────
+   104→
+   105→const CATEGORIES: { id: CategoryId; label: string; icon: React.ElementType }[] = [
+   106→  { id: 'all', label: 'All Products', icon: ShoppingBag },
+   107→  { id: 'period', label: 'Period Care', icon: Droplet },
+   108→  { id: 'supplements', label: 'Supplements', icon: Pill },
+   109→  { id: 'skincare', label: 'Skincare', icon: Flower2 },
+   110→  { id: 'fertility', label: 'Fertility', icon: ThermometerSun },
+   111→  { id: 'pregnancy', label: 'Pregnancy', icon: Baby },
+   112→  { id: 'wellness', label: 'Wellness', icon: Leaf },
+   113→  { id: 'fitness', label: 'Fitness', icon: Dumbbell },
+   114→]
+   115→
+   116→const PRODUCTS: Product[] = [
+   117→  {
+   118→    id: 'p1',
+   119→    name: 'Organic Cotton Pads',
+   120→    brand: 'Carmesi',
+   121→    category: 'period',
+   122→    categoryLabel: 'Period Care',
+   123→    price: 299,
+   124→    originalPrice: 399,
+   125→    rating: 4.7,
+   126→    reviews: 1284,
+   127→    emoji: '🌸',
+   128→    gradient: 'from-rose-400 via-pink-400 to-fuchsia-400',
+   129→    description: 'Chemical-free organic cotton sanitary pads, ultra-soft & rash-free.',
+   130→    bestSeller: true,
+   131→    aiRecommended: true,
+   132→    trending: true,
+   133→  },
+   134→  {
+   135→    id: 'p2',
+   136→    name: 'Menstrual Cup',
+   137→    brand: 'Sirona',
+   138→    category: 'period',
+   139→    categoryLabel: 'Period Care',
+   140→    price: 599,
+   141→    originalPrice: 899,
+   142→    rating: 4.6,
+   143→    reviews: 856,
+   144→    emoji: '☕',
+   145→    gradient: 'from-pink-500 via-rose-500 to-red-400',
+   146→    description: 'Medical-grade silicone cup, 12-hour leak protection, reusable.',
+   147→    bestSeller: true,
+   148→    trending: true,
+   149→  },
+   150→  {
+   151→    id: 'p3',
+   152→    name: 'Period Underwear',
+   153→    brand: 'Plush',
+   154→    category: 'period',
+   155→    categoryLabel: 'Period Care',
+   156→    price: 899,
+   157→    originalPrice: 1299,
+   158→    rating: 4.5,
+   159→    reviews: 432,
+   160→    emoji: '🩲',
+   161→    gradient: 'from-fuchsia-400 via-pink-400 to-rose-300',
+   162→    description: 'Absorbent, breathable period-proof underwear. Medium flow.',
+   163→    aiRecommended: true,
+   164→  },
+   165→  {
+   166→    id: 'p4',
+   167→    name: 'Myo-Inositol Supplement',
+   168→    brand: 'Ovasitol',
+   169→    category: 'supplements',
+   170→    categoryLabel: 'Supplements',
+   171→    price: 1299,
+   172→    originalPrice: 1599,
+   173→    rating: 4.8,
+   174→    reviews: 2147,
+   175→    emoji: '💊',
+   176→    gradient: 'from-amber-400 via-orange-400 to-rose-400',
+   177→    description: '40:1 Myo-Inositol & D-Chiro-Inositol blend for PCOS support.',
+   178→    bestSeller: true,
+   179→    aiRecommended: true,
+   180→    trending: true,
+   181→  },
+   182→  {
+   183→    id: 'p5',
+   184→    name: 'Prenatal Multivitamin',
+   185→    brand: 'Mama Earth',
+   186→    category: 'pregnancy',
+   187→    categoryLabel: 'Pregnancy',
+   188→    price: 699,
+   189→    originalPrice: 899,
+   190→    rating: 4.7,
+   191→    reviews: 968,
+   192→    emoji: '🤰',
+   193→    gradient: 'from-purple-400 via-fuchsia-400 to-pink-400',
+   194→    description: 'Folate, iron & DHA-rich prenatal vitamins for healthy pregnancy.',
+   195→    aiRecommended: true,
+   196→    trending: true,
+   197→  },
+   198→  {
+   199→    id: 'p6',
+   200→    name: 'Omega-3 Fish Oil',
+   201→    brand: 'HealthKart',
+   202→    category: 'supplements',
+   203→    categoryLabel: 'Supplements',
+   204→    price: 549,
+   205→    originalPrice: 799,
+   206→    rating: 4.5,
+   207→    reviews: 1542,
+   208→    emoji: '🐟',
+   209→    gradient: 'from-teal-400 via-cyan-400 to-blue-400',
+   210→    description: 'Triple-strength omega-3 with EPA & DHA for hormone balance.',
+   211→  },
+   212→  {
+   213→    id: 'p7',
+   214→    name: 'Vitamin D3 Capsules',
+   215→    brand: 'WOW',
+   216→    category: 'supplements',
+   217→    categoryLabel: 'Supplements',
+   218→    price: 399,
+   219→    originalPrice: 599,
+   220→    rating: 4.6,
+   221→    reviews: 1124,
+   222→    emoji: '☀️',
+   223→    gradient: 'from-yellow-400 via-amber-400 to-orange-400',
+   224→    description: 'High-potency 60,000 IU vitamin D3 with K2 for absorption.',
+   225→    aiRecommended: true,
+   226→  },
+   227→  {
+   228→    id: 'p8',
+   229→    name: 'Hormone Balance Tea',
+   230→    brand: 'Vitamin Tea',
+   231→    category: 'wellness',
+   232→    categoryLabel: 'Wellness',
+   233→    price: 449,
+   234→    originalPrice: 599,
+   235→    rating: 4.4,
+   236→    reviews: 387,
+   237→    emoji: '🍵',
+   238→    gradient: 'from-emerald-400 via-teal-400 to-green-400',
+   239→    description: 'Caffeine-free herbal blend with shatavari & ashwagandha.',
+   240→    trending: true,
+   241→  },
+   242→  {
+   243→    id: 'p9',
+   244→    name: 'Acne Treatment Serum',
+   245→    brand: 'Minimalist',
+   246→    category: 'skincare',
+   247→    categoryLabel: 'Skincare',
+   248→    price: 799,
+   249→    originalPrice: 1099,
+   250→    rating: 4.5,
+   251→    reviews: 2104,
+   252→    emoji: '💧',
+   253→    gradient: 'from-sky-400 via-blue-400 to-indigo-400',
+   254→    description: '2% Salicylic acid serum for hormonal acne & clear skin.',
+   255→    bestSeller: true,
+   256→    aiRecommended: true,
+   257→  },
+   258→  {
+   259→    id: 'p10',
+   260→    name: 'Glow Serum Vitamin C',
+   261→    brand: 'Plum',
+   262→    category: 'skincare',
+   263→    categoryLabel: 'Skincare',
+   264→    price: 699,
+   265→    originalPrice: 899,
+   266→    rating: 4.6,
+   267→    reviews: 1832,
+   268→    emoji: '🍊',
+   269→    gradient: 'from-orange-400 via-amber-400 to-yellow-400',
+   270→    description: '10% Vitamin C + Ferulic acid for radiant, even-toned skin.',
+   271→    trending: true,
+   272→  },
+   273→  {
+   274→    id: 'p11',
+   275→    name: 'Ovulation Test Kit',
+   276→    brand: 'Pregakem',
+   277→    category: 'fertility',
+   278→    categoryLabel: 'Fertility',
+   279→    price: 399,
+   280→    originalPrice: 549,
+   281→    rating: 4.4,
+   282→    reviews: 678,
+   283→    emoji: '🔬',
+   284→    gradient: 'from-rose-400 via-fuchsia-400 to-purple-400',
+   285→    description: '7 ovulation predictor strips for accurate LH surge detection.',
+   286→    aiRecommended: true,
+   287→  },
+   288→  {
+   289→    id: 'p12',
+   290→    name: 'Basal Thermometer',
+   291→    brand: 'iProven',
+   292→    category: 'fertility',
+   293→    categoryLabel: 'Fertility',
+   294→    price: 599,
+   295→    originalPrice: 799,
+   296→    rating: 4.5,
+   297→    reviews: 423,
+   298→    emoji: '🌡️',
+   299→    gradient: 'from-pink-400 via-rose-400 to-red-400',
+   300→    description: 'BBT thermometer with 2 decimal precision for cycle tracking.',
+   301→    aiRecommended: true,
+   302→  },
+   303→  {
+   304→    id: 'p13',
+   305→    name: 'Pregnancy Test Kit',
+   306→    brand: 'Pregakem',
+   307→    category: 'pregnancy',
+   308→    categoryLabel: 'Pregnancy',
+   309→    price: 299,
+   310→    originalPrice: 399,
+   311→    rating: 4.6,
+   312→    reviews: 1567,
+   313→    emoji: '🤱',
+   314→    gradient: 'from-pink-500 via-rose-400 to-fuchsia-400',
+   315→    description: 'Highly-sensitive HCG detection, results in 3 minutes.',
+   316→    bestSeller: true,
+   317→  },
+   318→  {
+   319→    id: 'p14',
+   320→    name: 'Belly Stretch Oil',
+   321→    brand: 'Mama Earth',
+   322→    category: 'pregnancy',
+   323→    categoryLabel: 'Pregnancy',
+   324→    price: 649,
+   325→    originalPrice: 849,
+   326→    rating: 4.5,
+   327→    reviews: 892,
+   328→    emoji: '🫧',
+   329→    gradient: 'from-rose-300 via-pink-300 to-fuchsia-300',
+   330→    description: 'Bio-oil with rosehip & vitamin E to prevent stretch marks.',
+   331→    aiRecommended: true,
+   332→  },
+   333→  {
+   334→    id: 'p15',
+   335→    name: 'Heating Pad',
+   336→    brand: 'GoQii',
+   337→    category: 'wellness',
+   338→    categoryLabel: 'Wellness',
+   339→    price: 899,
+   340→    originalPrice: 1299,
+   341→    rating: 4.7,
+   342→    reviews: 1043,
+   343→    emoji: '🔥',
+   344→    gradient: 'from-red-400 via-orange-400 to-amber-400',
+   345→    description: 'Electric heat belt with 3 temperature settings for cramp relief.',
+   346→    bestSeller: true,
+   347→    trending: true,
+   348→  },
+   349→  {
+   350→    id: 'p16',
+   351→    name: 'Essential Oil Blend',
+   352→    brand: 'Mystic',
+   353→    category: 'wellness',
+   354→    categoryLabel: 'Wellness',
+   355→    price: 549,
+   356→    originalPrice: 799,
+   357→    rating: 4.4,
+   358→    reviews: 287,
+   359→    emoji: '🌿',
+   360→    gradient: 'from-green-400 via-emerald-400 to-teal-400',
+   361→    description: 'Lavender + clary sage blend for PMS mood & cramp relief.',
+   362→  },
+   363→  {
+   364→    id: 'p17',
+   365→    name: 'Yoga Mat',
+   366→    brand: 'Boldfit',
+   367→    category: 'fitness',
+   368→    categoryLabel: 'Fitness',
+   369→    price: 1199,
+   370→    originalPrice: 1799,
+   371→    rating: 4.6,
+   372→    reviews: 3421,
+   373→    emoji: '🧘‍♀️',
+   374→    gradient: 'from-purple-400 via-violet-400 to-fuchsia-400',
+   375→    description: '6mm anti-skip TPE yoga mat with alignment lines.',
+   376→    bestSeller: true,
+   377→    aiRecommended: true,
+   378→  },
+   379→  {
+   380→    id: 'p18',
+   381→    name: 'Resistance Band Set',
+   382→    brand: 'Fitgear',
+   383→    category: 'fitness',
+   384→    categoryLabel: 'Fitness',
+   385→    price: 499,
+   386→    originalPrice: 799,
+   387→    rating: 4.5,
+   388→    reviews: 1872,
+   389→    emoji: '💪',
+   390→    gradient: 'from-rose-400 via-pink-400 to-purple-400',
+   391→    description: '5-level loop bands with carry bag for home workouts.',
+   392→    trending: true,
+   393→  },
+   394→  {
+   395→    id: 'p19',
+   396→    name: 'PCOS Guide Book',
+   397→    brand: 'ChandraCycle Press',
+   398→    category: 'wellness',
+   399→    categoryLabel: 'Wellness',
+   400→    price: 399,
+   401→    originalPrice: 599,
+   402→    rating: 4.8,
+   403→    reviews: 567,
+   404→    emoji: '📖',
+   405→    gradient: 'from-amber-400 via-orange-400 to-rose-400',
+   406→    description: 'Evidence-based 30-day plan to reverse PCOS naturally.',
+   407→    aiRecommended: true,
+   408→  },
+   409→  {
+   410→    id: 'p20',
+   411→    name: 'Fertility Tracker Bracelet',
+   412→    brand: 'Ava',
+   413→    category: 'fertility',
+   414→    categoryLabel: 'Fertility',
+   415→    price: 2499,
+   416→    originalPrice: 3499,
+   417→    rating: 4.6,
+   418→    reviews: 234,
+   419→    emoji: '⌚',
+   420→    gradient: 'from-fuchsia-500 via-purple-500 to-indigo-500',
+   421→    description: 'Wearable that tracks 6 fertility signals during sleep.',
+   422→    bestSeller: true,
+   423→    aiRecommended: true,
+   424→    trending: true,
+   425→  },
+   426→]
+   427→
+   428→// Featured products: top 4 best sellers
+   429→const FEATURED: Product[] = PRODUCTS.filter((p) => p.bestSeller).slice(0, 4)
+   430→
+   431→// AI recommendation groups — pick from full list (allow duplicates across groups)
+   432→const AI_GROUP_PCODS: Product[] = [
+   433→  PRODUCTS.find((p) => p.id === 'p4')!,
+   434→  PRODUCTS.find((p) => p.id === 'p19')!,
+   435→  PRODUCTS.find((p) => p.id === 'p7')!,
+   436→]
+   437→
+   438→const AI_GROUP_CYCLE: Product[] = [
+   439→  PRODUCTS.find((p) => p.id === 'p1')!,
+   440→  PRODUCTS.find((p) => p.id === 'p15')!,
+   441→]
+   442→
+   443→const AI_GROUP_TRENDING: Product[] = PRODUCTS.filter((p) => p.trending).slice(0, 3)
+   444→
+   445→// ─── Helpers ─────────────────────────────────────────────────────────────────
+   446→
+   447→const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`
+   448→
+   449→const discountPct = (p: Product) =>
+   450→  Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
+   451→
+   452→// ─── Sub-components ──────────────────────────────────────────────────────────
+   453→
+   454→function Stars({ rating, className }: { rating: number; className?: string }) {
+   455→  return (
+   456→    <div className={cn('flex items-center gap-0.5', className)}>
+   457→      {[1, 2, 3, 4, 5].map((i) => (
+   458→        <Star
+   459→          key={i}
+   460→          className={cn(
+   461→            'h-3.5 w-3.5',
+   462→            i <= Math.round(rating)
+   463→              ? 'fill-amber-400 text-amber-400'
+   464→              : 'fill-muted text-muted-foreground/40'
+   465→          )}
+   466→        />
+   467→      ))}
+   468→    </div>
+   469→  )
+   470→}
+   471→
+   472→function ProductImage({ product, className }: { product: Product; className?: string }) {
+   473→  return (
+   474→    <div
+   475→      className={cn(
+   476→        'relative flex items-center justify-center bg-gradient-to-br overflow-hidden',
+   477→        product.gradient,
+   478→        className
+   479→      )}
+   480→    >
+   481→      {/* Decorative blurred blobs */}
+   482→      <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full bg-white/20 blur-2xl" />
+   483→      <div className="absolute -bottom-6 -right-6 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+   484→      <span className="relative text-5xl drop-shadow-lg select-none" role="img" aria-hidden="true">
+   485→        {product.emoji}
+   486→      </span>
+   487→    </div>
+   488→  )
+   489→}
+   490→
+   491→function ProductCard({
+   492→  product,
+   493→  onAdd,
+   494→  inCart,
+   495→  layout = 'grid',
+   496→}: {
+   497→  product: Product
+   498→  onAdd: (p: Product) => void
+   499→  inCart: boolean
+   500→  layout?: 'grid' | 'wide'
+   501→}) {
+   502→  const [liked, setLiked] = useState(false)
+   503→
+   504→  return (
+   505→    <motion.div
+   506→      layout
+   507→      initial={{ opacity: 0, y: 16 }}
+   508→      animate={{ opacity: 1, y: 0 }}
+   509→      exit={{ opacity: 0, scale: 0.95 }}
+   510→      transition={{ duration: 0.3, ease: 'easeOut' }}
+   511→      whileHover={{ y: -4 }}
+   512→      className="h-full"
+   513→    >
+   514→      <Card className="group relative h-full overflow-hidden border-rose-100 dark:border-rose-900/30 hover:shadow-xl hover:shadow-rose-200/50 dark:hover:shadow-rose-950/30 transition-shadow duration-300 py-0 gap-0">
+   515→        {/* Image area */}
+   516→        <div className={cn('relative', layout === 'grid' ? 'aspect-square' : 'aspect-[4/3]')}>
+   517→          <ProductImage product={product} className="h-full w-full" />
+   518→
+   519→          {/* Top-left badges */}
+   520→          <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
+   521→            {product.bestSeller && (
+   522→              <Badge className="bg-amber-500 text-white border-0 shadow-sm text-[10px] gap-1">
+   523→                <Award className="h-3 w-3" /> Best Seller
+   524→              </Badge>
+   525→            )}
+   526→            {product.aiRecommended && (
+   527→              <Badge className="bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-0 shadow-sm text-[10px] gap-1">
+   528→                <Sparkles className="h-3 w-3" /> AI Recommended
+   529→              </Badge>
+   530→            )}
+   531→          </div>
+   532→
+   533→          {/* Discount badge */}
+   534→          <div className="absolute top-2 right-2">
+   535→            <Badge className="bg-rose-600 text-white border-0 shadow-sm text-[10px]">
+   536→              -{discountPct(product)}%
+   537→            </Badge>
+   538→          </div>
+   539→
+   540→          {/* Heart / wishlist button */}
+   541→          <button
+   542→            onClick={() => setLiked((v) => !v)}
+   543→            aria-label="Toggle wishlist"
+   544→            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform"
+   545→          >
+   546→            <Heart
+   547→              className={cn(
+   548→                'h-4 w-4 transition-colors',
+   549→                liked ? 'fill-rose-500 text-rose-500' : 'text-rose-400'
+   550→              )}
+   551→            />
+   552→          </button>
+   553→
+   554→          {/* Category tag */}
+   555→          <div className="absolute bottom-2 left-2">
+   556→            <Badge
+   557→              variant="secondary"
+   558→              className="bg-white/90 dark:bg-black/50 backdrop-blur-sm text-[10px] border-0 text-rose-700 dark:text-rose-200"
+   559→            >
+   560→              {product.categoryLabel}
+   561→            </Badge>
+   562→          </div>
+   563→        </div>
+   564→
+   565→        {/* Content */}
+   566→        <CardContent className="p-3 space-y-2 flex-1">
+   567→          <div>
+   568→            <p className="text-[11px] uppercase tracking-wider text-rose-500 font-semibold">
+   569→              {product.brand}
+   570→            </p>
+   571→            <h3 className="font-semibold text-sm leading-tight line-clamp-2 mt-0.5">
+   572→              {product.name}
+   573→            </h3>
+   574→          </div>
+   575→          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+   576→
+   577→          <div className="flex items-center gap-1.5">
+   578→            <Stars rating={product.rating} />
+   579→            <span className="text-[11px] text-muted-foreground">
+   580→              {product.rating.toFixed(1)} ({product.reviews.toLocaleString('en-IN')})
+   581→            </span>
+   582→          </div>
+   583→
+   584→          <div className="flex items-end gap-2 pt-0.5">
+   585→            <span className="text-lg font-bold text-rose-700 dark:text-rose-300">
+   586→              {formatINR(product.price)}
+   587→            </span>
+   588→            <span className="text-xs text-muted-foreground line-through">
+   589→              {formatINR(product.originalPrice)}
+   590→            </span>
+   591→          </div>
+   592→        </CardContent>
+   593→
+   594→        <CardFooter className="p-3 pt-0">
+   595→          <Button
+   596→            onClick={() => onAdd(product)}
+   597→            className={cn(
+   598→              'w-full h-9 text-xs font-semibold gap-1.5 transition-all',
+   599→              inCart
+   600→                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+   601→                : 'bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md shadow-rose-500/20'
+   602→            )}
+   603→          >
+   604→            {inCart ? (
+   605→              <>
+   606→                <CheckCircle2 className="h-4 w-4" /> Added to Cart
+   607→              </>
+   608→            ) : (
+   609→              <>
+   610→                <ShoppingCart className="h-4 w-4" /> Add to Cart
+   611→              </>
+   612→            )}
+   613→          </Button>
+   614→        </CardFooter>
+   615→      </Card>
+   616→    </motion.div>
+   617→  )
+   618→}
+   619→
+   620→function FeaturedCard({ product, onAdd }: { product: Product; onAdd: (p: Product) => void }) {
+   621→  return (
+   622→    <motion.div
+   623→      initial={{ opacity: 0, scale: 0.96 }}
+   624→      animate={{ opacity: 1, scale: 1 }}
+   625→      transition={{ duration: 0.4, ease: 'easeOut' }}
+   626→      className="min-w-[280px] sm:min-w-[340px] snap-center"
+   627→    >
+   628→      <Card className="overflow-hidden border-0 shadow-xl shadow-rose-200/40 dark:shadow-rose-950/40 py-0 gap-0">
+   629→        <div className="relative h-44">
+   630→          <ProductImage product={product} className="h-full w-full" />
+   631→          <div className="absolute top-3 left-3 flex gap-1.5">
+   632→            <Badge className="bg-amber-500 text-white border-0 shadow-sm gap-1">
+   633→              <Award className="h-3 w-3" /> Best Seller
+   634→            </Badge>
+   635→            <Badge className="bg-rose-600 text-white border-0 shadow-sm">
+   636→              -{discountPct(product)}% OFF
+   637→            </Badge>
+   638→          </div>
+   639→        </div>
+   640→        <CardContent className="p-4 space-y-3">
+   641→          <div>
+   642→            <p className="text-[11px] uppercase tracking-wider text-rose-500 font-semibold">
+   643→              {product.brand}
+   644→            </p>
+   645→            <h3 className="font-bold text-base leading-tight mt-0.5">{product.name}</h3>
+   646→            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
+   647→          </div>
+   648→          <div className="flex items-center gap-1.5">
+   649→            <Stars rating={product.rating} />
+   650→            <span className="text-xs text-muted-foreground">
+   651→              {product.rating.toFixed(1)} · {product.reviews.toLocaleString('en-IN')} reviews
+   652→            </span>
+   653→          </div>
+   654→          <div className="flex items-center justify-between">
+   655→            <div className="flex items-end gap-2">
+   656→              <span className="text-xl font-bold text-rose-700 dark:text-rose-300">
+   657→                {formatINR(product.price)}
+   658→              </span>
+   659→              <span className="text-xs text-muted-foreground line-through">
+   660→                {formatINR(product.originalPrice)}
+   661→              </span>
+   662→            </div>
+   663→            <Button
+   664→              size="sm"
+   665→              onClick={() => onAdd(product)}
+   666→              className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md shadow-rose-500/20 gap-1.5"
+   667→            >
+   668→              <ShoppingCart className="h-3.5 w-3.5" /> Add
+   669→            </Button>
+   670→          </div>
+   671→        </CardContent>
+   672→      </Card>
+   673→    </motion.div>
+   674→  )
+   675→}
+   676→
+   677→function RecommendationRow({
+   678→  title,
+   679→  subtitle,
+   680→  icon: Icon,
+   681→  iconBg,
+   682→  products,
+   683→  onAdd,
+   684→  cartIds,
+   685→}: {
+   686→  title: string
+   687→  subtitle: string
+   688→  icon: React.ElementType
+   689→  iconBg: string
+   690→  products: Product[]
+   691→  onAdd: (p: Product) => void
+   692→  cartIds: Set<string>
+   693→}) {
+   694→  return (
+   695→    <Card className="overflow-hidden border-rose-100 dark:border-rose-900/30 py-0 gap-0">
+   696→      <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-rose-50/80 to-pink-50/80 dark:from-rose-950/20 dark:to-pink-950/20 border-b border-rose-100 dark:border-rose-900/30">
+   697→        <div className="flex items-center gap-3">
+   698→          <div
+   699→            className={cn(
+   700→              'h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white shadow-md',
+   701→              iconBg
+   702→            )}
+   703→          >
+   704→            <Icon className="h-5 w-5" />
+   705→          </div>
+   706→          <div>
+   707→            <CardTitle className="text-base flex items-center gap-2">
+   708→              {title}
+   709→              <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200 border-0 text-[10px] gap-1">
+   710→                <Sparkles className="h-3 w-3" /> AI
+   711→              </Badge>
+   712→            </CardTitle>
+   713→            <CardDescription className="text-xs">{subtitle}</CardDescription>
+   714→          </div>
+   715→        </div>
+   716→      </CardHeader>
+   717→      <CardContent className="p-3">
+   718→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+   719→          {products.map((product) => (
+   720→            <div
+   721→              key={`${title}-${product.id}`}
+   722→              className="flex gap-3 p-2 rounded-xl border border-rose-50 dark:border-rose-900/20 hover:border-rose-200 dark:hover:border-rose-800 transition-colors"
+   723→            >
+   724→              <ProductImage
+   725→                product={product}
+   726→                className="h-16 w-16 rounded-lg shrink-0"
+   727→              />
+   728→              <div className="flex-1 min-w-0 flex flex-col justify-between">
+   729→                <div>
+   730→                  <p className="text-[10px] uppercase tracking-wider text-rose-500 font-semibold">
+   731→                    {product.brand}
+   732→                  </p>
+   733→                  <h4 className="text-xs font-semibold leading-tight line-clamp-1">
+   734→                    {product.name}
+   735→                  </h4>
+   736→                  <div className="flex items-center gap-1 mt-0.5">
+   737→                    <Stars rating={product.rating} className="scale-90" />
+   738→                  </div>
+   739→                </div>
+   740→                <div className="flex items-center justify-between">
+   741→                  <span className="text-sm font-bold text-rose-700 dark:text-rose-300">
+   742→                    {formatINR(product.price)}
+   743→                  </span>
+   744→                  <Button
+   745→                    size="sm"
+   746→                    variant="outline"
+   747→                    onClick={() => onAdd(product)}
+   748→                    className={cn(
+   749→                      'h-7 px-2 text-[11px] gap-1',
+   750→                      cartIds.has(product.id)
+   751→                        ? 'border-emerald-500 text-emerald-600'
+   752→                        : 'border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+   753→                    )}
+   754→                  >
+   755→                    {cartIds.has(product.id) ? (
+   756→                      <CheckCircle2 className="h-3 w-3" />
+   757→                    ) : (
+   758→                      <Plus className="h-3 w-3" />
+   759→                    )}
+   760→                    {cartIds.has(product.id) ? 'Added' : 'Add'}
+   761→                  </Button>
+   762→                </div>
+   763→              </div>
+   764→            </div>
+   765→          ))}
+   766→        </div>
+   767→      </CardContent>
+   768→    </Card>
+   769→  )
+   770→}
+   771→
+   772→// ─── Main Component ──────────────────────────────────────────────────────────
+   773→
+   774→export default function MarketplaceModule() {
+   775→  const [cart, setCart] = useState<CartItem[]>([])
+   776→  const [cartOpen, setCartOpen] = useState(false)
+   777→  const [activeCategory, setActiveCategory] = useState<CategoryId>('all')
+   778→  const [searchQuery, setSearchQuery] = useState('')
+   779→  const [featuredIndex, setFeaturedIndex] = useState(0)
+   780→  const [countdown, setCountdown] = useState({ hours: 5, minutes: 47, seconds: 23 })
+   781→
+   782→  // Flash-sale countdown timer
+   783→  useEffect(() => {
+   784→    const t = setInterval(() => {
+   785→      setCountdown((prev) => {
+   786→        let { hours, minutes, seconds } = prev
+   787→        seconds -= 1
+   788→        if (seconds < 0) {
+   789→          seconds = 59
+   790→          minutes -= 1
+   791→        }
+   792→        if (minutes < 0) {
+   793→          minutes = 59
+   794→          hours -= 1
+   795→        }
+   796→        if (hours < 0) {
+   797→          hours = 5
+   798→          minutes = 0
+   799→          seconds = 0
+   800→        }
+   801→        return { hours, minutes, seconds }
+   802→      })
+   803→    }, 1000)
+   804→    return () => clearInterval(t)
+   805→  }, [])
+   806→
+   807→  // Auto-advance featured carousel every 5s
+   808→  useEffect(() => {
+   809→    const t = setInterval(() => {
+   810→      setFeaturedIndex((i) => (i + 1) % FEATURED.length)
+   811→    }, 5000)
+   812→    return () => clearInterval(t)
+   813→  }, [])
+   814→
+   815→  // Cart helpers
+   816→  const addToCart = (product: Product) => {
+   817→    setCart((prev) => {
+   818→      const existing = prev.find((i) => i.product.id === product.id)
+   819→      if (existing) {
+   820→        return prev.map((i) =>
+   821→          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+   822→        )
+   823→      }
+   824→      return [...prev, { product, quantity: 1 }]
+   825→    })
+   826→    toast.success(`${product.name} added to cart`, {
+   827→      description: formatINR(product.price),
+   828→    })
+   829→  }
+   830→
+   831→  const removeFromCart = (productId: string) => {
+   832→    setCart((prev) => prev.filter((i) => i.product.id !== productId))
+   833→  }
+   834→
+   835→  const updateQty = (productId: string, delta: number) => {
+   836→    setCart((prev) =>
+   837→      prev
+   838→        .map((i) =>
+   839→          i.product.id === productId
+   840→            ? { ...i, quantity: Math.max(0, i.quantity + delta) }
+   841→            : i
+   842→        )
+   843→        .filter((i) => i.quantity > 0)
+   844→    )
+   845→  }
+   846→
+   847→  const clearCart = () => {
+   848→    setCart([])
+   849→    toast.info('Cart cleared')
+   850→  }
+   851→
+   852→  // Cart derived values
+   853→  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0)
+   854→  const subtotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+   855→  const shipping = subtotal > 499 || subtotal === 0 ? 0 : 49
+   856→  const total = subtotal + shipping
+   857→  const cartIds = useMemo(() => new Set(cart.map((i) => i.product.id)), [cart])
+   858→
+   859→  // Filtered products by category + search
+   860→  const filteredProducts = useMemo(() => {
+   861→    const q = searchQuery.trim().toLowerCase()
+   862→    return PRODUCTS.filter((p) => {
+   863→      const catMatch = activeCategory === 'all' || p.category === activeCategory
+   864→      const searchMatch =
+   865→        !q ||
+   866→        p.name.toLowerCase().includes(q) ||
+   867→        p.brand.toLowerCase().includes(q) ||
+   868→        p.categoryLabel.toLowerCase().includes(q) ||
+   869→        p.description.toLowerCase().includes(q)
+   870→      return catMatch && searchMatch
+   871→    })
+   872→  }, [activeCategory, searchQuery])
+   873→
+   874→  const pad2 = (n: number) => n.toString().padStart(2, '0')
+   875→
+   876→  return (
+   877→    <div className="space-y-6">
+   878→      {/* ─── 1. HEADER ─────────────────────────────────────────────────────── */}
+   879→      <motion.div
+   880→        initial={{ opacity: 0, y: -10 }}
+   881→        animate={{ opacity: 1, y: 0 }}
+   882→        transition={{ duration: 0.4 }}
+   883→        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-6 sm:p-8 text-white shadow-xl shadow-rose-500/20"
+   884→      >
+   885→        {/* Decorative blobs */}
+   886→        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+   887→        <div className="absolute -bottom-16 -left-12 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+   888→        <div className="absolute top-4 right-32 h-24 w-24 rounded-full bg-amber-300/20 blur-2xl" />
+   889→
+   890→        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+   891→          <div className="space-y-2 max-w-xl">
+   892→            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium">
+   893→              <ShoppingBag className="h-3.5 w-3.5" />
+   894→              ChandraCycle Marketplace
+   895→            </div>
+   896→            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
+   897→              <span className="bg-gradient-to-r from-white via-rose-50 to-amber-100 bg-clip-text text-transparent">
+   898→                Wellness Market
+   899→              </span>
+   900→            </h1>
+   901→            <p className="text-white/90 text-sm sm:text-base">
+   902→              Curated products for your health journey
+   903→            </p>
+   904→          </div>
+   905→
+   906→          {/* Search + Cart */}
+   907→          <div className="flex items-center gap-3">
+   908→            <div className="relative flex-1 lg:w-72">
+   909→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-300" />
+   910→              <Input
+   911→                value={searchQuery}
+   912→                onChange={(e) => setSearchQuery(e.target.value)}
+   913→                placeholder="Search products, brands..."
+   914→                className="pl-10 h-11 bg-white/95 text-rose-900 border-0 placeholder:text-rose-400 focus-visible:ring-2 focus-visible:ring-white/60"
+   915→              />
+   916→            </div>
+   917→            <Button
+   918→              onClick={() => setCartOpen(true)}
+   919→              size="icon"
+   920→              className="relative h-11 w-11 bg-white text-rose-600 hover:bg-rose-50 shadow-lg shrink-0"
+   921→            >
+   922→              <ShoppingCart className="h-5 w-5" />
+   923→              <AnimatePresence>
+   924→                {cartCount > 0 && (
+   925→                  <motion.span
+   926→                    initial={{ scale: 0 }}
+   927→                    animate={{ scale: 1 }}
+   928→                    exit={{ scale: 0 }}
+   929→                    className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md border-2 border-white"
+   930→                  >
+   931→                    {cartCount}
+   932→                  </motion.span>
+   933→                )}
+   934→              </AnimatePresence>
+   935→            </Button>
+   936→          </div>
+   937→        </div>
+   938→      </motion.div>
+   939→
+   940→      {/* ─── 8. TRUST & INFO ───────────────────────────────────────────────── */}
+   941→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   942→        {[
+   943→          { icon: Truck, title: 'Free Shipping', sub: 'On orders above ₹499', color: 'text-rose-500' },
+   944→          { icon: RotateCcw, title: '7-Day Returns', sub: 'Hassle-free returns', color: 'text-pink-500' },
+   945→          { icon: ShieldCheck, title: 'Secure Payments', sub: '100% protected', color: 'text-fuchsia-500' },
+   946→          { icon: BadgePercent, title: 'Authentic Products', sub: 'Verified & tested', color: 'text-amber-500' },
+   947→        ].map((item) => (
+   948→          <Card key={item.title} className="py-0 gap-0 border-rose-100 dark:border-rose-900/30">
+   949→            <CardContent className="flex items-center gap-3 p-3">
+   950→              <div className={cn('h-10 w-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center shrink-0', item.color)}>
+   951→                <item.icon className="h-5 w-5" />
+   952→              </div>
+   953→              <div className="min-w-0">
+   954→                <p className="text-xs font-semibold leading-tight truncate">{item.title}</p>
+   955→                <p className="text-[11px] text-muted-foreground leading-tight truncate">{item.sub}</p>
+   956→              </div>
+   957→            </CardContent>
+   958→          </Card>
+   959→        ))}
+   960→      </div>
+   961→
+   962→      {/* ─── 7. SPECIAL OFFERS BANNER ─────────────────────────────────────── */}
+   963→      <motion.div
+   964→        initial={{ opacity: 0, scale: 0.98 }}
+   965→        animate={{ opacity: 1, scale: 1 }}
+   966→        transition={{ duration: 0.4 }}
+   967→        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 p-5 sm:p-6 text-white shadow-lg shadow-orange-500/20"
+   968→      >
+   969→        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+   970→        <div className="absolute right-20 -bottom-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+   971→
+   972→        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+   973→          <div className="flex items-start gap-4">
+   974→            <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+   975→              <Flame className="h-6 w-6 text-white" />
+   976→            </div>
+   977→            <div className="space-y-1.5">
+   978→              <div className="flex items-center gap-2 flex-wrap">
+   979→                <h3 className="text-lg sm:text-xl font-bold">Flash Sale Live!</h3>
+   980→                <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm gap-1">
+   981→                  <Clock className="h-3 w-3" /> Ends in
+   982→                </Badge>
+   983→              </div>
+   984→              <p className="text-sm text-white/90">
+   985→                Use code <span className="font-bold bg-white/20 px-1.5 py-0.5 rounded">HEALTH20</span> for 20% off your first order
+   986→              </p>
+   987→
+   988→              {/* Countdown */}
+   989→              <div className="flex items-center gap-2 pt-1">
+   990→                {[
+   991→                  { label: 'Hrs', value: countdown.hours },
+   992→                  { label: 'Min', value: countdown.minutes },
+   993→                  { label: 'Sec', value: countdown.seconds },
+   994→                ].map((unit, idx) => (
+   995→                  <div key={unit.label} className="flex items-center gap-2">
+   996→                    <div className="flex flex-col items-center">
+   997→                      <div className="bg-white/20 backdrop-blur-sm rounded-md px-2.5 py-1 min-w-9 text-center">
+   998→                        <span className="font-mono font-bold text-base tabular-nums">
+   999→                          {pad2(unit.value)}
+  1000→                        </span>
+  1001→                      </div>
+  1002→                      <span className="text-[10px] text-white/80 mt-0.5">{unit.label}</span>
+  1003→                    </div>
+  1004→                    {idx < 2 && <span className="font-bold text-white/80 mb-3">:</span>}
+  1005→                  </div>
+  1006→                ))}
+  1007→              </div>
+  1008→            </div>
+  1009→          </div>
+  1010→
+  1011→          <div className="flex items-center gap-2 shrink-0">
+  1012→            <Button
+  1013→              variant="secondary"
+  1014→              className="bg-white text-orange-600 hover:bg-amber-50 font-semibold gap-1.5"
+  1015→              onClick={() => toast.success('Code HEALTH20 copied!', { description: 'Apply at checkout' })}
+  1016→            >
+  1017→              <Tag className="h-4 w-4" /> Copy Code
+  1018→            </Button>
+  1019→          </div>
+  1020→        </div>
+  1021→      </motion.div>
+  1022→
+  1023→      {/* ─── 3. FEATURED PRODUCTS (Hero Carousel) ─────────────────────────── */}
+  1024→      <section className="space-y-4">
+  1025→        <div className="flex items-center justify-between">
+  1026→          <div className="flex items-center gap-2">
+  1027→            <Award className="h-5 w-5 text-amber-500" />
+  1028→            <h2 className="text-xl font-bold">Featured Best Sellers</h2>
+  1029→          </div>
+  1030→          <div className="flex items-center gap-1">
+  1031→            <Button
+  1032→              variant="outline"
+  1033→              size="icon"
+  1034→              className="h-8 w-8 border-rose-200 text-rose-600 hover:bg-rose-50"
+  1035→              onClick={() => setFeaturedIndex((i) => (i - 1 + FEATURED.length) % FEATURED.length)}
+  1036→            >
+  1037→              <ChevronLeft className="h-4 w-4" />
+  1038→            </Button>
+  1039→            <Button
+  1040→              variant="outline"
+  1041→              size="icon"
+  1042→              className="h-8 w-8 border-rose-200 text-rose-600 hover:bg-rose-50"
+  1043→              onClick={() => setFeaturedIndex((i) => (i + 1) % FEATURED.length)}
+  1044→            >
+  1045→              <ChevronRight className="h-4 w-4" />
+  1046→            </Button>
+  1047→          </div>
+  1048→        </div>
+  1049→
+  1050→        {/* Scrollable carousel */}
+  1051→        <div className="relative overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+  1052→          <div className="flex gap-4">
+  1053→            {FEATURED.map((p) => (
+  1054→              <FeaturedCard key={p.id} product={p} onAdd={addToCart} />
+  1055→            ))}
+  1056→          </div>
+  1057→        </div>
+  1058→
+  1059→        {/* Dots */}
+  1060→        <div className="flex justify-center gap-1.5">
+  1061→          {FEATURED.map((_, i) => (
+  1062→            <button
+  1063→              key={i}
+  1064→              onClick={() => setFeaturedIndex(i)}
+  1065→              aria-label={`Go to slide ${i + 1}`}
+  1066→              className={cn(
+  1067→                'h-1.5 rounded-full transition-all',
+  1068→                i === featuredIndex ? 'w-6 bg-rose-500' : 'w-1.5 bg-rose-200 dark:bg-rose-900'
+  1069→              )}
+  1070→            />
+  1071→          ))}
+  1072→        </div>
+  1073→      </section>
+  1074→
+  1075→      {/* ─── 2. CATEGORY TABS ─────────────────────────────────────────────── */}
+  1076→      <div className="sticky top-[57px] z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-md border-y border-rose-100 dark:border-rose-900/30">
+  1077→        <ScrollArea className="w-full whitespace-nowrap">
+  1078→          <div className="flex gap-2 min-w-max pb-1">
+  1079→            {CATEGORIES.map((cat) => {
+  1080→              const active = activeCategory === cat.id
+  1081→              const Icon = cat.icon
+  1082→              return (
+  1083→                <button
+  1084→                  key={cat.id}
+  1085→                  onClick={() => setActiveCategory(cat.id)}
+  1086→                  className={cn(
+  1087→                    'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap',
+  1088→                    active
+  1089→                      ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white border-transparent shadow-md shadow-rose-500/20'
+  1090→                      : 'bg-card text-muted-foreground border-rose-100 dark:border-rose-900/30 hover:border-rose-300 hover:text-rose-600'
+  1091→                  )}
+  1092→                >
+  1093→                  <Icon className="h-3.5 w-3.5" />
+  1094→                  {cat.label}
+  1095→                </button>
+  1096→              )
+  1097→            })}
+  1098→          </div>
+  1099→        </ScrollArea>
+  1100→      </div>
+  1101→
+  1102→      {/* ─── 6. AI RECOMMENDATIONS ───────────────────────────────────────── */}
+  1103→      <section className="space-y-4">
+  1104→        <div className="flex items-center gap-2">
+  1105→          <Sparkles className="h-5 w-5 text-rose-500" />
+  1106→          <h2 className="text-xl font-bold">AI-Powered Recommendations</h2>
+  1107→          <Badge className="bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-0 gap-1">
+  1108→            <Sparkles className="h-3 w-3" /> Personalized
+  1109→          </Badge>
+  1110→        </div>
+  1111→
+  1112→        <div className="space-y-3">
+  1113→          <RecommendationRow
+  1114→            title="Based on your PCOS profile"
+  1115→            subtitle="Smart picks for managing insulin resistance & hormones"
+  1116→            icon={Flower2}
+  1117→            iconBg="from-amber-400 to-orange-500"
+  1118→            products={AI_GROUP_PCODS}
+  1119→            onAdd={addToCart}
+  1120→            cartIds={cartIds}
+  1121→          />
+  1122→          <RecommendationRow
+  1123→            title="For your cycle phase"
+  1124→            subtitle="Luteal phase — comfort & mood support essentials"
+  1125→            icon={Droplet}
+  1126→            iconBg="from-rose-400 to-pink-500"
+  1127→            products={AI_GROUP_CYCLE}
+  1128→            onAdd={addToCart}
+  1129→            cartIds={cartIds}
+  1130→          />
+  1131→          <RecommendationRow
+  1132→            title="Trending in community"
+  1133→            subtitle="Top picks loved by 50,000+ ChandraCycle women"
+  1134→            icon={TrendingUp}
+  1135→            iconBg="from-fuchsia-500 to-purple-500"
+  1136→            products={AI_GROUP_TRENDING}
+  1137→            onAdd={addToCart}
+  1138→            cartIds={cartIds}
+  1139→          />
+  1140→        </div>
+  1141→      </section>
+  1142→
+  1143→      {/* ─── 4. PRODUCT GRID ─────────────────────────────────────────────── */}
+  1144→      <section className="space-y-4">
+  1145→        <div className="flex items-center justify-between flex-wrap gap-2">
+  1146→          <div className="flex items-center gap-2">
+  1147→            <Package className="h-5 w-5 text-rose-500" />
+  1148→            <h2 className="text-xl font-bold">
+  1149→              {activeCategory === 'all'
+  1150→                ? 'All Products'
+  1151→                : CATEGORIES.find((c) => c.id === activeCategory)?.label}
+  1152→            </h2>
+  1153→            <Badge variant="secondary" className="bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 border-0">
+  1154→              {filteredProducts.length} items
+  1155→            </Badge>
+  1156→          </div>
+  1157→          {searchQuery && (
+  1158→            <Button
+  1159→              variant="ghost"
+  1160→              size="sm"
+  1161→              className="text-rose-600 hover:bg-rose-50"
+  1162→              onClick={() => setSearchQuery('')}
+  1163→            >
+  1164→              <X className="h-3.5 w-3.5" /> Clear search
+  1165→            </Button>
+  1166→          )}
+  1167→        </div>
+  1168→
+  1169→        {filteredProducts.length === 0 ? (
+  1170→          <Card className="border-dashed border-rose-200 dark:border-rose-900/40 py-12">
+  1171→            <CardContent className="flex flex-col items-center justify-center text-center gap-3">
+  1172→              <div className="h-14 w-14 rounded-full bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center">
+  1173→                <Search className="h-6 w-6 text-rose-400" />
+  1174→              </div>
+  1175→              <div>
+  1176→                <p className="font-semibold">No products found</p>
+  1177→                <p className="text-sm text-muted-foreground">
+  1178→                  Try a different search or category
+  1179→                </p>
+  1180→              </div>
+  1181→              <Button
+  1182→                variant="outline"
+  1183→                size="sm"
+  1184→                className="border-rose-300 text-rose-600 hover:bg-rose-50"
+  1185→                onClick={() => {
+  1186→                  setSearchQuery('')
+  1187→                  setActiveCategory('all')
+  1188→                }}
+  1189→              >
+  1190→                Reset filters
+  1191→              </Button>
+  1192→            </CardContent>
+  1193→          </Card>
+  1194→        ) : (
+  1195→          <motion.div
+  1196→            layout
+  1197→            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+  1198→          >
+  1199→            <AnimatePresence mode="popLayout">
+  1200→              {filteredProducts.map((product) => (
+  1201→                <ProductCard
+  1202→                  key={product.id}
+  1203→                  product={product}
+  1204→                  onAdd={addToCart}
+  1205→                  inCart={cartIds.has(product.id)}
+  1206→                />
+  1207→              ))}
+  1208→            </AnimatePresence>
+  1209→          </motion.div>
+  1210→        )}
+  1211→      </section>
+  1212→
+  1213→      {/* ─── Footer Promo ─────────────────────────────────────────────────── */}
+  1214→      <Card className="overflow-hidden border-0 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 text-white py-0 gap-0">
+  1215→        <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+  1216→          <div className="flex items-center gap-3 text-center sm:text-left">
+  1217→            <Gift className="h-8 w-8 shrink-0" />
+  1218→            <div>
+  1219→              <p className="font-bold text-base">Become a Premium Member</p>
+  1220→              <p className="text-sm text-white/90">Get 15% off all marketplace orders + free shipping</p>
+  1221→            </div>
+  1222→          </div>
+  1223→          <Button className="bg-white text-rose-600 hover:bg-rose-50 font-semibold gap-1.5 shrink-0">
+  1224→            Upgrade Now <ArrowRight className="h-4 w-4" />
+  1225→          </Button>
+  1226→        </CardContent>
+  1227→      </Card>
+  1228→
+  1229→      {/* ─── 6. SHOPPING CART (Sheet) ─────────────────────────────────────── */}
+  1230→      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+  1231→        <SheetContent
+  1232→          side="right"
+  1233→          className="w-full sm:max-w-md p-0 flex flex-col bg-card"
+  1234→        >
+  1235→          {/* Header */}
+  1236→          <SheetHeader className="px-5 pt-5 pb-3 border-b border-rose-100 dark:border-rose-900/30">
+  1237→            <SheetTitle className="flex items-center gap-2 text-lg">
+  1238→              <ShoppingCart className="h-5 w-5 text-rose-500" />
+  1239→              Your Cart
+  1240→              {cartCount > 0 && (
+  1241→                <Badge className="bg-rose-500 text-white border-0">
+  1242→                  {cartCount} {cartCount === 1 ? 'item' : 'items'}
+  1243→                </Badge>
+  1244→              )}
+  1245→            </SheetTitle>
+  1246→            <SheetDescription>
+  1247→              {cartCount === 0
+  1248→                ? 'Your cart is currently empty'
+  1249→                : 'Review your items and proceed to checkout'}
+  1250→            </SheetDescription>
+  1251→          </SheetHeader>
+  1252→
+  1253→          {/* Body */}
+  1254→          {cart.length === 0 ? (
+  1255→            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+  1256→              <motion.div
+  1257→                initial={{ scale: 0.8, opacity: 0 }}
+  1258→                animate={{ scale: 1, opacity: 1 }}
+  1259→                className="h-20 w-20 rounded-full bg-gradient-to-br from-rose-100 to-pink-100 dark:from-rose-950/40 dark:to-pink-950/40 flex items-center justify-center"
+  1260→              >
+  1261→                <ShoppingBag className="h-9 w-9 text-rose-400" />
+  1262→              </motion.div>
+  1263→              <div className="space-y-1">
+  1264→                <p className="font-semibold">Your cart is empty</p>
+  1265→                <p className="text-sm text-muted-foreground max-w-xs">
+  1266→                  Browse our wellness collection and find products curated for your journey.
+  1267→                </p>
+  1268→              </div>
+  1269→              <Button
+  1270→                onClick={() => setCartOpen(false)}
+  1271→                className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white gap-1.5"
+  1272→              >
+  1273→                <ArrowRight className="h-4 w-4 rotate-180" /> Continue Shopping
+  1274→              </Button>
+  1275→            </div>
+  1276→          ) : (
+  1277→            <>
+  1278→              {/* Free shipping progress */}
+  1279→              <div className="px-5 py-3 bg-rose-50/60 dark:bg-rose-950/20 border-b border-rose-100 dark:border-rose-900/30">
+  1280→                {subtotal >= 499 ? (
+  1281→                  <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+  1282→                    <CheckCircle2 className="h-3.5 w-3.5" />
+  1283→                    You&apos;ve unlocked <strong>FREE shipping!</strong>
+  1284→                  </div>
+  1285→                ) : (
+  1286→                  <>
+  1287→                    <p className="text-xs text-rose-700 dark:text-rose-300 mb-1.5">
+  1288→                      Add <strong>{formatINR(499 - subtotal)}</strong> more for FREE shipping
+  1289→                    </p>
+  1290→                    <div className="h-1.5 rounded-full bg-rose-200 dark:bg-rose-900/50 overflow-hidden">
+  1291→                      <motion.div
+  1292→                        className="h-full bg-gradient-to-r from-rose-500 to-pink-500"
+  1293→                        initial={{ width: 0 }}
+  1294→                        animate={{ width: `${Math.min(100, (subtotal / 499) * 100)}%` }}
+  1295→                        transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+  1296→                      />
+  1297→                    </div>
+  1298→                  </>
+  1299→                )}
+  1300→              </div>
+  1301→
+  1302→              {/* Items list */}
+  1303→              <ScrollArea className="flex-1">
+  1304→                <div className="p-4 space-y-3">
+  1305→                  <AnimatePresence initial={false}>
+  1306→                    {cart.map((item) => (
+  1307→                      <motion.div
+  1308→                        key={item.product.id}
+  1309→                        layout
+  1310→                        initial={{ opacity: 0, x: 20 }}
+  1311→                        animate={{ opacity: 1, x: 0 }}
+  1312→                        exit={{ opacity: 0, x: -20, height: 0 }}
+  1313→                        transition={{ duration: 0.2 }}
+  1314→                        className="flex gap-3 p-2 rounded-xl border border-rose-100 dark:border-rose-900/30 bg-background"
+  1315→                      >
+  1316→                        <ProductImage
+  1317→                          product={item.product}
+  1318→                          className="h-16 w-16 rounded-lg shrink-0"
+  1319→                        />
+  1320→                        <div className="flex-1 min-w-0">
+  1321→                          <div className="flex items-start justify-between gap-2">
+  1322→                            <div className="min-w-0">
+  1323→                              <p className="text-[10px] uppercase tracking-wider text-rose-500 font-semibold truncate">
+  1324→                                {item.product.brand}
+  1325→                              </p>
+  1326→                              <h4 className="text-xs font-semibold leading-tight line-clamp-1">
+  1327→                                {item.product.name}
+  1328→                              </h4>
+  1329→                            </div>
+  1330→                            <Button
+  1331→                              variant="ghost"
+  1332→                              size="icon"
+  1333→                              className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 shrink-0"
+  1334→                              onClick={() => removeFromCart(item.product.id)}
+  1335→                            >
+  1336→                              <Trash2 className="h-3.5 w-3.5" />
+  1337→                            </Button>
+  1338→                          </div>
+  1339→
+  1340→                          <div className="flex items-center justify-between mt-2">
+  1341→                            {/* Quantity stepper */}
+  1342→                            <div className="inline-flex items-center rounded-lg border border-rose-200 dark:border-rose-900/40 overflow-hidden">
+  1343→                              <button
+  1344→                                onClick={() => updateQty(item.product.id, -1)}
+  1345→                                className="h-7 w-7 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
+  1346→                                aria-label="Decrease quantity"
+  1347→                              >
+  1348→                                <Minus className="h-3 w-3" />
+  1349→                              </button>
+  1350→                              <span className="w-8 text-center text-xs font-semibold tabular-nums">
+  1351→                                {item.quantity}
+  1352→                              </span>
+  1353→                              <button
+  1354→                                onClick={() => updateQty(item.product.id, 1)}
+  1355→                                className="h-7 w-7 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
+  1356→                                aria-label="Increase quantity"
+  1357→                              >
+  1358→                                <Plus className="h-3 w-3" />
+  1359→                              </button>
+  1360→                            </div>
+  1361→
+  1362→                            <div className="text-right">
+  1363→                              <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
+  1364→                                {formatINR(item.product.price * item.quantity)}
+  1365→                              </p>
+  1366→                              <p className="text-[10px] text-muted-foreground">
+  1367→                                {formatINR(item.product.price)} each
+  1368→                              </p>
+  1369→                            </div>
+  1370→                          </div>
+  1371→                        </div>
+  1372→                      </motion.div>
+  1373→                    ))}
+  1374→                  </AnimatePresence>
+  1375→
+  1376→                  <button
+  1377→                    onClick={clearCart}
+  1378→                    className="w-full text-xs text-muted-foreground hover:text-rose-600 transition-colors py-2 flex items-center justify-center gap-1.5"
+  1379→                  >
+  1380→                    <Trash2 className="h-3 w-3" /> Clear cart
+  1381→                  </button>
+  1382→                </div>
+  1383→              </ScrollArea>
+  1384→
+  1385→              {/* Footer: totals + checkout */}
+  1386→              <SheetFooter className="border-t border-rose-100 dark:border-rose-900/30 p-4 space-y-3">
+  1387→                <div className="space-y-1.5 text-sm">
+  1388→                  <div className="flex justify-between text-muted-foreground">
+  1389→                    <span>Subtotal</span>
+  1390→                    <span className="font-medium text-foreground">{formatINR(subtotal)}</span>
+  1391→                  </div>
+  1392→                  <div className="flex justify-between text-muted-foreground">
+  1393→                    <span>Shipping</span>
+  1394→                    <span className="font-medium text-foreground">
+  1395→                      {shipping === 0 ? (
+  1396→                        <span className="text-emerald-600 dark:text-emerald-400">FREE</span>
+  1397→                      ) : (
+  1398→                        formatINR(shipping)
+  1399→                      )}
+  1400→                    </span>
+  1401→                  </div>
+  1402→                  <Separator className="my-2 bg-rose-100 dark:bg-rose-900/30" />
+  1403→                  <div className="flex justify-between items-center">
+  1404→                    <span className="font-semibold">Total</span>
+  1405→                    <span className="text-xl font-bold text-rose-700 dark:text-rose-300">
+  1406→                      {formatINR(total)}
+  1407→                    </span>
+  1408→                  </div>
+  1409→                  <p className="text-[11px] text-muted-foreground text-right">
+  1410→                    Inclusive of all taxes · Save {formatINR(
+  1411→                      cart.reduce(
+  1412→                        (sum, i) => sum + (i.product.originalPrice - i.product.price) * i.quantity,
+  1413→                        0
+  1414→                      )
+  1415→                    )} on this order
+  1416→                  </p>
+  1417→                </div>
+  1418→
+  1419→                <div className="flex flex-col gap-2">
+  1420→                  <Button
+  1421→                    className="w-full h-11 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold shadow-md shadow-rose-500/20 gap-1.5"
+  1422→                    onClick={() => {
+  1423→                      toast.success('Order placed successfully! 🎉', {
+  1424→                        description: `${cartCount} items · ${formatINR(total)}`,
+  1425→                      })
+  1426→                      setCart([])
+  1427→                      setCartOpen(false)
+  1428→                    }}
+  1429→                  >
+  1430→                    <CreditCard className="h-4 w-4" /> Proceed to Checkout
+  1431→                  </Button>
+  1432→                  <Button
+  1433→                    variant="outline"
+  1434→                    className="w-full h-10 border-rose-200 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+  1435→                    onClick={() => setCartOpen(false)}
+  1436→                  >
+  1437→                    Continue Shopping
+  1438→                  </Button>
+  1439→                </div>
+  1440→              </SheetFooter>
+  1441→            </>
+  1442→          )}
+  1443→        </SheetContent>
+  1444→      </Sheet>
+  1445→    </div>
+  1446→  )
+  1447→}
+  1448→

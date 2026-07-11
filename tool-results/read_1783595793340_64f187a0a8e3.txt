@@ -1,0 +1,1077 @@
+     1→'use client'
+     2→
+     3→import { useState, useMemo } from 'react'
+     4→import { motion } from 'framer-motion'
+     5→import {
+     6→  AreaChart,
+     7→  Area,
+     8→  BarChart,
+     9→  Bar,
+    10→  XAxis,
+    11→  YAxis,
+    12→  CartesianGrid,
+    13→  Tooltip,
+    14→  ResponsiveContainer,
+    15→  ReferenceLine,
+    16→} from 'recharts'
+    17→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    18→import { Badge } from '@/components/ui/badge'
+    19→import { Button } from '@/components/ui/button'
+    20→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    21→import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+    22→import { Progress } from '@/components/ui/progress'
+    23→import {
+    24→  Brain,
+    25→  Droplets,
+    26→  Zap,
+    27→  Moon,
+    28→  Flame,
+    29→  TrendingUp,
+    30→  Activity,
+    31→  Sparkles,
+    32→  Heart,
+    33→  Sun,
+    34→  CloudRain,
+    35→  Battery,
+    36→  Coffee,
+    37→  Salad,
+    38→  Dumbbell,
+    39→  HandHeart,
+    40→  ChevronDown,
+    41→  CheckCircle2,
+    42→  Flower2,
+    43→  ThermometerSun,
+    44→  Waves,
+    45→  Leaf,
+    46→} from 'lucide-react'
+    47→
+    48→// ─── MOCK DATA ───────────────────────────────────────────────────────────────
+    49→
+    50→const CURRENT_DAY = 14
+    51→const CYCLE_LENGTH = 28
+    52→
+    53→interface CycleDayData {
+    54→  day: number
+    55→  phase: string
+    56→  estrogen: number
+    57→  progesterone: number
+    58→  lh: number
+    59→  fsh: number
+    60→}
+    61→
+    62→function generateCycleData(): CycleDayData[] {
+    63→  const data: CycleDayData[] = []
+    64→  for (let d = 1; d <= CYCLE_LENGTH; d++) {
+    65→    let estrogen = 0
+    66→    let progesterone = 0
+    67→    let lh = 0
+    68→    let fsh = 0
+    69→    let phase = ''
+    70→
+    71→    if (d >= 1 && d <= 5) {
+    72→      // Menstrual phase
+    73→      phase = 'Menstrual'
+    74→      estrogen = 20 + Math.random() * 10
+    75→      progesterone = 5 + Math.random() * 5
+    76→      lh = 5 + Math.random() * 3
+    77→      fsh = 8 + Math.random() * 4
+    78→    } else if (d >= 6 && d <= 12) {
+    79→      // Follicular phase
+    80→      phase = 'Follicular'
+    81→      const progress = (d - 5) / 7
+    82→      estrogen = 30 + progress * 120 + Math.random() * 10
+    83→      progesterone = 5 + Math.random() * 5
+    84→      lh = 5 + Math.random() * 3
+    85→      fsh = 8 + progress * 4 + Math.random() * 3
+    86→    } else if (d >= 13 && d <= 15) {
+    87→      // Ovulation phase
+    88→      phase = 'Ovulation'
+    89→      estrogen = 140 + Math.random() * 20
+    90→      progesterone = 10 + Math.random() * 10
+    91→      lh = d === 14 ? 80 + Math.random() * 20 : d === 13 ? 40 + Math.random() * 20 : 30 + Math.random() * 15
+    92→      fsh = 12 + Math.random() * 5
+    93→    } else {
+    94→      // Luteal phase
+    95→      phase = 'Luteal'
+    96→      const lutealProgress = (d - 15) / 13
+    97→      estrogen = 130 - lutealProgress * 80 + Math.random() * 10
+    98→      progesterone = 15 + lutealProgress * 100 - (lutealProgress > 0.6 ? lutealProgress * 50 : 0) + Math.random() * 10
+    99→      lh = 5 + Math.random() * 3
+   100→      fsh = 5 + Math.random() * 3
+   101→    }
+   102→
+   103→    data.push({
+   104→      day: d,
+   105→      phase,
+   106→      estrogen: Math.round(estrogen * 10) / 10,
+   107→      progesterone: Math.round(progesterone * 10) / 10,
+   108→      lh: Math.round(lh * 10) / 10,
+   109→      fsh: Math.round(fsh * 10) / 10,
+   110→    })
+   111→  }
+   112→  return data
+   113→}
+   114→
+   115→const cycleData = generateCycleData()
+   116→
+   117→const currentPhase = cycleData[CURRENT_DAY - 1]
+   118→
+   119→const phaseGradients: Record<string, { from: string; to: string; accent: string; bg: string }> = {
+   120→  Menstrual: { from: '#6b21a8', to: '#be185d', accent: '#a855f7', bg: 'from-purple-900/80 to-rose-900/80' },
+   121→  Follicular: { from: '#7c3aed', to: '#ec4899', accent: '#c084fc', bg: 'from-violet-800/80 to-pink-700/80' },
+   122→  Ovulation: { from: '#8b5cf6', to: '#f43f5e', accent: '#f472b6', bg: 'from-purple-700/80 to-rose-600/80' },
+   123→  Luteal: { from: '#6d28d9', to: '#db2777', accent: '#d946ef', bg: 'from-violet-900/80 to-fuchsia-800/80' },
+   124→}
+   125→
+   126→const phaseDescriptions: Record<string, { title: string; description: string; details: string }> = {
+   127→  Menstrual: {
+   128→    title: 'Menstrual Phase',
+   129→    description: 'Your body is shedding the uterine lining',
+   130→    details: 'Estrogen and progesterone are at their lowest. Your body is resetting for a new cycle. Energy may be lower — this is a time for rest and reflection.',
+   131→  },
+   132→  Follicular: {
+   133→    title: 'Follicular Phase',
+   134→    description: 'Estrogen is rising — energy and creativity surge',
+   135→    details: 'The pituitary releases FSH, stimulating follicle growth. Estrogen climbs steadily, boosting mood, energy, and cognitive function. This is your time to initiate and create.',
+   136→  },
+   137→  Ovulation: {
+   138→    title: 'Ovulation Phase',
+   139→    description: 'Peak estrogen & LH surge — you\'re at your most fertile',
+   140→    details: 'The LH surge triggers egg release. Estrogen peaks, making you feel confident, social, and vibrant. Your communication skills and energy are at their highest.',
+   141→  },
+   142→  Luteal: {
+   143→    title: 'Luteal Phase',
+   144→    description: 'Progesterone rises — your body prepares for potential pregnancy',
+   145→    details: 'Progesterone dominates, promoting calm and nesting behaviors. Estrogen has a secondary rise then falls. You may notice increased appetite, deeper intuition, and need for slower-paced activities.',
+   146→  },
+   147→}
+   148→
+   149→const sevenDayPredictions = [
+   150→  { day: 'Mon', mood: 'Energetic', moodEmoji: '☀️', energy: 85, sleep: 88, stress: 25, productivity: 90, cravings: 'Low' },
+   151→  { day: 'Tue', mood: 'Confident', moodEmoji: '✨', energy: 92, sleep: 85, stress: 20, productivity: 95, cravings: 'Low' },
+   152→  { day: 'Wed', mood: 'Social', moodEmoji: '💫', energy: 88, sleep: 82, stress: 30, productivity: 88, cravings: 'Moderate' },
+   153→  { day: 'Thu', mood: 'Calm', moodEmoji: '🌙', energy: 72, sleep: 78, stress: 40, productivity: 75, cravings: 'Moderate' },
+   154→  { day: 'Fri', mood: 'Reflective', moodEmoji: '🦋', energy: 65, sleep: 75, stress: 50, productivity: 68, cravings: 'High' },
+   155→  { day: 'Sat', mood: 'Nesting', moodEmoji: '🏠', energy: 58, sleep: 72, stress: 55, productivity: 60, cravings: 'High' },
+   156→  { day: 'Sun', mood: 'Restful', moodEmoji: '🌿', energy: 55, sleep: 80, stress: 45, productivity: 55, cravings: 'Moderate' },
+   157→]
+   158→
+   159→const phaseInsights = [
+   160→  {
+   161→    id: 'body',
+   162→    icon: Activity,
+   163→    title: "What's Happening in Your Body",
+   164→    content:
+   165→      'You\'re at peak fertility! The LH surge has triggered ovulation, and your body is releasing an egg. Estrogen is at its highest point, enhancing your mood, cognition, and social skills. Your cervical mucus is at its most fertile consistency. Your basal body temperature is about to rise.',
+   166→  },
+   167→  {
+   168→    id: 'activities',
+   169→    icon: Sparkles,
+   170→    title: 'Best Activities for This Phase',
+   171→    content:
+   172→      'This is your power phase! Schedule important presentations, networking events, and difficult conversations. Your verbal fluency and social confidence are peaking. Great time for dates, team collaborations, and creative brainstorming. Your energy and stamina are at their highest.',
+   173→  },
+   174→  {
+   175→    id: 'nutrition',
+   176→    icon: Salad,
+   177→    title: 'Nutrition Recommendations',
+   178→    content:
+   179→      'Support ovulation with zinc-rich foods: oysters, pumpkin seeds, and legumes. Include antioxidant-rich berries and leafy greens. Lighter, fresh meals support your natural energy. Stay well hydrated. Include cruciferous vegetables to support estrogen metabolism. Avoid excessive caffeine which can disrupt hormone balance.',
+   180→  },
+   181→  {
+   182→    id: 'exercise',
+   183→    icon: Dumbbell,
+   184→    title: 'Exercise Suggestions',
+   185→    content:
+   186→      'Your energy is peaking — go for it! High-intensity interval training, challenging cardio, strength training with heavier weights, and competitive sports are all great now. This is the time to push your limits. Group fitness classes can be especially enjoyable given your heightened social energy.',
+   187→  },
+   188→  {
+   189→    id: 'selfcare',
+   190→    icon: HandHeart,
+   191→    title: 'Self-Care Tips',
+   192→    content:
+   193→      'Channel your heightened energy into social connections and creative expression. Plan something special with friends or your partner. Journal your insights — your mental clarity is at its peak. Practice gratitude and enjoy your confidence. Consider this your "me time" to shine and express yourself fully.',
+   194→  },
+   195→]
+   196→
+   197→const symptomCategories = [
+   198→  { id: 'bloating', label: 'Bloating', icon: Droplets },
+   199→  { id: 'cramps', label: 'Cramps', icon: Waves },
+   200→  { id: 'headache', label: 'Headache', icon: Flame },
+   201→  { id: 'fatigue', label: 'Fatigue', icon: Battery },
+   202→  { id: 'mood-swings', label: 'Mood Swings', icon: CloudRain },
+   203→  { id: 'acne', label: 'Acne', icon: Sun },
+   204→  { id: 'cravings', label: 'Cravings', icon: Coffee },
+   205→  { id: 'insomnia', label: 'Insomnia', icon: Moon },
+   206→  { id: 'breast-tenderness', label: 'Breast Tenderness', icon: Heart },
+   207→  { id: 'anxiety', label: 'Anxiety', icon: Brain },
+   208→  { id: 'back-pain', label: 'Back Pain', icon: Activity },
+   209→  { id: 'hot-flashes', label: 'Hot Flashes', icon: ThermometerSun },
+   210→]
+   211→
+   212→// ─── ANIMATION VARIANTS ──────────────────────────────────────────────────────
+   213→
+   214→const containerVariants = {
+   215→  hidden: { opacity: 0 },
+   216→  visible: {
+   217→    opacity: 1,
+   218→    transition: {
+   219→      staggerChildren: 0.08,
+   220→    },
+   221→  },
+   222→}
+   223→
+   224→const itemVariants = {
+   225→  hidden: { opacity: 0, y: 20 },
+   226→  visible: {
+   227→    opacity: 1,
+   228→    y: 0,
+   229→    transition: { duration: 0.5, ease: 'easeOut' },
+   230→  },
+   231→}
+   232→
+   233→// ─── HELPER: GET LEVEL ────────────────────────────────────────────────────────
+   234→
+   235→function getLevel(value: number, thresholds: [number, number, number, number]): string {
+   236→  if (value >= thresholds[3]) return 'Peak'
+   237→  if (value >= thresholds[2]) return 'High'
+   238→  if (value >= thresholds[1]) return 'Medium'
+   239→  return 'Low'
+   240→}
+   241→
+   242→function getLevelColor(level: string): string {
+   243→  switch (level) {
+   244→    case 'Peak': return 'text-rose-600'
+   245→    case 'High': return 'text-purple-600'
+   246→    case 'Medium': return 'text-violet-500'
+   247→    case 'Low': return 'text-slate-500'
+   248→    default: return 'text-muted-foreground'
+   249→  }
+   250→}
+   251→
+   252→function getLevelBarColor(level: string): string {
+   253→  switch (level) {
+   254→    case 'Peak': return 'bg-rose-500'
+   255→    case 'High': return 'bg-purple-500'
+   256→    case 'Medium': return 'bg-violet-400'
+   257→    case 'Low': return 'bg-slate-400'
+   258→    default: return 'bg-muted'
+   259→  }
+   260→}
+   261→
+   262→function getLevelBarBg(level: string): string {
+   263→  switch (level) {
+   264→    case 'Peak': return 'bg-rose-100'
+   265→    case 'High': return 'bg-purple-100'
+   266→    case 'Medium': return 'bg-violet-100'
+   267→    case 'Low': return 'bg-slate-100'
+   268→    default: return 'bg-muted'
+   269→  }
+   270→}
+   271→
+   272→function getLevelPercent(value: number, max: number): number {
+   273→  return Math.min(100, Math.round((value / max) * 100))
+   274→}
+   275→
+   276→// ─── CUSTOM TOOLTIP ───────────────────────────────────────────────────────────
+   277→
+   278→function CustomChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+   279→  if (!active || !payload?.length) return null
+   280→  return (
+   281→    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-xl px-4 py-3 shadow-xl text-xs">
+   282→      <p className="font-semibold text-foreground mb-1.5">Day {label}</p>
+   283→      {payload.map((entry, i) => (
+   284→        <div key={i} className="flex items-center gap-2 py-0.5">
+   285→          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+   286→          <span className="text-muted-foreground">{entry.name}:</span>
+   287→          <span className="font-mono font-medium text-foreground">{entry.value}</span>
+   288→        </div>
+   289→      ))}
+   290→    </div>
+   291→  )
+   292→}
+   293→
+   294→// ─── CIRCULAR GAUGE ───────────────────────────────────────────────────────────
+   295→
+   296→function CircularGauge({ value, max = 100, label, size = 120 }: { value: number; max?: number; label: string; size?: number }) {
+   297→  const strokeWidth = 8
+   298→  const radius = (size - strokeWidth) / 2
+   299→  const circumference = 2 * Math.PI * radius
+   300→  const percent = value / max
+   301→  const dashOffset = circumference * (1 - percent)
+   302→
+   303→  const getColor = (p: number) => {
+   304→    if (p >= 0.8) return '#a855f7'
+   305→    if (p >= 0.6) return '#8b5cf6'
+   306→    if (p >= 0.4) return '#c084fc'
+   307→    return '#d8b4fe'
+   308→  }
+   309→
+   310→  return (
+   311→    <div className="flex flex-col items-center gap-1">
+   312→      <svg width={size} height={size} className="-rotate-90">
+   313→        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-muted/30" />
+   314→        <motion.circle
+   315→          cx={size / 2}
+   316→          cy={size / 2}
+   317→          r={radius}
+   318→          fill="none"
+   319→          stroke={getColor(percent)}
+   320→          strokeWidth={strokeWidth}
+   321→          strokeLinecap="round"
+   322→          strokeDasharray={circumference}
+   323→          initial={{ strokeDashoffset: circumference }}
+   324→          animate={{ strokeDashoffset: dashOffset }}
+   325→          transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
+   326→        />
+   327→      </svg>
+   328→      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
+   329→        <span className="text-2xl font-bold text-foreground">{value}</span>
+   330→        <span className="text-[10px] text-muted-foreground">{label}</span>
+   331→      </div>
+   332→    </div>
+   333→  )
+   334→}
+   335→
+   336→// ─── SECTION 1: PHASE BANNER ─────────────────────────────────────────────────
+   337→
+   338→function PhaseBanner() {
+   339→  const gradient = phaseGradients[currentPhase.phase]
+   340→  const info = phaseDescriptions[currentPhase.phase]
+   341→
+   342→  return (
+   343→    <motion.div variants={itemVariants}>
+   344→      <div
+   345→        className="relative overflow-hidden rounded-2xl p-6 md:p-8"
+   346→        style={{
+   347→          background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`,
+   348→        }}
+   349→      >
+   350→        {/* Decorative circles */}
+   351→        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/5" />
+   352→        <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-white/5" />
+   353→        <div className="absolute left-1/2 -bottom-6 h-32 w-32 rounded-full bg-white/5" />
+   354→
+   355→        <div className="relative z-10">
+   356→          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+   357→            <div className="space-y-2">
+   358→              <div className="flex items-center gap-2">
+   359→                <Flower2 className="h-5 w-5 text-white/80" />
+   360→                <Badge variant="secondary" className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">
+   361→                  Cycle Day {CURRENT_DAY} of {CYCLE_LENGTH}
+   362→                </Badge>
+   363→              </div>
+   364→              <h2 className="text-2xl md:text-3xl font-bold text-white">{info.title}</h2>
+   365→              <p className="text-white/80 text-sm md:text-base max-w-xl">{info.description}</p>
+   366→            </div>
+   367→            <div className="flex flex-col items-start md:items-end gap-2">
+   368→              <div className="flex items-center gap-1.5">
+   369→                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+   370→                <span className="text-white/70 text-xs">Live Tracking</span>
+   371→              </div>
+   372→              <div className="text-right max-w-xs">
+   373→                <p className="text-white/90 text-xs leading-relaxed">{info.details}</p>
+   374→              </div>
+   375→            </div>
+   376→          </div>
+   377→        </div>
+   378→      </div>
+   379→    </motion.div>
+   380→  )
+   381→}
+   382→
+   383→// ─── SECTION 2: HORMONE TREND CHARTS ─────────────────────────────────────────
+   384→
+   385→function HormoneTrendCharts() {
+   386→  const chartData = useMemo(() =>
+   387→    cycleData.map((d) => ({
+   388→      day: d.day,
+   389→      estrogen: d.estrogen,
+   390→      progesterone: d.progesterone,
+   391→      lh: d.lh,
+   392→      fsh: d.fsh,
+   393→      phase: d.phase,
+   394→    })),
+   395→    []
+   396→  )
+   397→
+   398→  // Build phase label positions for x-axis
+   399→  const phaseLabels = useMemo(() => {
+   400→    const labels: Record<string, number> = {}
+   401→    cycleData.forEach((d) => {
+   402→      if (!labels[d.phase]) {
+   403→        labels[d.phase] = d.day
+   404→      }
+   405→    })
+   406→    return labels
+   407→  }, [])
+   408→
+   409→  return (
+   410→    <motion.div variants={itemVariants}>
+   411→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   412→        <CardHeader className="pb-2">
+   413→          <div className="flex items-center justify-between">
+   414→            <CardTitle className="flex items-center gap-2 text-lg">
+   415→              <TrendingUp className="h-5 w-5 text-purple-500" />
+   416→              Hormone Trends — 28-Day Cycle
+   417→            </CardTitle>
+   418→            <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs">
+   419→              Full Cycle View
+   420→            </Badge>
+   421→          </div>
+   422→        </CardHeader>
+   423→        <CardContent className="pt-0">
+   424→          <div className="w-full h-[320px] md:h-[380px]">
+   425→            <ResponsiveContainer width="100%" height="100%">
+   426→              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+   427→                <defs>
+   428→                  <linearGradient id="estrogenGradient" x1="0" y1="0" x2="0" y2="1">
+   429→                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+   430→                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+   431→                  </linearGradient>
+   432→                  <linearGradient id="progesteroneGradient" x1="0" y1="0" x2="0" y2="1">
+   433→                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.35} />
+   434→                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0.02} />
+   435→                  </linearGradient>
+   436→                  <linearGradient id="lhGradient" x1="0" y1="0" x2="0" y2="1">
+   437→                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+   438→                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
+   439→                  </linearGradient>
+   440→                  <linearGradient id="fshGradient" x1="0" y1="0" x2="0" y2="1">
+   441→                    <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.3} />
+   442→                    <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.02} />
+   443→                  </linearGradient>
+   444→                </defs>
+   445→                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+   446→                <XAxis
+   447→                  dataKey="day"
+   448→                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+   449→                  tickLine={false}
+   450→                  axisLine={{ stroke: 'hsl(var(--border))' }}
+   451→                  tickFormatter={(value: number) => {
+   452→                    const entry = cycleData[value - 1]
+   453→                    if (entry && phaseLabels[entry.phase] === value) return `D${value}`
+   454→                    return `${value}`
+   455→                  }}
+   456→                />
+   457→                <YAxis
+   458→                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+   459→                  tickLine={false}
+   460→                  axisLine={false}
+   461→                />
+   462→                <Tooltip content={<CustomChartTooltip />} />
+   463→                <ReferenceLine
+   464→                  x={CURRENT_DAY}
+   465→                  stroke="#a855f7"
+   466→                  strokeWidth={2}
+   467→                  strokeDasharray="5 5"
+   468→                  label={{
+   469→                    value: 'Today',
+   470→                    position: 'top',
+   471→                    fill: '#a855f7',
+   472→                    fontSize: 12,
+   473→                    fontWeight: 600,
+   474→                  }}
+   475→                />
+   476→                <Area
+   477→                  type="monotone"
+   478→                  dataKey="estrogen"
+   479→                  name="Estrogen"
+   480→                  stroke="#8b5cf6"
+   481→                  strokeWidth={2.5}
+   482→                  fill="url(#estrogenGradient)"
+   483→                  dot={false}
+   484→                  activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }}
+   485→                />
+   486→                <Area
+   487→                  type="monotone"
+   488→                  dataKey="progesterone"
+   489→                  name="Progesterone"
+   490→                  stroke="#ec4899"
+   491→                  strokeWidth={2.5}
+   492→                  fill="url(#progesteroneGradient)"
+   493→                  dot={false}
+   494→                  activeDot={{ r: 5, fill: '#ec4899', stroke: '#fff', strokeWidth: 2 }}
+   495→                />
+   496→                <Area
+   497→                  type="monotone"
+   498→                  dataKey="lh"
+   499→                  name="LH"
+   500→                  stroke="#f97316"
+   501→                  strokeWidth={2}
+   502→                  fill="url(#lhGradient)"
+   503→                  dot={false}
+   504→                  activeDot={{ r: 5, fill: '#f97316', stroke: '#fff', strokeWidth: 2 }}
+   505→                />
+   506→                <Area
+   507→                  type="monotone"
+   508→                  dataKey="fsh"
+   509→                  name="FSH"
+   510→                  stroke="#14b8a6"
+   511→                  strokeWidth={2}
+   512→                  fill="url(#fshGradient)"
+   513→                  dot={false}
+   514→                  activeDot={{ r: 5, fill: '#14b8a6', stroke: '#fff', strokeWidth: 2 }}
+   515→                />
+   516→              </AreaChart>
+   517→            </ResponsiveContainer>
+   518→          </div>
+   519→
+   520→          {/* Phase labels */}
+   521→          <div className="flex items-center justify-center gap-4 md:gap-8 mt-3 flex-wrap">
+   522→            {['Menstrual', 'Follicular', 'Ovulation', 'Luteal'].map((phase) => (
+   523→              <div key={phase} className="flex items-center gap-1.5">
+   524→                <span
+   525→                  className="h-2.5 w-2.5 rounded-full"
+   526→                  style={{
+   527→                    backgroundColor: phaseGradients[phase].accent,
+   528→                  }}
+   529→                />
+   530→                <span className="text-xs text-muted-foreground">{phase}</span>
+   531→              </div>
+   532→            ))}
+   533→          </div>
+   534→        </CardContent>
+   535→      </Card>
+   536→    </motion.div>
+   537→  )
+   538→}
+   539→
+   540→// ─── SECTION 3: CURRENT HORMONE STATUS ───────────────────────────────────────
+   541→
+   542→function CurrentHormoneStatus() {
+   543→  const estrogenLevel = getLevel(currentPhase.estrogen, [30, 70, 120, 140])
+   544→  const progesteroneLevel = getLevel(currentPhase.progesterone, [10, 40, 80, 110])
+   545→  const lhStatus = currentPhase.lh > 30 ? 'Surging' : 'Baseline'
+   546→  const balanceScore = 82
+   547→
+   548→  return (
+   549→    <motion.div variants={itemVariants}>
+   550→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+   551→        {/* Phase Card */}
+   552→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   553→          <div
+   554→            className="h-2"
+   555→            style={{
+   556→              background: `linear-gradient(90deg, ${phaseGradients[currentPhase.phase].from}, ${phaseGradients[currentPhase.phase].to})`,
+   557→            }}
+   558→          />
+   559→          <CardContent className="p-4 pt-3">
+   560→            <div className="flex items-center gap-2 mb-2">
+   561→              <div
+   562→                className="h-8 w-8 rounded-lg flex items-center justify-center"
+   563→                style={{
+   564→                  background: `linear-gradient(135deg, ${phaseGradients[currentPhase.phase].from}40, ${phaseGradients[currentPhase.phase].to}40)`,
+   565→                }}
+   566→              >
+   567→                <Flower2 className="h-4 w-4" style={{ color: phaseGradients[currentPhase.phase].accent }} />
+   568→              </div>
+   569→              <span className="text-xs text-muted-foreground">Current Phase</span>
+   570→            </div>
+   571→            <p className="font-bold text-foreground">{currentPhase.phase}</p>
+   572→            <p className="text-xs text-muted-foreground">Day {CURRENT_DAY}</p>
+   573→          </CardContent>
+   574→        </Card>
+   575→
+   576→        {/* Estrogen Level */}
+   577→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   578→          <div className="h-2 bg-gradient-to-r from-violet-400 to-purple-600" />
+   579→          <CardContent className="p-4 pt-3">
+   580→            <div className="flex items-center gap-2 mb-2">
+   581→              <div className="h-8 w-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+   582→                <Droplets className="h-4 w-4 text-violet-500" />
+   583→              </div>
+   584→              <span className="text-xs text-muted-foreground">Estrogen</span>
+   585→            </div>
+   586→            <div className="flex items-center justify-between mb-1.5">
+   587→              <p className="font-bold text-foreground">{currentPhase.estrogen}</p>
+   588→              <Badge variant="secondary" className={`text-[10px] px-1.5 ${getLevelColor(estrogenLevel)}`}>
+   589→                {estrogenLevel}
+   590→              </Badge>
+   591→            </div>
+   592→            <div className={`h-2 rounded-full ${getLevelBarBg(estrogenLevel)} overflow-hidden`}>
+   593→              <motion.div
+   594→                className={`h-full rounded-full ${getLevelBarColor(estrogenLevel)}`}
+   595→                initial={{ width: 0 }}
+   596→                animate={{ width: `${getLevelPercent(currentPhase.estrogen, 160)}%` }}
+   597→                transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+   598→              />
+   599→            </div>
+   600→          </CardContent>
+   601→        </Card>
+   602→
+   603→        {/* Progesterone Level */}
+   604→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   605→          <div className="h-2 bg-gradient-to-r from-pink-400 to-rose-600" />
+   606→          <CardContent className="p-4 pt-3">
+   607→            <div className="flex items-center gap-2 mb-2">
+   608→              <div className="h-8 w-8 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+   609→                <Heart className="h-4 w-4 text-pink-500" />
+   610→              </div>
+   611→              <span className="text-xs text-muted-foreground">Progesterone</span>
+   612→            </div>
+   613→            <div className="flex items-center justify-between mb-1.5">
+   614→              <p className="font-bold text-foreground">{currentPhase.progesterone}</p>
+   615→              <Badge variant="secondary" className={`text-[10px] px-1.5 ${getLevelColor(progesteroneLevel)}`}>
+   616→                {progesteroneLevel}
+   617→              </Badge>
+   618→            </div>
+   619→            <div className={`h-2 rounded-full ${getLevelBarBg(progesteroneLevel)} overflow-hidden`}>
+   620→              <motion.div
+   621→                className={`h-full rounded-full ${getLevelBarColor(progesteroneLevel)}`}
+   622→                initial={{ width: 0 }}
+   623→                animate={{ width: `${getLevelPercent(currentPhase.progesterone, 120)}%` }}
+   624→                transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
+   625→              />
+   626→            </div>
+   627→          </CardContent>
+   628→        </Card>
+   629→
+   630→        {/* LH Status */}
+   631→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   632→          <div className="h-2 bg-gradient-to-r from-orange-400 to-amber-500" />
+   633→          <CardContent className="p-4 pt-3">
+   634→            <div className="flex items-center gap-2 mb-2">
+   635→              <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+   636→                <Zap className="h-4 w-4 text-orange-500" />
+   637→              </div>
+   638→              <span className="text-xs text-muted-foreground">LH Status</span>
+   639→            </div>
+   640→            <div className="flex items-center justify-between mb-1.5">
+   641→              <p className="font-bold text-foreground">{currentPhase.lh}</p>
+   642→              <Badge
+   643→                variant="secondary"
+   644→                className={`text-[10px] px-1.5 ${lhStatus === 'Surging' ? 'text-orange-600 bg-orange-100 dark:bg-orange-900/40 dark:text-orange-300' : 'text-slate-500'}`}
+   645→              >
+   646→                {lhStatus}
+   647→              </Badge>
+   648→            </div>
+   649→            <div className="flex items-center gap-1">
+   650→              {lhStatus === 'Surging' ? (
+   651→                <>
+   652→                  {[...Array(5)].map((_, i) => (
+   653→                    <motion.div
+   654→                      key={i}
+   655→                      className="h-2 flex-1 rounded-full bg-orange-500"
+   656→                      initial={{ scaleY: 0 }}
+   657→                      animate={{ scaleY: 1 }}
+   658→                      transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
+   659→                    />
+   660→                  ))}
+   661→                </>
+   662→              ) : (
+   663→                <>
+   664→                  {[...Array(5)].map((_, i) => (
+   665→                    <div
+   666→                      key={i}
+   667→                      className={`h-2 flex-1 rounded-full ${i < 1 ? 'bg-orange-400' : 'bg-orange-100 dark:bg-orange-900/30'}`}
+   668→                    />
+   669→                  ))}
+   670→                </>
+   671→              )}
+   672→            </div>
+   673→          </CardContent>
+   674→        </Card>
+   675→
+   676→        {/* Hormone Balance Score */}
+   677→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+   678→          <div className="h-2 bg-gradient-to-r from-purple-400 to-fuchsia-600" />
+   679→          <CardContent className="p-4 pt-3 flex flex-col items-center justify-center">
+   680→            <span className="text-xs text-muted-foreground mb-1">Hormone Balance</span>
+   681→            <div className="relative">
+   682→              <CircularGauge value={balanceScore} label="Score" size={100} />
+   683→            </div>
+   684→          </CardContent>
+   685→        </Card>
+   686→      </div>
+   687→    </motion.div>
+   688→  )
+   689→}
+   690→
+   691→// ─── SECTION 4: AI PREDICTIONS ────────────────────────────────────────────────
+   692→
+   693→function AIPredictions() {
+   694→  const energyData = sevenDayPredictions.map((d) => ({
+   695→    day: d.day,
+   696→    energy: d.energy,
+   697→  }))
+   698→
+   699→  const getCravingColor = (level: string) => {
+   700→    switch (level) {
+   701→      case 'Low': return 'bg-green-400'
+   702→      case 'Moderate': return 'bg-amber-400'
+   703→      case 'High': return 'bg-rose-400'
+   704→      default: return 'bg-muted'
+   705→    }
+   706→  }
+   707→
+   708→  const getStressColor = (value: number) => {
+   709→    if (value >= 60) return 'bg-rose-500'
+   710→    if (value >= 40) return 'bg-amber-500'
+   711→    return 'bg-green-500'
+   712→  }
+   713→
+   714→  return (
+   715→    <motion.div variants={itemVariants}>
+   716→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   717→        <CardHeader className="pb-3">
+   718→          <CardTitle className="flex items-center gap-2 text-lg">
+   719→            <Sparkles className="h-5 w-5 text-purple-500" />
+   720→            AI Predictions — Next 7 Days
+   721→          </CardTitle>
+   722→        </CardHeader>
+   723→        <CardContent>
+   724→          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   725→            {/* Mood Forecast */}
+   726→            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-950/20 dark:to-pink-950/20 p-4">
+   727→              <div className="flex items-center gap-2 mb-3">
+   728→                <Sun className="h-4 w-4 text-amber-500" />
+   729→                <span className="text-sm font-semibold text-foreground">Mood Forecast</span>
+   730→              </div>
+   731→              <div className="space-y-2">
+   732→                {sevenDayPredictions.map((d) => (
+   733→                  <div key={d.day} className="flex items-center justify-between">
+   734→                    <span className="text-xs text-muted-foreground w-8">{d.day}</span>
+   735→                    <span className="text-sm">{d.moodEmoji}</span>
+   736→                    <span className="text-xs font-medium text-foreground">{d.mood}</span>
+   737→                  </div>
+   738→                ))}
+   739→              </div>
+   740→            </div>
+   741→
+   742→            {/* Energy Levels */}
+   743→            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-violet-50/80 to-fuchsia-50/80 dark:from-violet-950/20 dark:to-fuchsia-950/20 p-4">
+   744→              <div className="flex items-center gap-2 mb-3">
+   745→                <Battery className="h-4 w-4 text-violet-500" />
+   746→                <span className="text-sm font-semibold text-foreground">Energy Levels</span>
+   747→              </div>
+   748→              <div className="h-40">
+   749→                <ResponsiveContainer width="100%" height="100%">
+   750→                  <BarChart data={energyData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+   751→                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.08} />
+   752→                    <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} />
+   753→                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} domain={[0, 100]} />
+   754→                    <Tooltip
+   755→                      contentStyle={{
+   756→                        fontSize: 11,
+   757→                        borderRadius: 8,
+   758→                        border: '1px solid hsl(var(--border))',
+   759→                        background: 'hsl(var(--background))',
+   760→                      }}
+   761→                    />
+   762→                    <Bar dataKey="energy" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+   763→                  </BarChart>
+   764→                </ResponsiveContainer>
+   765→              </div>
+   766→            </div>
+   767→
+   768→            {/* Sleep Quality */}
+   769→            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-indigo-50/80 to-violet-50/80 dark:from-indigo-950/20 dark:to-violet-950/20 p-4">
+   770→              <div className="flex items-center gap-2 mb-3">
+   771→                <Moon className="h-4 w-4 text-indigo-500" />
+   772→                <span className="text-sm font-semibold text-foreground">Sleep Quality</span>
+   773→              </div>
+   774→              <div className="space-y-2.5">
+   775→                {sevenDayPredictions.map((d) => (
+   776→                  <div key={d.day} className="space-y-1">
+   777→                    <div className="flex items-center justify-between">
+   778→                      <span className="text-xs text-muted-foreground">{d.day}</span>
+   779→                      <span className="text-xs font-medium text-foreground">{d.sleep}%</span>
+   780→                    </div>
+   781→                    <Progress value={d.sleep} className="h-1.5" />
+   782→                  </div>
+   783→                ))}
+   784→              </div>
+   785→            </div>
+   786→
+   787→            {/* Stress Susceptibility */}
+   788→            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-rose-50/80 to-orange-50/80 dark:from-rose-950/20 dark:to-orange-950/20 p-4">
+   789→              <div className="flex items-center gap-2 mb-3">
+   790→                <Flame className="h-4 w-4 text-rose-500" />
+   791→                <span className="text-sm font-semibold text-foreground">Stress Susceptibility</span>
+   792→              </div>
+   793→              <div className="space-y-2.5">
+   794→                {sevenDayPredictions.map((d) => (
+   795→                  <div key={d.day} className="space-y-1">
+   796→                    <div className="flex items-center justify-between">
+   797→                      <span className="text-xs text-muted-foreground">{d.day}</span>
+   798→                      <span className="text-xs font-medium text-foreground">{d.stress}%</span>
+   799→                    </div>
+   800→                    <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+   801→                      <motion.div
+   802→                        className={`h-full rounded-full ${getStressColor(d.stress)}`}
+   803→                        initial={{ width: 0 }}
+   804→                        animate={{ width: `${d.stress}%` }}
+   805→                        transition={{ duration: 0.8, delay: 0.1 }}
+   806→                      />
+   807→                    </div>
+   808→                  </div>
+   809→                ))}
+   810→              </div>
+   811→            </div>
+   812→
+   813→            {/* Productivity Forecast */}
+   814→            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-teal-50/80 to-emerald-50/80 dark:from-teal-950/20 dark:to-emerald-950/20 p-4">
+   815→              <div className="flex items-center gap-2 mb-3">
+   816→                <Zap className="h-4 w-4 text-teal-500" />
+   817→                <span className="text-sm font-semibold text-foreground">Productivity Forecast</span>
+   818→              </div>
+   819→              <div className="space-y-2">
+   820→                {sevenDayPredictions.map((d) => (
+   821→                  <div key={d.day} className="flex items-center gap-2">
+   822→                    <span className="text-xs text-muted-foreground w-8">{d.day}</span>
+   823→                    <div className="flex-1 flex items-center gap-0.5">
+   824→                      {[...Array(10)].map((_, i) => (
+   825→                        <div
+   826→                          key={i}
+   827→                          className={`h-3 flex-1 rounded-sm ${
+   828→                            i < Math.round(d.productivity / 10)
+   829→                              ? 'bg-teal-500'
+   830→                              : 'bg-muted/40'
+   831→                          }`}
+   832→                        />
+   833→                      ))}
+   834→                    </div>
+   835→                    <span className="text-xs font-mono text-muted-foreground w-8 text-right">{d.productivity}%</span>
+   836→                  </div>
+   837→                ))}
+   838→              </div>
+   839→            </div>
+   840→
+   841→            {/* Cravings Prediction */}
+   842→            <div className="rounded-xl border border-border/50 bg-gradient-to-br from-amber-50/80 to-rose-50/80 dark:from-amber-950/20 dark:to-rose-950/20 p-4">
+   843→              <div className="flex items-center gap-2 mb-3">
+   844→                <Coffee className="h-4 w-4 text-amber-500" />
+   845→                <span className="text-sm font-semibold text-foreground">Cravings Prediction</span>
+   846→              </div>
+   847→              <div className="space-y-2.5">
+   848→                {sevenDayPredictions.map((d) => (
+   849→                  <div key={d.day} className="flex items-center justify-between">
+   850→                    <span className="text-xs text-muted-foreground">{d.day}</span>
+   851→                    <div className="flex items-center gap-1.5">
+   852→                      {[...Array(3)].map((_, i) => (
+   853→                        <div
+   854→                          key={i}
+   855→                          className={`h-2 w-5 rounded-full ${
+   856→                            (d.cravings === 'High' && i < 3) ||
+   857→                            (d.cravings === 'Moderate' && i < 2) ||
+   858→                            (d.cravings === 'Low' && i < 1)
+   859→                              ? getCravingColor(d.cravings)
+   860→                              : 'bg-muted/40'
+   861→                          }`}
+   862→                        />
+   863→                      ))}
+   864→                    </div>
+   865→                    <Badge
+   866→                      variant="secondary"
+   867→                      className={`text-[10px] px-1.5 ${
+   868→                        d.cravings === 'High'
+   869→                          ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300'
+   870→                          : d.cravings === 'Moderate'
+   871→                          ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300'
+   872→                          : 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300'
+   873→                      }`}
+   874→                    >
+   875→                      {d.cravings}
+   876→                    </Badge>
+   877→                  </div>
+   878→                ))}
+   879→              </div>
+   880→            </div>
+   881→          </div>
+   882→        </CardContent>
+   883→      </Card>
+   884→    </motion.div>
+   885→  )
+   886→}
+   887→
+   888→// ─── SECTION 5: PHASE-BASED INSIGHTS ─────────────────────────────────────────
+   889→
+   890→function PhaseBasedInsights() {
+   891→  return (
+   892→    <motion.div variants={itemVariants}>
+   893→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   894→        <CardHeader className="pb-3">
+   895→          <CardTitle className="flex items-center gap-2 text-lg">
+   896→            <Leaf className="h-5 w-5 text-emerald-500" />
+   897→            Phase-Based Insights — {currentPhase.phase} Phase
+   898→          </CardTitle>
+   899→        </CardHeader>
+   900→        <CardContent>
+   901→          <Accordion type="single" collapsible className="w-full">
+   902→            {phaseInsights.map((insight, index) => (
+   903→              <AccordionItem key={insight.id} value={insight.id} className="border-border/50">
+   904→                <AccordionTrigger className="hover:no-underline py-3">
+   905→                  <div className="flex items-center gap-3">
+   906→                    <div
+   907→                      className="h-8 w-8 rounded-lg flex items-center justify-center"
+   908→                      style={{
+   909→                        background: `linear-gradient(135deg, ${phaseGradients[currentPhase.phase].from}20, ${phaseGradients[currentPhase.phase].to}20)`,
+   910→                      }}
+   911→                    >
+   912→                      <insight.icon className="h-4 w-4" style={{ color: phaseGradients[currentPhase.phase].accent }} />
+   913→                    </div>
+   914→                    <span className="text-sm font-medium text-foreground">{insight.title}</span>
+   915→                    {index === 0 && (
+   916→                      <Badge variant="secondary" className="bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300 text-[10px] px-1.5">
+   917→                        Key
+   918→                      </Badge>
+   919→                    )}
+   920→                  </div>
+   921→                </AccordionTrigger>
+   922→                <AccordionContent>
+   923→                  <div className="pl-11 pr-2">
+   924→                    <p className="text-sm text-muted-foreground leading-relaxed">{insight.content}</p>
+   925→                  </div>
+   926→                </AccordionContent>
+   927→              </AccordionItem>
+   928→            ))}
+   929→          </Accordion>
+   930→        </CardContent>
+   931→      </Card>
+   932→    </motion.div>
+   933→  )
+   934→}
+   935→
+   936→// ─── SECTION 6: HORMONE LOG ──────────────────────────────────────────────────
+   937→
+   938→function HormoneLog() {
+   939→  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([])
+   940→  const [notes, setNotes] = useState('')
+   941→  const [saved, setSaved] = useState(false)
+   942→
+   943→  const toggleSymptom = (id: string) => {
+   944→    setSelectedSymptoms((prev) =>
+   945→      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+   946→    )
+   947→    setSaved(false)
+   948→  }
+   949→
+   950→  const handleSave = () => {
+   951→    setSaved(true)
+   952→    setTimeout(() => setSaved(false), 3000)
+   953→  }
+   954→
+   955→  return (
+   956→    <motion.div variants={itemVariants}>
+   957→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   958→        <CardHeader className="pb-3">
+   959→          <CardTitle className="flex items-center gap-2 text-lg">
+   960→            <Activity className="h-5 w-5 text-purple-500" />
+   961→            Hormone Symptom Log
+   962→          </CardTitle>
+   963→          <p className="text-xs text-muted-foreground">Track symptoms that correlate with your hormonal changes</p>
+   964→        </CardHeader>
+   965→        <CardContent className="space-y-4">
+   966→          {/* Symptom category pills */}
+   967→          <div className="space-y-1.5">
+   968→            <span className="text-xs font-medium text-muted-foreground">Select symptoms you&apos;re experiencing</span>
+   969→            <div className="flex flex-wrap gap-2">
+   970→              {symptomCategories.map((symptom) => {
+   971→                const isSelected = selectedSymptoms.includes(symptom.id)
+   972→                return (
+   973→                  <motion.button
+   974→                    key={symptom.id}
+   975→                    whileTap={{ scale: 0.95 }}
+   976→                    onClick={() => toggleSymptom(symptom.id)}
+   977→                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 border ${
+   978→                      isSelected
+   979→                        ? 'bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/40 dark:border-purple-700 dark:text-purple-300 shadow-sm'
+   980→                        : 'bg-background border-border/50 text-muted-foreground hover:border-purple-300 hover:text-purple-600 dark:hover:border-purple-700 dark:hover:text-purple-400'
+   981→                    }`}
+   982→                  >
+   983→                    <symptom.icon className="h-3 w-3" />
+   984→                    {symptom.label}
+   985→                    {isSelected && <CheckCircle2 className="h-3 w-3" />}
+   986→                  </motion.button>
+   987→                )
+   988→              })}
+   989→            </div>
+   990→          </div>
+   991→
+   992→          {/* Notes */}
+   993→          <div className="space-y-1.5">
+   994→            <span className="text-xs font-medium text-muted-foreground">Additional notes</span>
+   995→            <textarea
+   996→              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 resize-none transition-all"
+   997→              rows={3}
+   998→              placeholder="Describe how you're feeling, any patterns you notice..."
+   999→              value={notes}
+  1000→              onChange={(e) => {
+  1001→                setNotes(e.target.value)
+  1002→                setSaved(false)
+  1003→              }}
+  1004→            />
+  1005→          </div>
+  1006→
+  1007→          {/* Save button */}
+  1008→          <div className="flex items-center gap-3">
+  1009→            <Button
+  1010→              onClick={handleSave}
+  1011→              disabled={selectedSymptoms.length === 0 && !notes}
+  1012→              className="bg-gradient-to-r from-purple-600 to-rose-600 hover:from-purple-700 hover:to-rose-700 text-white shadow-lg shadow-purple-500/20 transition-all duration-200"
+  1013→            >
+  1014→              {saved ? (
+  1015→                <>
+  1016→                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+  1017→                  Saved!
+  1018→                </>
+  1019→              ) : (
+  1020→                <>
+  1021→                  <Sparkles className="h-4 w-4 mr-1.5" />
+  1022→                  Log Symptoms
+  1023→                </>
+  1024→              )}
+  1025→            </Button>
+  1026→            {saved && (
+  1027→              <motion.p
+  1028→                initial={{ opacity: 0, x: -10 }}
+  1029→                animate={{ opacity: 1, x: 0 }}
+  1030→                className="text-xs text-emerald-600 dark:text-emerald-400"
+  1031→              >
+  1032→                Symptoms logged successfully — AI will correlate with your hormone data
+  1033→              </motion.p>
+  1034→            )}
+  1035→            {selectedSymptoms.length > 0 && (
+  1036→              <span className="text-xs text-muted-foreground">
+  1037→                {selectedSymptoms.length} symptom{selectedSymptoms.length !== 1 ? 's' : ''} selected
+  1038→              </span>
+  1039→            )}
+  1040→          </div>
+  1041→        </CardContent>
+  1042→      </Card>
+  1043→    </motion.div>
+  1044→  )
+  1045→}
+  1046→
+  1047→// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+  1048→
+  1049→export default function HormoneModule() {
+  1050→  return (
+  1051→    <motion.div
+  1052→      className="space-y-6"
+  1053→      variants={containerVariants}
+  1054→      initial="hidden"
+  1055→      animate="visible"
+  1056→    >
+  1057→      {/* Section 1: Phase Banner */}
+  1058→      <PhaseBanner />
+  1059→
+  1060→      {/* Section 2: Hormone Trend Charts */}
+  1061→      <HormoneTrendCharts />
+  1062→
+  1063→      {/* Section 3: Current Hormone Status */}
+  1064→      <CurrentHormoneStatus />
+  1065→
+  1066→      {/* Section 4: AI Predictions */}
+  1067→      <AIPredictions />
+  1068→
+  1069→      {/* Section 5: Phase-Based Insights */}
+  1070→      <PhaseBasedInsights />
+  1071→
+  1072→      {/* Section 6: Hormone Log */}
+  1073→      <HormoneLog />
+  1074→    </motion.div>
+  1075→  )
+  1076→}
+  1077→

@@ -1,0 +1,718 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+     4→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+     5→import { Badge } from '@/components/ui/badge'
+     6→import { Button } from '@/components/ui/button'
+     7→import { motion } from 'framer-motion'
+     8→import { useAppStore } from '@/lib/store'
+     9→import {
+    10→  Droplets,
+    11→  CalendarDays,
+    12→  Sparkles,
+    13→  Sun,
+    14→  CloudSun,
+    15→  Moon,
+    16→  HeartPulse,
+    17→  GlassWater,
+    18→  TrendingUp,
+    19→  Zap,
+    20→  Plus,
+    21→  Bell,
+    22→  Activity,
+    23→  Baby,
+    24→  Flower2,
+    25→  Clock,
+    26→} from 'lucide-react'
+    27→
+    28→// ─── Animation Variants ──────────────────────────────────────────────────────
+    29→
+    30→const containerVariants = {
+    31→  hidden: { opacity: 0 },
+    32→  visible: {
+    33→    opacity: 1,
+    34→    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+    35→  },
+    36→}
+    37→
+    38→const itemVariants = {
+    39→  hidden: { opacity: 0, y: 16 },
+    40→  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    41→}
+    42→
+    43→// ─── Empty State Component ───────────────────────────────────────────────────
+    44→
+    45→interface EmptyStateProps {
+    46→  icon: React.ElementType
+    47→  title: string
+    48→  description: string
+    49→  ctaLabel?: string
+    50→  onCta?: () => void
+    51→  className?: string
+    52→}
+    53→
+    54→function EmptyState({ icon: Icon, title, description, ctaLabel, onCta, className }: EmptyStateProps) {
+    55→  return (
+    56→    <div
+    57→      className={`flex flex-col items-center justify-center py-12 px-4 text-center ${
+    58→        className ?? ''
+    59→      }`}
+    60→    >
+    61→      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-3">
+    62→        <Icon className="h-6 w-6 text-muted-foreground" />
+    63→      </div>
+    64→      <p className="text-sm font-medium text-foreground">{title}</p>
+    65→      <p className="text-xs text-muted-foreground mt-1 max-w-xs">{description}</p>
+    66→      {ctaLabel && onCta && (
+    67→        <Button size="sm" className="mt-4" onClick={onCta}>
+    68→          {ctaLabel}
+    69→        </Button>
+    70→      )}
+    71→    </div>
+    72→  )
+    73→}
+    74→
+    75→// ─── Phase metadata (configuration — not user data) ──────────────────────────
+    76→
+    77→const PHASE_META = [
+    78→  { name: 'Menstrual', days: '1-5', color: '#e11d48' },
+    79→  { name: 'Follicular', days: '6-13', color: '#8b5cf6' },
+    80→  { name: 'Ovulation', days: '14-16', color: '#f97316' },
+    81→  { name: 'Luteal', days: '17-28', color: '#06b6d4' },
+    82→]
+    83→
+    84→function getPhaseForCycleDay(cycleDay: number, cycleLength: number, periodLength: number) {
+    85→  // Period phase
+    86→  if (cycleDay <= periodLength) {
+    87→    return PHASE_META[0]
+    88→  }
+    89→  // Ovulation is roughly 14 days before next period
+    90→  const ovulationDay = cycleLength - 14
+    91→  if (cycleDay >= ovulationDay - 1 && cycleDay <= ovulationDay + 1) {
+    92→    return PHASE_META[2]
+    93→  }
+    94→  if (cycleDay < ovulationDay - 1) {
+    95→    return PHASE_META[1]
+    96→  }
+    97→  return PHASE_META[3]
+    98→}
+    99→
+   100→// ─── Main Component ──────────────────────────────────────────────────────────
+   101→
+   102→const emptySubscribe = () => () => {}
+   103→
+   104→interface CycleEntry {
+   105→  id: string
+   106→  startDate: string
+   107→  endDate?: string | null
+   108→  cycleLength: number
+   109→  periodLength: number
+   110→  ovulationDate?: string | null
+   111→  fertilityWindowStart?: string | null
+   112→  fertilityWindowEnd?: string | null
+   113→  notes?: string | null
+   114→}
+   115→
+   116→export default function DashboardModule() {
+   117→  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
+   118→  const userProfile = useAppStore((s) => s.userProfile)
+   119→  const setActiveModule = useAppStore((s) => s.setActiveModule)
+   120→  const displayName = userProfile?.name?.trim() || 'there'
+   121→
+   122→  const [cycles, setCycles] = useState<CycleEntry[]>([])
+   123→  const [loading, setLoading] = useState(true)
+   124→
+   125→  useEffect(() => {
+   126→    if (!userProfile?.id) {
+   127→      setLoading(false)
+   128→      return
+   129→    }
+   130→    let cancelled = false
+   131→    fetch(`/api/cycles?userId=${encodeURIComponent(userProfile.id)}`)
+   132→      .then((r) => (r.ok ? r.json() : []))
+   133→      .then((data: CycleEntry[]) => {
+   134→        if (!cancelled) {
+   135→          setCycles(Array.isArray(data) ? data : [])
+   136→          setLoading(false)
+   137→        }
+   138→      })
+   139→      .catch(() => {
+   140→        if (!cancelled) setLoading(false)
+   141→      })
+   142→    return () => {
+   143→      cancelled = true
+   144→    }
+   145→  }, [userProfile?.id])
+   146→
+   147→  const greeting = useMemo(() => {
+   148→    const hour = new Date().getHours()
+   149→    if (hour < 12) return 'Good Morning'
+   150→    if (hour < 17) return 'Good Afternoon'
+   151→    return 'Good Evening'
+   152→  }, [])
+   153→
+   154→  const formattedDate = useMemo(() => {
+   155→    return new Date().toLocaleDateString('en-US', {
+   156→      weekday: 'long',
+   157→      month: 'long',
+   158→      day: 'numeric',
+   159→      year: 'numeric',
+   160→    })
+   161→  }, [])
+   162→
+   163→  const greetingIcon = useMemo(() => {
+   164→    const hour = new Date().getHours()
+   165→    if (hour < 12) return Sun
+   166→    if (hour < 17) return CloudSun
+   167→    return Moon
+   168→  }, [])
+   169→
+   170→  const GreetingIcon = greetingIcon
+   171→
+   172→  // Compute current cycle day from latest cycle (or user's lastPeriodStart)
+   173→  const cycleInfo = useMemo(() => {
+   174→    const latest = cycles[0]
+   175→    const refStart = latest?.startDate ?? userProfile?.lastPeriodStart
+   176→    if (!refStart) return null
+   177→    const start = new Date(refStart)
+   178→    const today = new Date()
+   179→    today.setHours(0, 0, 0, 0)
+   180→    start.setHours(0, 0, 0, 0)
+   181→    const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+   182→    const cycleLength = latest?.cycleLength ?? userProfile?.cycleLength ?? 28
+   183→    const periodLength = latest?.periodLength ?? userProfile?.periodLength ?? 5
+   184→    if (diffDays < 1) return null
+   185→    const cycleDay = ((diffDays - 1) % cycleLength) + 1
+   186→    return {
+   187→      cycleDay,
+   188→      cycleLength,
+   189→      periodLength,
+   190→      daysUntilPeriod: cycleLength - cycleDay,
+   191→      phase: getPhaseForCycleDay(cycleDay, cycleLength, periodLength),
+   192→      startDate: refStart,
+   193→    }
+   194→  }, [cycles, userProfile])
+   195→
+   196→  const quickLogButtons = [
+   197→    {
+   198→      icon: Droplets,
+   199→      label: 'Log Period',
+   200→      color: 'bg-rose-500 hover:bg-rose-600',
+   201→      textColor: 'text-white',
+   202→      module: 'period' as const,
+   203→    },
+   204→    {
+   205→      icon: Sparkles,
+   206→      label: 'Log Mood',
+   207→      color: 'bg-purple-500 hover:bg-purple-600',
+   208→      textColor: 'text-white',
+   209→      module: 'mental' as const,
+   210→    },
+   211→    {
+   212→      icon: HeartPulse,
+   213→      label: 'Log Symptoms',
+   214→      color: 'bg-pink-500 hover:bg-pink-600',
+   215→      textColor: 'text-white',
+   216→      module: 'symptoms' as const,
+   217→    },
+   218→    {
+   219→      icon: GlassWater,
+   220→      label: 'Log Water',
+   221→      color: 'bg-sky-500 hover:bg-sky-600',
+   222→      textColor: 'text-white',
+   223→      module: 'fitness' as const,
+   224→    },
+   225→    {
+   226→      icon: Moon,
+   227→      label: 'Log Sleep',
+   228→      color: 'bg-indigo-500 hover:bg-indigo-600',
+   229→      textColor: 'text-white',
+   230→      module: 'fitness' as const,
+   231→    },
+   232→  ]
+   233→
+   234→  if (!mounted || loading) {
+   235→    return (
+   236→      <div className="space-y-6 animate-pulse">
+   237→        <div className="h-10 w-64 bg-muted rounded-lg" />
+   238→        <div className="h-72 bg-muted rounded-2xl" />
+   239→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   240→          {[...Array(4)].map((_, i) => (
+   241→            <div key={i} className="h-28 bg-muted rounded-xl" />
+   242→          ))}
+   243→        </div>
+   244→      </div>
+   245→    )
+   246→  }
+   247→
+   248→  return (
+   249→    <motion.div
+   250→      variants={containerVariants}
+   251→      initial="hidden"
+   252→      animate="visible"
+   253→      className="space-y-6"
+   254→    >
+   255→      {/* ─── 1. Welcome Header ──────────────────────────────────────────────── */}
+   256→      <motion.div
+   257→        variants={itemVariants}
+   258→        className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3"
+   259→      >
+   260→        <div>
+   261→          <div className="flex items-center gap-2 mb-1">
+   262→            <GreetingIcon className="h-6 w-6 text-amber-500" />
+   263→            <h1 className="text-2xl sm:text-3xl font-bold">
+   264→              <span className="gradient-text">{greeting}</span>, {displayName}
+   265→            </h1>
+   266→          </div>
+   267→          <p className="text-sm text-muted-foreground">{formattedDate}</p>
+   268→        </div>
+   269→        {cycleInfo && (
+   270→          <div className="flex items-center gap-2">
+   271→            <Badge variant="secondary" className="gap-1.5 px-3 py-1 text-xs font-medium">
+   272→              <Droplets className="h-3 w-3 text-rose-500" />
+   273→              Day {cycleInfo.cycleDay} of Cycle
+   274→            </Badge>
+   275→            <Badge
+   276→              className="gap-1.5 px-3 py-1 text-xs font-semibold text-white border-0"
+   277→              style={{ backgroundColor: cycleInfo.phase.color }}
+   278→            >
+   279→              <Sparkles className="h-3 w-3" />
+   280→              {cycleInfo.phase.name} Phase
+   281→            </Badge>
+   282→          </div>
+   283→        )}
+   284→      </motion.div>
+   285→
+   286→      {/* ─── 2. Cycle Status Hero Card ──────────────────────────────────────── */}
+   287→      <motion.div variants={itemVariants}>
+   288→        <Card className="glass overflow-hidden border-0 shadow-lg">
+   289→          <CardContent className="p-6">
+   290→            {cycleInfo ? (
+   291→              <div className="flex flex-col lg:flex-row items-center gap-8">
+   292→                {/* Circular Progress Ring */}
+   293→                <div className="flex-shrink-0">
+   294→                  <CycleProgressRing
+   295→                    cycleDay={cycleInfo.cycleDay}
+   296→                    cycleLength={cycleInfo.cycleLength}
+   297→                    periodLength={cycleInfo.periodLength}
+   298→                    phaseColor={cycleInfo.phase.color}
+   299→                    phaseName={cycleInfo.phase.name}
+   300→                  />
+   301→                </div>
+   302→
+   303→                {/* Phase Info */}
+   304→                <div className="flex-1 text-center lg:text-left space-y-4 w-full">
+   305→                  <div>
+   306→                    <h2 className="text-xl font-bold mb-1">
+   307→                      You&apos;re in your{' '}
+   308→                      <span style={{ color: cycleInfo.phase.color }} className="font-extrabold">
+   309→                        {cycleInfo.phase.name}
+   310→                      </span>{' '}
+   311→                      phase
+   312→                    </h2>
+   313→                    <p className="text-muted-foreground text-sm">
+   314→                      Log symptoms, mood, and sleep to learn how this phase affects you.
+   315→                    </p>
+   316→                  </div>
+   317→
+   318→                  <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+   319→                    <div className="text-center px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/30">
+   320→                      <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">
+   321→                        {cycleInfo.daysUntilPeriod}
+   322→                      </p>
+   323→                      <p className="text-xs text-muted-foreground">Days until period</p>
+   324→                    </div>
+   325→                    <div className="text-center px-4 py-2 rounded-xl bg-orange-50 dark:bg-orange-950/30">
+   326→                      <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+   327→                        {cycleInfo.cycleLength - cycleInfo.cycleDay < 0
+   328→                          ? cycleInfo.cycleLength
+   329→                          : Math.max(0, cycleInfo.cycleLength - 14 - cycleInfo.cycleDay + 14)}
+   330→                      </p>
+   331→                      <p className="text-xs text-muted-foreground">Days to ovulation</p>
+   332→                    </div>
+   333→                  </div>
+   334→
+   335→                  {/* Phase Breakdown Legend */}
+   336→                  <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+   337→                    {PHASE_META.map((phase) => (
+   338→                      <div key={phase.name} className="flex items-center gap-1.5 text-xs">
+   339→                        <span
+   340→                          className="inline-block h-2.5 w-2.5 rounded-full"
+   341→                          style={{ backgroundColor: phase.color }}
+   342→                        />
+   343→                        <span className="text-muted-foreground">
+   344→                          {phase.name} <span className="font-medium text-foreground">({phase.days})</span>
+   345→                        </span>
+   346→                      </div>
+   347→                    ))}
+   348→                  </div>
+   349→                </div>
+   350→              </div>
+   351→            ) : (
+   352→              <EmptyState
+   353→                icon={Droplets}
+   354→                title="No cycle logged yet"
+   355→                description="Log your first period start date to unlock cycle predictions, fertility windows, and phase insights."
+   356→                ctaLabel="Log your first period"
+   357→                onCta={() => setActiveModule('period')}
+   358→              />
+   359→            )}
+   360→          </CardContent>
+   361→        </Card>
+   362→      </motion.div>
+   363→
+   364→      {/* ─── 3. Quick Stats Row ─────────────────────────────────────────────── */}
+   365→      {cycleInfo && (
+   366→        <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   367→          {[
+   368→            {
+   369→              title: 'Cycle Day',
+   370→              value: cycleInfo.cycleDay,
+   371→              subtitle: `of ${cycleInfo.cycleLength} days`,
+   372→              icon: CalendarDays,
+   373→              color: 'text-rose-500',
+   374→              bg: 'bg-rose-50 dark:bg-rose-950/30',
+   375→              badge: { text: cycleInfo.phase.name, bg: cycleInfo.phase.color },
+   376→            },
+   377→            {
+   378→              title: 'Days Until Period',
+   379→              value: cycleInfo.daysUntilPeriod,
+   380→              subtitle: 'countdown',
+   381→              icon: Clock,
+   382→              color: 'text-purple-500',
+   383→              bg: 'bg-purple-50 dark:bg-purple-950/30',
+   384→              badge: null,
+   385→            },
+   386→            {
+   387→              title: 'Fertility Status',
+   388→              value: cycleInfo.phase.name === 'Ovulation' ? 'Peak' : '—',
+   389→              subtitle:
+   390→                cycleInfo.phase.name === 'Ovulation'
+   391→                  ? 'High chance'
+   392→                  : 'Log to learn more',
+   393→              icon: Baby,
+   394→              color: 'text-orange-500',
+   395→              bg: 'bg-orange-50 dark:bg-orange-950/30',
+   396→              badge:
+   397→                cycleInfo.phase.name === 'Ovulation'
+   398→                  ? { text: 'Peak', bg: '#e11d48' }
+   399→                  : null,
+   400→            },
+   401→            {
+   402→              title: 'Next Ovulation',
+   403→              value: '—',
+   404→              subtitle: 'Based on cycle length',
+   405→              icon: Flower2,
+   406→              color: 'text-emerald-500',
+   407→              bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+   408→              badge: null,
+   409→            },
+   410→          ].map((stat) => (
+   411→            <Card
+   412→              key={stat.title}
+   413→              className="glass border-0 shadow-md hover:shadow-lg transition-shadow"
+   414→            >
+   415→              <CardContent className="p-4">
+   416→                <div className="flex items-center justify-between mb-3">
+   417→                  <div className={`p-2 rounded-lg ${stat.bg}`}>
+   418→                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
+   419→                  </div>
+   420→                  {stat.badge && (
+   421→                    <Badge
+   422→                      className="text-white border-0 text-[10px] px-2 py-0.5"
+   423→                      style={{ backgroundColor: stat.badge.bg }}
+   424→                    >
+   425→                      {stat.badge.text}
+   426→                    </Badge>
+   427→                  )}
+   428→                </div>
+   429→                <p className="text-2xl font-bold">{stat.value}</p>
+   430→                <p className="text-xs text-muted-foreground mt-0.5">{stat.subtitle}</p>
+   431→              </CardContent>
+   432→            </Card>
+   433→          ))}
+   434→        </motion.div>
+   435→      )}
+   436→
+   437→      {/* ─── 4. Hormone Preview — empty until user logs data ────────────────── */}
+   438→      <motion.div variants={itemVariants}>
+   439→        <Card className="glass border-0 shadow-lg">
+   440→          <CardHeader className="pb-2">
+   441→            <div className="flex items-center gap-2">
+   442→              <Activity className="h-5 w-5 text-rose-500" />
+   443→              <CardTitle className="text-base">Hormone Preview</CardTitle>
+   444→            </div>
+   445→            <CardDescription>
+   446→              Your hormone patterns will appear here once you have cycle data.
+   447→            </CardDescription>
+   448→          </CardHeader>
+   449→          <CardContent>
+   450→            <EmptyState
+   451→              icon={Activity}
+   452→              title="No hormone insights yet"
+   453→              description="Log a couple of cycles and ChandraCycle will visualize your estrogen and progesterone patterns across your cycle."
+   454→              ctaLabel="Log your period"
+   455→              onCta={() => setActiveModule('period')}
+   456→            />
+   457→          </CardContent>
+   458→        </Card>
+   459→      </motion.div>
+   460→
+   461→      {/* ─── 5. AI Insights Section — empty until user logs data ────────────── */}
+   462→      <motion.div variants={itemVariants}>
+   463→        <div className="flex items-center gap-2 mb-3">
+   464→          <Sparkles className="h-5 w-5 text-primary" />
+   465→          <h2 className="text-lg font-bold">AI Insights for Your Phase</h2>
+   466→          <Badge variant="secondary" className="text-[10px]">
+   467→            Powered by AI
+   468→          </Badge>
+   469→        </div>
+   470→        <Card className="glass border-0 shadow-lg">
+   471→          <CardContent className="p-0">
+   472→            <EmptyState
+   473→              icon={Sparkles}
+   474→              title="Personalized insights coming soon"
+   475→              description="Once you start logging your cycle, mood, and symptoms, ChandraCycle's AI will surface personalized recommendations for your current phase."
+   476→              ctaLabel="Start tracking"
+   477→              onCta={() => setActiveModule('period')}
+   478→            />
+   479→          </CardContent>
+   480→        </Card>
+   481→      </motion.div>
+   482→
+   483→      {/* ─── 6. Quick Log ───────────────────────────────────────────────────── */}
+   484→      <motion.div variants={itemVariants}>
+   485→        <Card className="glass border-0 shadow-lg">
+   486→          <CardHeader className="pb-2">
+   487→            <div className="flex items-center gap-2">
+   488→              <Zap className="h-5 w-5 text-primary" />
+   489→              <CardTitle className="text-base">Quick Log</CardTitle>
+   490→            </div>
+   491→            <CardDescription>Track your health in one tap</CardDescription>
+   492→          </CardHeader>
+   493→          <CardContent>
+   494→            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   495→              {quickLogButtons.map((btn, i) => (
+   496→                <motion.button
+   497→                  key={btn.label}
+   498→                  whileHover={{ scale: 1.05, y: -2 }}
+   499→                  whileTap={{ scale: 0.97 }}
+   500→                  initial={{ opacity: 0, y: 12 }}
+   501→                  animate={{ opacity: 1, y: 0 }}
+   502→                  transition={{
+   503→                    delay: i * 0.06,
+   504→                    type: 'spring',
+   505→                    stiffness: 400,
+   506→                    damping: 20,
+   507→                  }}
+   508→                  className={`${btn.color} ${btn.textColor} rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-md hover:shadow-lg transition-shadow cursor-pointer`}
+   509→                  aria-label={btn.label}
+   510→                  onClick={() => setActiveModule(btn.module)}
+   511→                >
+   512→                  <btn.icon className="h-6 w-6" />
+   513→                  <span className="text-xs font-semibold">{btn.label}</span>
+   514→                </motion.button>
+   515→              ))}
+   516→            </div>
+   517→          </CardContent>
+   518→        </Card>
+   519→      </motion.div>
+   520→
+   521→      {/* ─── 7. Weekly Symptoms Chart — empty ───────────────────────────────── */}
+   522→      <motion.div variants={itemVariants}>
+   523→        <Card className="glass border-0 shadow-lg">
+   524→          <CardHeader className="pb-2">
+   525→            <div className="flex items-center gap-2">
+   526→              <HeartPulse className="h-5 w-5 text-pink-500" />
+   527→              <CardTitle className="text-base">Weekly Symptoms</CardTitle>
+   528→            </div>
+   529→            <CardDescription>Track symptoms to see weekly patterns</CardDescription>
+   530→          </CardHeader>
+   531→          <CardContent>
+   532→            <EmptyState
+   533→              icon={HeartPulse}
+   534→              title="No symptoms logged this week"
+   535→              description="Tap a symptom in the Symptoms Tracker to start building your weekly pattern chart."
+   536→              ctaLabel="Log a symptom"
+   537→              onCta={() => setActiveModule('symptoms')}
+   538→            />
+   539→          </CardContent>
+   540→        </Card>
+   541→      </motion.div>
+   542→
+   543→      {/* ─── 8. Upcoming Reminders — empty ──────────────────────────────────── */}
+   544→      <motion.div variants={itemVariants}>
+   545→        <Card className="glass border-0 shadow-lg">
+   546→          <CardHeader className="pb-2">
+   547→            <div className="flex items-center gap-2">
+   548→              <Bell className="h-5 w-5 text-amber-500" />
+   549→              <CardTitle className="text-base">Upcoming Reminders</CardTitle>
+   550→            </div>
+   551→          </CardHeader>
+   552→          <CardContent>
+   553→            <EmptyState
+   554→              icon={Bell}
+   555→              title="No reminders set"
+   556→              description="You haven't set any reminders yet. Add reminders for medications, hydration, or checkups in Settings."
+   557→              ctaLabel="Go to Settings"
+   558→              onCta={() => setActiveModule('settings')}
+   559→            />
+   560→          </CardContent>
+   561→        </Card>
+   562→      </motion.div>
+   563→
+   564→      {/* ─── 9. Recent Activity Feed — empty ────────────────────────────────── */}
+   565→      <motion.div variants={itemVariants}>
+   566→        <Card className="glass border-0 shadow-lg">
+   567→          <CardHeader className="pb-2">
+   568→            <div className="flex items-center justify-between">
+   569→              <div className="flex items-center gap-2">
+   570→                <TrendingUp className="h-5 w-5 text-emerald-500" />
+   571→                <CardTitle className="text-base">Recent Activity</CardTitle>
+   572→              </div>
+   573→            </div>
+   574→          </CardHeader>
+   575→          <CardContent>
+   576→            <EmptyState
+   577→              icon={Plus}
+   578→              title="No activity yet"
+   579→              description="Your recent logs — periods, moods, symptoms, sleep, water — will show up here. Start tracking to see your timeline."
+   580→              ctaLabel="Log your first entry"
+   581→              onCta={() => setActiveModule('period')}
+   582→            />
+   583→          </CardContent>
+   584→        </Card>
+   585→      </motion.div>
+   586→
+   587→      {/* ─── Bottom spacer for scroll ───────────────────────────────────────── */}
+   588→      <div className="h-4" />
+   589→    </motion.div>
+   590→  )
+   591→}
+   592→
+   593→// ─── SVG Circular Progress ───────────────────────────────────────────────────
+   594→
+   595→function CycleProgressRing({
+   596→  cycleDay,
+   597→  cycleLength,
+   598→  periodLength,
+   599→  phaseColor,
+   600→  phaseName,
+   601→}: {
+   602→  cycleDay: number
+   603→  cycleLength: number
+   604→  periodLength: number
+   605→  phaseColor: string
+   606→  phaseName: string
+   607→}) {
+   608→  const radius = 90
+   609→  const strokeWidth = 10
+   610→  const normalizedRadius = radius - strokeWidth / 2
+   611→  const circumference = normalizedRadius * 2 * Math.PI
+   612→  const progress = cycleDay / cycleLength
+   613→  const strokeDashoffset = circumference - progress * circumference
+   614→
+   615→  // Phase proportions
+   616→  const menstrualPct = periodLength / cycleLength
+   617→  const ovulationPct = 3 / cycleLength
+   618→  const follicularPct = (cycleLength - 14 - 1 - periodLength) / cycleLength
+   619→  const lutealPct = 1 - menstrualPct - ovulationPct - follicularPct
+   620→
+   621→  return (
+   622→    <div className="relative flex items-center justify-center">
+   623→      <svg
+   624→        height={radius * 2}
+   625→        width={radius * 2}
+   626→        className="transform -rotate-90"
+   627→        role="img"
+   628→        aria-label={`Cycle day ${cycleDay} of ${cycleLength}`}
+   629→      >
+   630→        <circle
+   631→          stroke="oklch(0.91 0.02 325)"
+   632→          fill="transparent"
+   633→          strokeWidth={strokeWidth}
+   634→          r={normalizedRadius}
+   635→          cx={radius}
+   636→          cy={radius}
+   637→        />
+   638→        {/* Menstrual */}
+   639→        <circle
+   640→          stroke="#e11d48"
+   641→          fill="transparent"
+   642→          strokeWidth={strokeWidth}
+   643→          strokeDasharray={`${circumference * menstrualPct} ${circumference}`}
+   644→          strokeDashoffset={0}
+   645→          r={normalizedRadius}
+   646→          cx={radius}
+   647→          cy={radius}
+   648→          opacity={0.3}
+   649→          strokeLinecap="round"
+   650→        />
+   651→        {/* Follicular */}
+   652→        <circle
+   653→          stroke="#8b5cf6"
+   654→          fill="transparent"
+   655→          strokeWidth={strokeWidth}
+   656→          strokeDasharray={`${circumference * follicularPct} ${circumference}`}
+   657→          strokeDashoffset={-circumference * menstrualPct}
+   658→          r={normalizedRadius}
+   659→          cx={radius}
+   660→          cy={radius}
+   661→          opacity={0.3}
+   662→          strokeLinecap="round"
+   663→        />
+   664→        {/* Ovulation */}
+   665→        <circle
+   666→          stroke="#f97316"
+   667→          fill="transparent"
+   668→          strokeWidth={strokeWidth}
+   669→          strokeDasharray={`${circumference * ovulationPct} ${circumference}`}
+   670→          strokeDashoffset={-circumference * (menstrualPct + follicularPct)}
+   671→          r={normalizedRadius}
+   672→          cx={radius}
+   673→          cy={radius}
+   674→          opacity={0.3}
+   675→          strokeLinecap="round"
+   676→        />
+   677→        {/* Luteal */}
+   678→        <circle
+   679→          stroke="#06b6d4"
+   680→          fill="transparent"
+   681→          strokeWidth={strokeWidth}
+   682→          strokeDasharray={`${circumference * lutealPct} ${circumference}`}
+   683→          strokeDashoffset={-circumference * (menstrualPct + follicularPct + ovulationPct)}
+   684→          r={normalizedRadius}
+   685→          cx={radius}
+   686→          cy={radius}
+   687→          opacity={0.3}
+   688→          strokeLinecap="round"
+   689→        />
+   690→        {/* Active progress arc */}
+   691→        <circle
+   692→          stroke={phaseColor}
+   693→          fill="transparent"
+   694→          strokeWidth={strokeWidth + 2}
+   695→          strokeDasharray={`${circumference} ${circumference}`}
+   696→          strokeDashoffset={strokeDashoffset}
+   697→          strokeLinecap="round"
+   698→          r={normalizedRadius}
+   699→          cx={radius}
+   700→          cy={radius}
+   701→          style={{ transition: 'stroke-dashoffset 1.2s ease-in-out' }}
+   702→          className="drop-shadow-lg"
+   703→        />
+   704→      </svg>
+   705→      <div className="absolute inset-0 flex flex-col items-center justify-center">
+   706→        <span className="text-4xl font-bold gradient-text">{cycleDay}</span>
+   707→        <span className="text-xs text-muted-foreground mt-0.5">of {cycleLength} days</span>
+   708→        <Badge
+   709→          className="mt-2 border-0 text-white font-semibold text-xs px-3 py-1"
+   710→          style={{ backgroundColor: phaseColor }}
+   711→        >
+   712→          {phaseName}
+   713→        </Badge>
+   714→      </div>
+   715→    </div>
+   716→  )
+   717→}
+   718→

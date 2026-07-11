@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  avatar       String?
+  password     String?
+  phone        String?  @unique
+  provider     String   @default("email")
+  dateOfBirth  String?
+  height       Float?
+  weight       Float?
+  cycleLength  Int      @default(28)
+  periodLength Int      @default(5)
+  lastPeriodStart String?
+  onboardingComplete Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cycles       Cycle[]
+  symptoms     SymptomEntry[]
+  moodEntries  MoodEntry[]
+  sleepEntries SleepEntry[]
+  waterEntries WaterEntry[]
+  pcosRecords  PCOSRecord[]
+  fertilityData FertilityData[]
+  pregnancyData PregnancyData[]
+  menopauseData MenopauseData[]
+  chatMessages ChatMessage[]
+  communityPosts CommunityPost[]
+  comments     Comment[]
+  appointments Appointment[]
+  reports      Report[]
+  notifications Notification[]
+}
+
+model Cycle {
+  id          String   @id @default(cuid())
+  userId      String
+  startDate   String
+  endDate     String?
+  cycleLength Int?
+  periodLength Int?
+  ovulationDate String?
+  fertilityWindowStart String?
+  fertilityWindowEnd String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SymptomEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String
+  category  String   // cramps, headache, bloating, acne, fatigue, backache, nausea, breast_tenderness
+  severity  Int      @default(1) // 1-5
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String
+  mood      String   // happy, calm, anxious, sad, irritable, energetic, tired, neutral
+  energy    Int      @default(3) // 1-5
+  stress    Int      @default(3) // 1-5
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SleepEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  date        String
+  hoursSlept  Float
+  quality     Int      @default(3) // 1-5
+  bedTime     String?
+  wakeTime    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WaterEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String
+  glasses   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PCOSRecord {
+  id              String   @id @default(cuid())
+  userId          String
+  date            String
+  irregularPeriods Boolean @default(false)
+  excessHair      Boolean @default(false)
+  acne            Boolean @default(false)
+  weightGain      Boolean @default(false)
+  hairLoss        Boolean @default(false)
+  skinTags        Boolean @default(false)
+  fatigue         Boolean @default(false)
+  moodChanges     Boolean @default(false)
+  sleepIssues     Boolean @default(false)
+  riskScore       Float?
+  exerciseMinutes Int     @default(0)
+  dietQuality     Int     @default(3) // 1-5
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FertilityData {
+  id                  String   @id @default(cuid())
+  userId              String
+  date                String
+  basalTemp           Float?
+  cervicalMucus       String?  // dry, sticky, creamy, watery, eggwhite
+  opkResult           String?  // negative, positive
+  fertilityScore      Float?
+  ovulationConfirmed  Boolean  @default(false)
+  intercourse         Boolean  @default(false)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PregnancyData {
+  id              String   @id @default(cuid())
+  userId          String
+  date            String
+  week            Int
+  day             Int      @default(0)
+  weight          Float?
+  bloodPressure   String?
+  babySize        String?
+  symptoms        String?  // JSON array of symptoms
+  mood            String?
+  appointmentDue  String?
+  vaccinationDue  String?
+  medicineTaken   String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MenopauseData {
+  id              String   @id @default(cuid())
+  userId          String
+  date            String
+  hotFlashes      Int      @default(0) // count per day
+  nightSweats     Int      @default(0)
+  moodChanges     Boolean  @default(false)
+  sleepIssues     Boolean  @default(false)
+  vaginalDryness  Boolean  @default(false)
+  jointPain       Boolean  @default(false)
+  weightChange    Float?
+  anxiety         Int      @default(0) // 0-5
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // user, assistant
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CommunityPost {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  category  String   // general, pcos, fertility, pregnancy, menopause, mental_health
+  isAnonymous Boolean @default(true)
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  isAnonymous Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  userId      String
+  doctorName  String
+  specialty   String
+  date        String
+  time        String
+  type        String   // in_person, video, chat
+  status      String   @default("upcoming") // upcoming, completed, cancelled
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // daily, weekly, monthly, annual
+  startDate   String
+  endDate     String
+  content     String   // JSON string with report data
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // period_reminder, medication, appointment, insight, community
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

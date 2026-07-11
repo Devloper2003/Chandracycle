@@ -1,0 +1,1130 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Baby,
+     7→  Thermometer,
+     8→  CalendarDays,
+     9→  TrendingUp,
+    10→  Sparkles,
+    11→  Heart,
+    12→  Clock,
+    13→  Droplets,
+    14→  ChevronDown,
+    15→  ChevronRight,
+    16→  Check,
+    17→  Save,
+    18→  Activity,
+    19→  AlertCircle,
+    20→  Info,
+    21→  Star,
+    22→  Zap,
+    23→  Target,
+    24→  CircleDot,
+    25→  Flame,
+    26→  Leaf,
+    27→} from 'lucide-react'
+    28→import {
+    29→  Card,
+    30→  CardContent,
+    31→  CardHeader,
+    32→  CardTitle,
+    33→  CardDescription,
+    34→} from '@/components/ui/card'
+    35→import { Badge } from '@/components/ui/badge'
+    36→import { Button } from '@/components/ui/button'
+    37→import { Input } from '@/components/ui/input'
+    38→import { Label } from '@/components/ui/label'
+    39→import { Textarea } from '@/components/ui/textarea'
+    40→import { Checkbox } from '@/components/ui/checkbox'
+    41→import { Separator } from '@/components/ui/separator'
+    42→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    43→import {
+    44→  Collapsible,
+    45→  CollapsibleContent,
+    46→  CollapsibleTrigger,
+    47→} from '@/components/ui/collapsible'
+    48→import {
+    49→  ComposedChart,
+    50→  Line,
+    51→  Area,
+    52→  XAxis,
+    53→  YAxis,
+    54→  CartesianGrid,
+    55→  Tooltip,
+    56→  ResponsiveContainer,
+    57→  ReferenceLine,
+    58→} from 'recharts'
+    59→
+    60→// ─── Constants & Mock Data ─────────────────────────────────────────
+    61→
+    62→const CYCLE_LENGTH = 28
+    63→const CURRENT_CYCLE_DAY = 12
+    64→const FERTILITY_SCORE = 82
+    65→const OVULATION_DAY = 14
+    66→const FERTILE_WINDOW_START = 10
+    67→const FERTILE_WINDOW_END = 16
+    68→
+    69→type FertilityLevel = 'low' | 'medium' | 'high' | 'peak'
+    70→
+    71→interface CycleDayData {
+    72→  day: number
+    73→  level: FertilityLevel
+    74→  isOvulation: boolean
+    75→  isCurrent: boolean
+    76→  isFertileWindow: boolean
+    77→}
+    78→
+    79→type CervicalMucus = 'Dry' | 'Sticky' | 'Creamy' | 'Watery' | 'Egg-white'
+    80→type OPKResult = 'Positive' | 'Negative' | null
+    81→
+    82→interface FertilityLog {
+    83→  date: string
+    84→  basalTemp: number | null
+    85→  cervicalMucus: CervicalMucus | null
+    86→  opkResult: OPKResult
+    87→  intercourse: boolean
+    88→  notes: string
+    89→}
+    90→
+    91→interface InsightCard {
+    92→  id: string
+    93→  icon: React.ElementType
+    94→  title: string
+    95→  description: string
+    96→  severity: 'info' | 'warning' | 'success' | 'critical'
+    97→  details: string
+    98→}
+    99→
+   100→// Generate 28-day cycle data
+   101→function generateCycleData(): CycleDayData[] {
+   102→  return Array.from({ length: CYCLE_LENGTH }, (_, i) => {
+   103→    const day = i + 1
+   104→    let level: FertilityLevel = 'low'
+   105→    let isOvulation = false
+   106→    let isFertileWindow = false
+   107→
+   108→    if (day >= FERTILE_WINDOW_START && day <= FERTILE_WINDOW_END) {
+   109→      isFertileWindow = true
+   110→      if (day === OVULATION_DAY) {
+   111→        level = 'peak'
+   112→        isOvulation = true
+   113→      } else if (day === OVULATION_DAY - 1 || day === OVULATION_DAY + 1) {
+   114→        level = 'high'
+   115→      } else if (day === FERTILE_WINDOW_START || day === FERTILE_WINDOW_END) {
+   116→        level = 'medium'
+   117→      } else {
+   118→        level = 'high'
+   119→      }
+   120→    } else if (day >= OVULATION_DAY - 3 && day < FERTILE_WINDOW_START) {
+   121→      level = 'medium'
+   122→    } else if (day > FERTILE_WINDOW_END && day <= FERTILE_WINDOW_END + 2) {
+   123→      level = 'medium'
+   124→    }
+   125→
+   126→    return {
+   127→      day,
+   128→      level,
+   129→      isOvulation,
+   130→      isCurrent: day === CURRENT_CYCLE_DAY,
+   131→      isFertileWindow,
+   132→    }
+   133→  })
+   134→}
+   135→
+   136→// Generate BBT data for the cycle (realistic pattern)
+   137→function generateBBTData() {
+   138→  return Array.from({ length: CYCLE_LENGTH }, (_, i) => {
+   139→    const day = i + 1
+   140→    let temp: number
+   141→    if (day < OVULATION_DAY - 1) {
+   142→      // Pre-ovulation: lower temps ~97.0-97.5°F
+   143→      temp = 97.0 + Math.random() * 0.5
+   144→    } else if (day === OVULATION_DAY - 1) {
+   145→      // Dip before ovulation
+   146→      temp = 96.8 + Math.random() * 0.2
+   147→    } else if (day === OVULATION_DAY) {
+   148→      // Ovulation day - starting to rise
+   149→      temp = 97.4 + Math.random() * 0.3
+   150→    } else {
+   151→      // Post-ovulation: higher temps ~97.7-98.4°F (luteal phase)
+   152→      temp = 97.8 + Math.random() * 0.5
+   153→    }
+   154→    return {
+   155→      day: `Day ${day}`,
+   156→      bbt: parseFloat(temp.toFixed(1)),
+   157→      fertileStart: day >= FERTILE_WINDOW_START && day <= FERTILE_WINDOW_END ? 98.5 : null,
+   158→      fertileEnd: day >= FERTILE_WINDOW_START && day <= FERTILE_WINDOW_END ? 96.5 : null,
+   159→    }
+   160→  })
+   161→}
+   162→
+   163→const MUCUS_OPTIONS: CervicalMucus[] = ['Dry', 'Sticky', 'Creamy', 'Watery', 'Egg-white']
+   164→
+   165→const INSIGHTS: InsightCard[] = [
+   166→  {
+   167→    id: '1',
+   168→    icon: TrendingUp,
+   169→    title: 'Ovulation Approaching',
+   170→    description: 'Your BBT pattern suggests ovulation is likely within 2 days.',
+   171→    severity: 'warning',
+   172→    details:
+   173→      'Based on your recent basal body temperature readings and cervical mucus changes, your body is preparing for ovulation. The slight dip in BBT followed by a sustained rise is a classic ovulation sign. Consider increasing monitoring frequency to pinpoint the exact day.',
+   174→  },
+   175→  {
+   176→    id: '2',
+   177→    icon: Droplets,
+   178→    title: 'Cervical Mucus Quality',
+   179→    description: 'Mucus is transitioning to watery — fertility is increasing.',
+   180→    severity: 'success',
+   181→    details:
+   182→      'Your cervical mucus has shifted from sticky to watery, indicating rising estrogen levels. Egg-white cervical mucus typically appears 1-2 days before ovulation and is the most fertile type. This is a positive sign for conception planning.',
+   183→  },
+   184→  {
+   185→    id: '3',
+   186→    icon: Activity,
+   187→    title: 'Cycle Regularity Check',
+   188→    description: 'Your cycle has been consistent for 3 months. Great sign!',
+   189→    severity: 'success',
+   190→    details:
+   191→      'Consistent cycle lengths (27-29 days) over the past 3 months indicate regular ovulation. This makes predicting your fertile window more reliable. Regular cycles are associated with better overall reproductive health.',
+   192→  },
+   193→  {
+   194→    id: '4',
+   195→    icon: AlertCircle,
+   196→    title: 'BBT Measurement Tip',
+   197→    description: 'Try to measure at the same time daily for accuracy.',
+   198→    severity: 'info',
+   199→    details:
+   200→      'Basal body temperature can vary by 0.1-0.3°F based on measurement time. For the most accurate ovulation detection, measure immediately upon waking, before any activity. Set a consistent alarm and keep the thermometer by your bed.',
+   201→  },
+   202→]
+   203→
+   204→const CONCEPTION_PHASES = [
+   205→  {
+   206→    id: 'before',
+   207→    title: 'Before Ovulation',
+   208→    subtitle: 'Days 8-13',
+   209→    icon: Leaf,
+   210→    color: 'text-amber-500',
+   211→    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+   212→    borderColor: 'border-amber-200 dark:border-amber-800',
+   213→    tips: [
+   214→      'Begin tracking cervical mucus daily',
+   215→      'Measure BBT every morning before getting up',
+   216→      'Start OPK testing from cycle day 10',
+   217→      'Maintain a healthy diet rich in folic acid',
+   218→      'Consider prenatal vitamins with DHA',
+   219→    ],
+   220→  },
+   221→  {
+   222→    id: 'ovulation',
+   223→    title: 'Ovulation Day',
+   224→    subtitle: 'Day 14',
+   225→    icon: Target,
+   226→    color: 'text-orange-600',
+   227→    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+   228→    borderColor: 'border-orange-200 dark:border-orange-800',
+   229→    tips: [
+   230→      'This is your most fertile day — prioritize intercourse',
+   231→      'Egg-white cervical mucus indicates peak fertility',
+   232→      'Positive OPK confirms LH surge',
+   233→      'The egg lives 12-24 hours after release',
+   234→      'Intercourse every 24-48 hours maximizes chances',
+   235→    ],
+   236→  },
+   237→  {
+   238→    id: 'after',
+   239→    title: 'After Ovulation',
+   240→    subtitle: 'Days 15-28',
+   241→    icon: Heart,
+   242→    color: 'text-rose-500',
+   243→    bgColor: 'bg-rose-50 dark:bg-rose-950/30',
+   244→    borderColor: 'border-rose-200 dark:border-rose-800',
+   245→    tips: [
+   246→      'BBT should remain elevated if conception occurred',
+   247→      'Avoid stress — cortisol can affect implantation',
+   248→      'Continue light exercise and healthy eating',
+   249→      'Wait at least 10 days post-ovulation to test',
+   250→      'Watch for early signs: mild cramping, fatigue',
+   251→    ],
+   252→  },
+   253→]
+   254→
+   255→// ─── Helper Functions ──────────────────────────────────────────────
+   256→
+   257→function getScoreColor(score: number): string {
+   258→  if (score >= 85) return '#22c55e'
+   259→  if (score >= 60) return '#f97316'
+   260→  if (score >= 30) return '#f59e0b'
+   261→  return '#ef4444'
+   262→}
+   263→
+   264→function getScoreLabel(score: number): string {
+   265→  if (score >= 85) return 'Excellent'
+   266→  if (score >= 60) return 'Good'
+   267→  if (score >= 30) return 'Fair'
+   268→  return 'Low'
+   269→}
+   270→
+   271→function getLevelColor(level: FertilityLevel): string {
+   272→  switch (level) {
+   273→    case 'peak':
+   274→      return 'bg-red-400 text-white'
+   275→    case 'high':
+   276→      return 'bg-orange-400 text-white'
+   277→    case 'medium':
+   278→      return 'bg-amber-200 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'
+   279→    case 'low':
+   280→      return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+   281→  }
+   282→}
+   283→
+   284→function getLevelDotColor(level: FertilityLevel): string {
+   285→  switch (level) {
+   286→    case 'peak':
+   287→      return 'bg-red-400'
+   288→    case 'high':
+   289→      return 'bg-orange-400'
+   290→    case 'medium':
+   291→      return 'bg-amber-300 dark:bg-amber-600'
+   292→    case 'low':
+   293→      return 'bg-gray-300 dark:bg-gray-600'
+   294→  }
+   295→}
+   296→
+   297→function getSeverityColor(severity: InsightCard['severity']): string {
+   298→  switch (severity) {
+   299→    case 'critical':
+   300→      return 'bg-red-500'
+   301→    case 'warning':
+   302→      return 'bg-amber-500'
+   303→    case 'success':
+   304→      return 'bg-green-500'
+   305→    case 'info':
+   306→      return 'bg-blue-500'
+   307→  }
+   308→}
+   309→
+   310→function getSeverityBadge(severity: InsightCard['severity']): string {
+   311→  switch (severity) {
+   312→    case 'critical':
+   313→      return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800'
+   314→    case 'warning':
+   315→      return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800'
+   316→    case 'success':
+   317→      return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800'
+   318→    case 'info':
+   319→      return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800'
+   320→  }
+   321→}
+   322→
+   323→// ─── Animation Variants ────────────────────────────────────────────
+   324→
+   325→const containerVariants = {
+   326→  hidden: { opacity: 0 },
+   327→  visible: {
+   328→    opacity: 1,
+   329→    transition: { staggerChildren: 0.08 },
+   330→  },
+   331→}
+   332→
+   333→const itemVariants = {
+   334→  hidden: { opacity: 0, y: 20 },
+   335→  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+   336→}
+   337→
+   338→// ─── Sub-Components ────────────────────────────────────────────────
+   339→
+   340→function FertilityScoreHero() {
+   341→  const score = FERTILITY_SCORE
+   342→  const scoreColor = getScoreColor(score)
+   343→  const daysToOvulation = OVULATION_DAY - CURRENT_CYCLE_DAY
+   344→  const fertileDaysCount = FERTILE_WINDOW_END - FERTILE_WINDOW_START + 1
+   345→
+   346→  // SVG circular gauge calculations
+   347→  const radius = 70
+   348→  const stroke = 10
+   349→  const normalizedRadius = radius - stroke / 2
+   350→  const circumference = normalizedRadius * 2 * Math.PI
+   351→  const strokeDashoffset = circumference - (score / 100) * circumference
+   352→
+   353→  return (
+   354→    <motion.div variants={itemVariants}>
+   355→      <Card className="border-0 bg-gradient-to-br from-orange-50 via-white to-amber-50 dark:from-orange-950/20 dark:via-card dark:to-amber-950/20 shadow-lg overflow-hidden">
+   356→        <CardHeader className="pb-2">
+   357→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   358→            <Baby className="h-5 w-5" />
+   359→            Fertility Score
+   360→          </CardTitle>
+   361→          <CardDescription>Your daily fertility assessment based on multiple signals</CardDescription>
+   362→        </CardHeader>
+   363→        <CardContent>
+   364→          <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
+   365→            {/* SVG Circular Gauge */}
+   366→            <div className="relative flex-shrink-0">
+   367→              <svg height={radius * 2} width={radius * 2} className="transform -rotate-90">
+   368→                {/* Background circle */}
+   369→                <circle
+   370→                  stroke="currentColor"
+   371→                  className="text-gray-200 dark:text-gray-700"
+   372→                  fill="transparent"
+   373→                  strokeWidth={stroke}
+   374→                  r={normalizedRadius}
+   375→                  cx={radius}
+   376→                  cy={radius}
+   377→                />
+   378→                {/* Score arc */}
+   379→                <motion.circle
+   380→                  stroke={scoreColor}
+   381→                  fill="transparent"
+   382→                  strokeWidth={stroke}
+   383→                  strokeLinecap="round"
+   384→                  strokeDasharray={`${circumference} ${circumference}`}
+   385→                  initial={{ strokeDashoffset: circumference }}
+   386→                  animate={{ strokeDashoffset }}
+   387→                  transition={{ duration: 1.5, ease: 'easeOut', delay: 0.3 }}
+   388→                  r={normalizedRadius}
+   389→                  cx={radius}
+   390→                  cy={radius}
+   391→                />
+   392→                {/* Color zone markers */}
+   393→                {/* 0-30 red zone end marker */}
+   394→                <circle
+   395→                  fill="#ef4444"
+   396→                  r={3}
+   397→                  cx={radius + normalizedRadius * Math.cos(2 * Math.PI * 0.3 - Math.PI / 2)}
+   398→                  cy={radius + normalizedRadius * Math.sin(2 * Math.PI * 0.3 - Math.PI / 2)}
+   399→                  className="opacity-40"
+   400→                />
+   401→                {/* 30-60 orange zone end marker */}
+   402→                <circle
+   403→                  fill="#f59e0b"
+   404→                  r={3}
+   405→                  cx={radius + normalizedRadius * Math.cos(2 * Math.PI * 0.6 - Math.PI / 2)}
+   406→                  cy={radius + normalizedRadius * Math.sin(2 * Math.PI * 0.6 - Math.PI / 2)}
+   407→                  className="opacity-40"
+   408→                />
+   409→                {/* 60-85 green zone end marker */}
+   410→                <circle
+   411→                  fill="#f97316"
+   412→                  r={3}
+   413→                  cx={radius + normalizedRadius * Math.cos(2 * Math.PI * 0.85 - Math.PI / 2)}
+   414→                  cy={radius + normalizedRadius * Math.sin(2 * Math.PI * 0.85 - Math.PI / 2)}
+   415→                  className="opacity-40"
+   416→                />
+   417→              </svg>
+   418→              {/* Center text */}
+   419→              <div className="absolute inset-0 flex flex-col items-center justify-center">
+   420→                <motion.span
+   421→                  className="text-4xl font-bold"
+   422→                  style={{ color: scoreColor }}
+   423→                  initial={{ opacity: 0, scale: 0.5 }}
+   424→                  animate={{ opacity: 1, scale: 1 }}
+   425→                  transition={{ duration: 0.6, delay: 0.8 }}
+   426→                >
+   427→                  {score}
+   428→                </motion.span>
+   429→                <span className="text-xs text-muted-foreground font-medium mt-0.5">out of 100</span>
+   430→              </div>
+   431→            </div>
+   432→
+   433→            {/* Stats */}
+   434→            <div className="flex-1 grid grid-cols-1 gap-4 w-full">
+   435→              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm border border-orange-100 dark:border-orange-900/30">
+   436→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/40">
+   437→                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+   438→                </div>
+   439→                <div>
+   440→                  <p className="text-xs text-muted-foreground">Days to Ovulation</p>
+   441→                  <p className="text-xl font-bold text-orange-700 dark:text-orange-400">{daysToOvulation}</p>
+   442→                </div>
+   443→              </div>
+   444→              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm border border-amber-100 dark:border-amber-900/30">
+   445→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+   446→                  <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+   447→                </div>
+   448→                <div>
+   449→                  <p className="text-xs text-muted-foreground">Fertile Days This Cycle</p>
+   450→                  <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{fertileDaysCount}</p>
+   451→                </div>
+   452→              </div>
+   453→              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm border border-green-100 dark:border-green-900/30">
+   454→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+   455→                  <Sparkles className="h-5 w-5 text-green-600 dark:text-green-400" />
+   456→                </div>
+   457→                <div>
+   458→                  <p className="text-xs text-muted-foreground">Fertility Status</p>
+   459→                  <div className="flex items-center gap-2">
+   460→                    <p className="text-xl font-bold text-green-700 dark:text-green-400">{getScoreLabel(score)}</p>
+   461→                    <Badge
+   462→                      variant="outline"
+   463→                      className="text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800"
+   464→                    >
+   465→                      High
+   466→                    </Badge>
+   467→                  </div>
+   468→                </div>
+   469→              </div>
+   470→            </div>
+   471→          </div>
+   472→
+   473→          {/* Color Zone Legend */}
+   474→          <div className="flex flex-wrap items-center gap-3 mt-5 pt-4 border-t border-orange-100 dark:border-orange-900/30">
+   475→            <span className="text-xs text-muted-foreground mr-1">Score Zones:</span>
+   476→            <div className="flex items-center gap-1.5">
+   477→              <div className="w-3 h-3 rounded-sm bg-red-500" />
+   478→              <span className="text-xs text-muted-foreground">0-30</span>
+   479→            </div>
+   480→            <div className="flex items-center gap-1.5">
+   481→              <div className="w-3 h-3 rounded-sm bg-amber-500" />
+   482→              <span className="text-xs text-muted-foreground">30-60</span>
+   483→            </div>
+   484→            <div className="flex items-center gap-1.5">
+   485→              <div className="w-3 h-3 rounded-sm bg-orange-500" />
+   486→              <span className="text-xs text-muted-foreground">60-85</span>
+   487→            </div>
+   488→            <div className="flex items-center gap-1.5">
+   489→              <div className="w-3 h-3 rounded-sm bg-green-500" />
+   490→              <span className="text-xs text-muted-foreground">85-100</span>
+   491→            </div>
+   492→          </div>
+   493→        </CardContent>
+   494→      </Card>
+   495→    </motion.div>
+   496→  )
+   497→}
+   498→
+   499→function OvulationCalendar() {
+   500→  const cycleData = useMemo(() => generateCycleData(), [])
+   501→  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+   502→
+   503→  // Split into 4 rows of 7
+   504→  const rows = useMemo(() => {
+   505→    const result: CycleDayData[][] = []
+   506→    for (let i = 0; i < 28; i += 7) {
+   507→      result.push(cycleData.slice(i, i + 7))
+   508→    }
+   509→    return result
+   510→  }, [cycleData])
+   511→
+   512→  return (
+   513→    <motion.div variants={itemVariants}>
+   514→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   515→        <CardHeader className="pb-2">
+   516→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   517→            <CalendarDays className="h-5 w-5" />
+   518→            Ovulation Calendar
+   519→          </CardTitle>
+   520→          <CardDescription>28-day cycle view — Day {CURRENT_CYCLE_DAY} of {CYCLE_LENGTH}</CardDescription>
+   521→        </CardHeader>
+   522→        <CardContent>
+   523→          {/* Day headers */}
+   524→          <div className="grid grid-cols-7 gap-1 mb-1">
+   525→            {weekDays.map((d) => (
+   526→              <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">
+   527→                {d}
+   528→              </div>
+   529→            ))}
+   530→          </div>
+   531→
+   532→          {/* Calendar grid */}
+   533→          <div className="space-y-1">
+   534→            {rows.map((row, rowIndex) => (
+   535→              <div key={rowIndex} className="grid grid-cols-7 gap-1">
+   536→                {row.map((dayData) => (
+   537→                  <motion.div
+   538→                    key={dayData.day}
+   539→                    initial={{ opacity: 0, scale: 0.8 }}
+   540→                    animate={{ opacity: 1, scale: 1 }}
+   541→                    transition={{ duration: 0.3, delay: rowIndex * 0.1 + (dayData.day % 7) * 0.03 }}
+   542→                    className={`
+   543→                      relative flex flex-col items-center justify-center py-2 rounded-lg text-sm font-medium
+   544→                      transition-all duration-200 cursor-default
+   545→                      ${getLevelColor(dayData.level)}
+   546→                      ${dayData.isCurrent ? 'ring-2 ring-orange-500 ring-offset-2 dark:ring-offset-gray-900' : ''}
+   547→                      hover:scale-105 hover:shadow-md
+   548→                    `}
+   549→                  >
+   550→                    <span className="text-xs">{dayData.day}</span>
+   551→                    {dayData.isOvulation && (
+   552→                      <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[8px] bg-red-500 text-white border-0">
+   553→                        O
+   554→                      </Badge>
+   555→                    )}
+   556→                    {dayData.isCurrent && (
+   557→                      <div className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-orange-500" />
+   558→                    )}
+   559→                  </motion.div>
+   560→                ))}
+   561→              </div>
+   562→            ))}
+   563→          </div>
+   564→
+   565→          {/* Legend */}
+   566→          <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-orange-100 dark:border-orange-900/30">
+   567→            <span className="text-xs text-muted-foreground mr-1">Fertility Level:</span>
+   568→            <div className="flex items-center gap-1.5">
+   569→              <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800" />
+   570→              <span className="text-xs text-muted-foreground">Low</span>
+   571→            </div>
+   572→            <div className="flex items-center gap-1.5">
+   573→              <div className="w-3 h-3 rounded-sm bg-amber-200 dark:bg-amber-900/50" />
+   574→              <span className="text-xs text-muted-foreground">Medium</span>
+   575→            </div>
+   576→            <div className="flex items-center gap-1.5">
+   577→              <div className="w-3 h-3 rounded-sm bg-orange-400" />
+   578→              <span className="text-xs text-muted-foreground">High</span>
+   579→            </div>
+   580→            <div className="flex items-center gap-1.5">
+   581→              <div className="w-3 h-3 rounded-sm bg-red-400" />
+   582→              <span className="text-xs text-muted-foreground">Peak</span>
+   583→            </div>
+   584→            <div className="flex items-center gap-1.5 ml-2">
+   585→              <div className="w-3 h-3 rounded-sm border-2 border-orange-500" />
+   586→              <span className="text-xs text-muted-foreground">Today</span>
+   587→            </div>
+   588→            <div className="flex items-center gap-1.5">
+   589→              <Badge className="h-4 min-w-4 px-1 text-[8px] bg-red-500 text-white border-0">O</Badge>
+   590→              <span className="text-xs text-muted-foreground">Ovulation</span>
+   591→            </div>
+   592→          </div>
+   593→        </CardContent>
+   594→      </Card>
+   595→    </motion.div>
+   596→  )
+   597→}
+   598→
+   599→function BBTChart() {
+   600→  const bbtData = useMemo(() => generateBBTData(), [])
+   601→
+   602→  return (
+   603→    <motion.div variants={itemVariants}>
+   604→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   605→        <CardHeader className="pb-2">
+   606→          <div className="flex items-center justify-between flex-wrap gap-2">
+   607→            <div>
+   608→              <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   609→                <Thermometer className="h-5 w-5" />
+   610→                BBT &amp; Ovulation Chart
+   611→              </CardTitle>
+   612→              <CardDescription>Basal body temperature pattern across your cycle</CardDescription>
+   613→            </div>
+   614→            <div className="flex items-center gap-2">
+   615→              <Badge variant="outline" className="text-xs border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+   616→                <Droplets className="h-3 w-3 mr-1" />
+   617→                Fertile Window
+   618→              </Badge>
+   619→            </div>
+   620→          </div>
+   621→        </CardHeader>
+   622→        <CardContent>
+   623→          <div className="h-[300px] w-full">
+   624→            <ResponsiveContainer width="100%" height="100%">
+   625→              <ComposedChart data={bbtData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+   626→                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+   627→                <XAxis
+   628→                  dataKey="day"
+   629→                  tick={{ fontSize: 10 }}
+   630→                  interval={2}
+   631→                  className="text-muted-foreground"
+   632→                />
+   633→                <YAxis
+   634→                  domain={[96.5, 98.5]}
+   635→                  tick={{ fontSize: 10 }}
+   636→                  tickFormatter={(v: number) => `${v}°F`}
+   637→                  className="text-muted-foreground"
+   638→                />
+   639→                <Tooltip
+   640→                  contentStyle={{
+   641→                    backgroundColor: 'rgba(255,255,255,0.95)',
+   642→                    border: '1px solid #f97316',
+   643→                    borderRadius: '8px',
+   644→                    fontSize: '12px',
+   645→                  }}
+   646→                  formatter={(value: number) => [`${value}°F`, 'BBT']}
+   647→                  labelFormatter={(label: string) => `${label}`}
+   648→                />
+   649→                {/* Fertile window shaded area */}
+   650→                <Area
+   651→                  type="monotone"
+   652→                  dataKey="fertileStart"
+   653→                  fill="rgba(251, 146, 60, 0.15)"
+   654→                  stroke="none"
+   655→                  name="Fertile Window"
+   656→                />
+   657→                {/* BBT Line */}
+   658→                <Line
+   659→                  type="monotone"
+   660→                  dataKey="bbt"
+   661→                  stroke="#f97316"
+   662→                  strokeWidth={2.5}
+   663→                  dot={{ r: 3, fill: '#f97316', stroke: '#fff', strokeWidth: 1.5 }}
+   664→                  activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}
+   665→                  name="BBT"
+   666→                />
+   667→                {/* Ovulation reference line */}
+   668→                <ReferenceLine
+   669→                  x={`Day ${OVULATION_DAY}`}
+   670→                  stroke="#ef4444"
+   671→                  strokeWidth={2}
+   672→                  strokeDasharray="6 3"
+   673→                  label={{
+   674→                    value: 'Ovulation',
+   675→                    position: 'top',
+   676→                    fill: '#ef4444',
+   677→                    fontSize: 11,
+   678→                    fontWeight: 600,
+   679→                  }}
+   680→                />
+   681→              </ComposedChart>
+   682→            </ResponsiveContainer>
+   683→          </div>
+   684→
+   685→          {/* Chart Legend */}
+   686→          <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-orange-100 dark:border-orange-900/30">
+   687→            <div className="flex items-center gap-1.5">
+   688→              <div className="w-6 h-0.5 bg-orange-500 rounded" />
+   689→              <span className="text-xs text-muted-foreground">BBT</span>
+   690→            </div>
+   691→            <div className="flex items-center gap-1.5">
+   692→              <div className="w-6 h-0.5 bg-red-500 rounded border-dashed" style={{ borderTop: '2px dashed #ef4444', height: 0 }} />
+   693→              <span className="text-xs text-muted-foreground">Ovulation Day</span>
+   694→            </div>
+   695→            <div className="flex items-center gap-1.5">
+   696→              <div className="w-6 h-3 rounded bg-orange-200/40" />
+   697→              <span className="text-xs text-muted-foreground">Fertile Window</span>
+   698→            </div>
+   699→          </div>
+   700→        </CardContent>
+   701→      </Card>
+   702→    </motion.div>
+   703→  )
+   704→}
+   705→
+   706→function FertilityLoggingForm() {
+   707→  const [basalTemp, setBasalTemp] = useState<string>('')
+   708→  const [selectedMucus, setSelectedMucus] = useState<CervicalMucus | null>(null)
+   709→  const [opkResult, setOpkResult] = useState<OPKResult>(null)
+   710→  const [intercourse, setIntercourse] = useState(false)
+   711→  const [notes, setNotes] = useState('')
+   712→  const [isSaving, setIsSaving] = useState(false)
+   713→  const [saved, setSaved] = useState(false)
+   714→
+   715→  const handleSave = async () => {
+   716→    setIsSaving(true)
+   717→    // Simulate save
+   718→    await new Promise((resolve) => setTimeout(resolve, 1000))
+   719→    setIsSaving(false)
+   720→    setSaved(true)
+   721→    setTimeout(() => setSaved(false), 2000)
+   722→
+   723→    // Reset form
+   724→    setBasalTemp('')
+   725→    setSelectedMucus(null)
+   726→    setOpkResult(null)
+   727→    setIntercourse(false)
+   728→    setNotes('')
+   729→  }
+   730→
+   731→  const isValid = basalTemp || selectedMucus || opkResult
+   732→
+   733→  return (
+   734→    <motion.div variants={itemVariants}>
+   735→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   736→        <CardHeader className="pb-2">
+   737→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   738→            <Activity className="h-5 w-5" />
+   739→            Fertility Logging
+   740→          </CardTitle>
+   741→          <CardDescription>Record your daily fertility signals</CardDescription>
+   742→        </CardHeader>
+   743→        <CardContent className="space-y-5">
+   744→          {/* BBT Input */}
+   745→          <div className="space-y-2">
+   746→            <Label className="text-sm font-medium flex items-center gap-2">
+   747→              <Thermometer className="h-4 w-4 text-orange-500" />
+   748→              Basal Body Temperature (°F)
+   749→            </Label>
+   750→            <div className="flex items-center gap-2">
+   751→              <Input
+   752→                type="number"
+   753→                step="0.1"
+   754→                min="95.0"
+   755→                max="100.0"
+   756→                placeholder="97.5"
+   757→                value={basalTemp}
+   758→                onChange={(e) => setBasalTemp(e.target.value)}
+   759→                className="max-w-[160px]"
+   760→              />
+   761→              <span className="text-sm text-muted-foreground">°F</span>
+   762→              {basalTemp && parseFloat(basalTemp) >= 97.8 && (
+   763→                <Badge className="bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800 text-[10px]">
+   764→                  Elevated
+   765→                </Badge>
+   766→              )}
+   767→            </div>
+   768→          </div>
+   769→
+   770→          {/* Cervical Mucus Selector */}
+   771→          <div className="space-y-2">
+   772→            <Label className="text-sm font-medium flex items-center gap-2">
+   773→              <Droplets className="h-4 w-4 text-orange-500" />
+   774→              Cervical Mucus
+   775→            </Label>
+   776→            <div className="flex flex-wrap gap-2">
+   777→              {MUCUS_OPTIONS.map((option) => (
+   778→                <button
+   779→                  key={option}
+   780→                  onClick={() => setSelectedMucus(selectedMucus === option ? null : option)}
+   781→                  className={`
+   782→                    px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border
+   783→                    ${
+   784→                      selectedMucus === option
+   785→                        ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200 dark:shadow-orange-900/40'
+   786→                        : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300 hover:bg-orange-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-orange-600 dark:hover:bg-orange-950/30'
+   787→                    }
+   788→                  `}
+   789→                >
+   790→                  {option}
+   791→                </button>
+   792→              ))}
+   793→            </div>
+   794→            {selectedMucus && (
+   795→              <p className="text-xs text-muted-foreground">
+   796→                {selectedMucus === 'Egg-white' && '🌟 Most fertile — indicates peak fertility!'}
+   797→                {selectedMucus === 'Watery' && '📈 Fertility increasing — approaching ovulation'}
+   798→                {selectedMucus === 'Creamy' && '📊 Moderate fertility — transition phase'}
+   799→                {selectedMucus === 'Sticky' && '📉 Low fertility — early cycle pattern'}
+   800→                {selectedMucus === 'Dry' && '⬇️ Minimal fertility — typical post-period'}
+   801→              </p>
+   802→            )}
+   803→          </div>
+   804→
+   805→          {/* OPK Test Result */}
+   806→          <div className="space-y-2">
+   807→            <Label className="text-sm font-medium flex items-center gap-2">
+   808→              <Zap className="h-4 w-4 text-orange-500" />
+   809→              OPK Test Result
+   810→            </Label>
+   811→            <div className="flex gap-2">
+   812→              <button
+   813→                onClick={() => setOpkResult(opkResult === 'Positive' ? null : 'Positive')}
+   814→                className={`
+   815→                  flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border
+   816→                  ${
+   817→                    opkResult === 'Positive'
+   818→                      ? 'bg-green-500 text-white border-green-500 shadow-md shadow-green-200 dark:shadow-green-900/40'
+   819→                      : 'bg-white text-gray-600 border-gray-200 hover:border-green-300 hover:bg-green-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-green-600 dark:hover:bg-green-950/30'
+   820→                  }
+   821→                `}
+   822→              >
+   823→                <Check className="h-4 w-4" />
+   824→                Positive
+   825→              </button>
+   826→              <button
+   827→                onClick={() => setOpkResult(opkResult === 'Negative' ? null : 'Negative')}
+   828→                className={`
+   829→                  flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border
+   830→                  ${
+   831→                    opkResult === 'Negative'
+   832→                      ? 'bg-gray-400 text-white border-gray-400 shadow-md'
+   833→                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-700'
+   834→                  }
+   835→                `}
+   836→              >
+   837→                <CircleDot className="h-4 w-4" />
+   838→                Negative
+   839→              </button>
+   840→            </div>
+   841→            {opkResult === 'Positive' && (
+   842→              <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+   843→                LH surge detected! Ovulation likely within 24-36 hours.
+   844→              </p>
+   845→            )}
+   846→          </div>
+   847→
+   848→          {/* Intercourse Tracking */}
+   849→          <div className="flex items-center space-x-3 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-orange-100 dark:border-orange-900/30">
+   850→            <Checkbox
+   851→              id="intercourse"
+   852→              checked={intercourse}
+   853→              onCheckedChange={(checked) => setIntercourse(checked === true)}
+   854→              className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+   855→            />
+   856→            <Label htmlFor="intercourse" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+   857→              <Heart className="h-4 w-4 text-rose-400" />
+   858→              Intercourse today
+   859→            </Label>
+   860→          </div>
+   861→
+   862→          {/* Notes */}
+   863→          <div className="space-y-2">
+   864→            <Label className="text-sm font-medium flex items-center gap-2">
+   865→              <Info className="h-4 w-4 text-orange-500" />
+   866→              Notes
+   867→            </Label>
+   868→            <Textarea
+   869→              placeholder="Any observations, symptoms, or thoughts..."
+   870→              value={notes}
+   871→              onChange={(e) => setNotes(e.target.value)}
+   872→              className="min-h-[80px] resize-none"
+   873→            />
+   874→          </div>
+   875→
+   876→          {/* Save Button */}
+   877→          <div className="flex items-center gap-3">
+   878→            <Button
+   879→              onClick={handleSave}
+   880→              disabled={!isValid || isSaving}
+   881→              className="bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-200 dark:shadow-orange-900/40"
+   882→            >
+   883→              {isSaving ? (
+   884→                <motion.div
+   885→                  className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full"
+   886→                  animate={{ rotate: 360 }}
+   887→                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+   888→                />
+   889→              ) : saved ? (
+   890→                <>
+   891→                  <Check className="h-4 w-4 mr-2" />
+   892→                  Saved!
+   893→                </>
+   894→              ) : (
+   895→                <>
+   896→                  <Save className="h-4 w-4 mr-2" />
+   897→                  Save Log
+   898→                </>
+   899→              )}
+   900→            </Button>
+   901→            {saved && (
+   902→              <motion.span
+   903→                initial={{ opacity: 0, x: -10 }}
+   904→                animate={{ opacity: 1, x: 0 }}
+   905→                exit={{ opacity: 0 }}
+   906→                className="text-sm text-green-600 dark:text-green-400"
+   907→              >
+   908→                Entry saved successfully
+   909→              </motion.span>
+   910→            )}
+   911→          </div>
+   912→        </CardContent>
+   913→      </Card>
+   914→    </motion.div>
+   915→  )
+   916→}
+   917→
+   918→function ConceptionPlanner() {
+   919→  const [activePhase, setActivePhase] = useState<string>('before')
+   920→  const conceptionProbability = 25 // percentage for current day
+   921→
+   922→  return (
+   923→    <motion.div variants={itemVariants}>
+   924→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+   925→        <CardHeader className="pb-2">
+   926→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+   927→            <Star className="h-5 w-5" />
+   928→            Conception Planner
+   929→          </CardTitle>
+   930→          <CardDescription>Guidance for each phase of your fertility window</CardDescription>
+   931→        </CardHeader>
+   932→        <CardContent className="space-y-5">
+   933→          {/* Conception Probability Meter */}
+   934→          <div className="p-4 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-100 dark:border-orange-900/30">
+   935→            <div className="flex items-center justify-between mb-2">
+   936→              <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Conception Probability Today</span>
+   937→              <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{conceptionProbability}%</span>
+   938→            </div>
+   939→            <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+   940→              <motion.div
+   941→                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500"
+   942→                initial={{ width: 0 }}
+   943→                animate={{ width: `${conceptionProbability}%` }}
+   944→                transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
+   945→              />
+   946→            </div>
+   947→            <p className="text-xs text-muted-foreground mt-1.5">
+   948→              Based on cycle day {CURRENT_CYCLE_DAY} — approaching your fertile window
+   949→            </p>
+   950→          </div>
+   951→
+   952→          {/* Phase Tabs */}
+   953→          <Tabs value={activePhase} onValueChange={setActivePhase}>
+   954→            <TabsList className="w-full grid grid-cols-3 bg-orange-50 dark:bg-orange-950/30">
+   955→              {CONCEPTION_PHASES.map((phase) => (
+   956→                <TabsTrigger
+   957→                  key={phase.id}
+   958→                  value={phase.id}
+   959→                  className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
+   960→                >
+   961→                  <phase.icon className={`h-3.5 w-3.5 mr-1 ${phase.color}`} />
+   962→                  <span className="hidden sm:inline">{phase.title}</span>
+   963→                  <span className="sm:hidden">{phase.subtitle.split(' ')[0]}</span>
+   964→                </TabsTrigger>
+   965→              ))}
+   966→            </TabsList>
+   967→
+   968→            {CONCEPTION_PHASES.map((phase) => (
+   969→              <TabsContent key={phase.id} value={phase.id} className="mt-4">
+   970→                <motion.div
+   971→                  initial={{ opacity: 0, y: 10 }}
+   972→                  animate={{ opacity: 1, y: 0 }}
+   973→                  transition={{ duration: 0.3 }}
+   974→                  className={`p-4 rounded-xl border ${phase.borderColor} ${phase.bgColor}`}
+   975→                >
+   976→                  <div className="flex items-center gap-2 mb-3">
+   977→                    <phase.icon className={`h-5 w-5 ${phase.color}`} />
+   978→                    <div>
+   979→                      <h4 className="font-semibold text-sm">{phase.title}</h4>
+   980→                      <p className="text-xs text-muted-foreground">{phase.subtitle}</p>
+   981→                    </div>
+   982→                  </div>
+   983→                  <ul className="space-y-2">
+   984→                    {phase.tips.map((tip, idx) => (
+   985→                      <motion.li
+   986→                        key={idx}
+   987→                        initial={{ opacity: 0, x: -10 }}
+   988→                        animate={{ opacity: 1, x: 0 }}
+   989→                        transition={{ delay: idx * 0.08 }}
+   990→                        className="flex items-start gap-2 text-sm"
+   991→                      >
+   992→                        <ChevronRight className={`h-4 w-4 mt-0.5 flex-shrink-0 ${phase.color}`} />
+   993→                        <span>{tip}</span>
+   994→                      </motion.li>
+   995→                    ))}
+   996→                  </ul>
+   997→                </motion.div>
+   998→              </TabsContent>
+   999→            ))}
+  1000→          </Tabs>
+  1001→        </CardContent>
+  1002→      </Card>
+  1003→    </motion.div>
+  1004→  )
+  1005→}
+  1006→
+  1007→function AIFertilityInsights() {
+  1008→  const [expandedId, setExpandedId] = useState<string | null>(null)
+  1009→
+  1010→  return (
+  1011→    <motion.div variants={itemVariants}>
+  1012→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1013→        <CardHeader className="pb-2">
+  1014→          <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+  1015→            <Sparkles className="h-5 w-5" />
+  1016→            AI Fertility Insights
+  1017→          </CardTitle>
+  1018→          <CardDescription>Personalized analysis based on your data</CardDescription>
+  1019→        </CardHeader>
+  1020→        <CardContent className="space-y-3">
+  1021→          {INSIGHTS.map((insight, index) => (
+  1022→            <Collapsible
+  1023→              key={insight.id}
+  1024→              open={expandedId === insight.id}
+  1025→              onOpenChange={(open) => setExpandedId(open ? insight.id : null)}
+  1026→            >
+  1027→              <CollapsibleTrigger asChild>
+  1028→                <motion.div
+  1029→                  initial={{ opacity: 0, y: 10 }}
+  1030→                  animate={{ opacity: 1, y: 0 }}
+  1031→                  transition={{ delay: index * 0.1 }}
+  1032→                  className={`
+  1033→                    flex items-start gap-3 p-3 rounded-xl border cursor-pointer
+  1034→                    transition-all duration-200 hover:shadow-md w-full text-left
+  1035→                    ${getSeverityBadge(insight.severity)}
+  1036→                  `}
+  1037→                >
+  1038→                  <div className={`flex-shrink-0 mt-0.5 ${getSeverityColor(insight.severity)} rounded-full w-2 h-2 mt-1.5`} />
+  1039→                  <insight.icon className="h-5 w-5 flex-shrink-0 mt-0.5 opacity-70" />
+  1040→                  <div className="flex-1 min-w-0">
+  1041→                    <div className="flex items-center justify-between gap-2">
+  1042→                      <h4 className="font-semibold text-sm">{insight.title}</h4>
+  1043→                      <motion.div
+  1044→                        animate={{ rotate: expandedId === insight.id ? 180 : 0 }}
+  1045→                        transition={{ duration: 0.2 }}
+  1046→                      >
+  1047→                        <ChevronDown className="h-4 w-4 flex-shrink-0 opacity-50" />
+  1048→                      </motion.div>
+  1049→                    </div>
+  1050→                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{insight.description}</p>
+  1051→                  </div>
+  1052→                </motion.div>
+  1053→              </CollapsibleTrigger>
+  1054→              <CollapsibleContent>
+  1055→                <motion.div
+  1056→                  initial={{ opacity: 0, height: 0 }}
+  1057→                  animate={{ opacity: 1, height: 'auto' }}
+  1058→                  exit={{ opacity: 0, height: 0 }}
+  1059→                  transition={{ duration: 0.3 }}
+  1060→                  className="mx-4 mt-1 mb-2 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50 border border-dashed border-orange-200 dark:border-orange-800"
+  1061→                >
+  1062→                  <p className="text-xs leading-relaxed text-muted-foreground">{insight.details}</p>
+  1063→                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-orange-100 dark:border-orange-900/30">
+  1064→                    <Badge
+  1065→                      variant="outline"
+  1066→                      className={`text-[10px] ${getSeverityBadge(insight.severity)}`}
+  1067→                    >
+  1068→                      {insight.severity === 'critical' && 'Critical'}
+  1069→                      {insight.severity === 'warning' && 'Warning'}
+  1070→                      {insight.severity === 'success' && 'Positive'}
+  1071→                      {insight.severity === 'info' && 'Info'}
+  1072→                    </Badge>
+  1073→                    <span className="text-[10px] text-muted-foreground">AI-generated insight</span>
+  1074→                  </div>
+  1075→                </motion.div>
+  1076→              </CollapsibleContent>
+  1077→            </Collapsible>
+  1078→          ))}
+  1079→        </CardContent>
+  1080→      </Card>
+  1081→    </motion.div>
+  1082→  )
+  1083→}
+  1084→
+  1085→// ─── Main Component ────────────────────────────────────────────────
+  1086→
+  1087→export default function FertilityModule() {
+  1088→  return (
+  1089→    <motion.div
+  1090→      className="space-y-6"
+  1091→      variants={containerVariants}
+  1092→      initial="hidden"
+  1093→      animate="visible"
+  1094→    >
+  1095→      {/* Header */}
+  1096→      <motion.div variants={itemVariants} className="flex items-center gap-3">
+  1097→        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-900/40">
+  1098→          <Baby className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+  1099→        </div>
+  1100→        <div>
+  1101→          <h2 className="text-2xl font-bold text-orange-800 dark:text-orange-300">Fertility Planner</h2>
+  1102→          <p className="text-sm text-muted-foreground">Track, predict, and optimize your fertility journey</p>
+  1103→        </div>
+  1104→        <Badge className="ml-auto bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800 text-xs">
+  1105→          <Flame className="h-3 w-3 mr-1" />
+  1106→          Day {CURRENT_CYCLE_DAY}
+  1107→        </Badge>
+  1108→      </motion.div>
+  1109→
+  1110→      {/* Section 1: Fertility Score Hero */}
+  1111→      <FertilityScoreHero />
+  1112→
+  1113→      {/* Section 2 & 3: Calendar + BBT Chart side by side on larger screens */}
+  1114→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  1115→        <OvulationCalendar />
+  1116→        <BBTChart />
+  1117→      </div>
+  1118→
+  1119→      {/* Section 4 & 5: Logging Form + Conception Planner side by side */}
+  1120→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  1121→        <FertilityLoggingForm />
+  1122→        <ConceptionPlanner />
+  1123→      </div>
+  1124→
+  1125→      {/* Section 6: AI Fertility Insights */}
+  1126→      <AIFertilityInsights />
+  1127→    </motion.div>
+  1128→  )
+  1129→}
+  1130→

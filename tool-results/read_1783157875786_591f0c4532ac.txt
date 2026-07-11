@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useMemo, useEffect } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  AreaChart,
+     7→  Area,
+     8→  LineChart,
+     9→  Line,
+    10→  BarChart,
+    11→  Bar,
+    12→  ScatterChart,
+    13→  Scatter,
+    14→  XAxis,
+    15→  YAxis,
+    16→  CartesianGrid,
+    17→  Tooltip,
+    18→  ResponsiveContainer,
+    19→  RadarChart,
+    20→  PolarGrid,
+    21→  PolarAngleAxis,
+    22→  PolarRadiusAxis,
+    23→  Radar,
+    24→  Cell,
+    25→  ReferenceLine,
+    26→} from 'recharts'
+    27→import {
+    28→  Card,
+    29→  CardContent,
+    30→  CardDescription,
+    31→  CardHeader,
+    32→  CardTitle,
+    33→  CardFooter,
+    34→} from '@/components/ui/card'
+    35→import { Badge } from '@/components/ui/badge'
+    36→import { Button } from '@/components/ui/button'
+    37→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    38→import { Progress } from '@/components/ui/progress'
+    39→import { Separator } from '@/components/ui/separator'
+    40→import { cn } from '@/lib/utils'
+    41→import { toast } from 'sonner'
+    42→import {
+    43→  Brain,
+    44→  Sparkles,
+    45→  Crown,
+    46→  Activity,
+    47→  Gauge,
+    48→  Smile,
+    49→  Moon,
+    50→  Zap,
+    51→  Target,
+    52→  Cookie,
+    53→  TrendingUp,
+    54→  TrendingDown,
+    55→  Droplet,
+    56→  Sun,
+    57→  Grid3x3,
+    58→  Network,
+    59→  Link2,
+    60→  LineChart as LineChartIcon,
+    61→  BarChart3,
+    62→  Salad,
+    63→  Dumbbell,
+    64→  Heart,
+    65→  ShieldAlert,
+    66→  AlertTriangle,
+    67→  HeartPulse,
+    68→  Pill,
+    69→  FileText,
+    70→  Download,
+    71→  Calendar,
+    72→  Cpu,
+    73→  Database,
+    74→  GitBranch,
+    75→  Info,
+    76→  Star,
+    77→  Clock,
+    78→  CheckCircle2,
+    79→  ArrowUpRight,
+    80→  ArrowDownRight,
+    81→  Wind,
+    82→  BrainCircuit,
+    83→  CircuitBoard,
+    84→  Layers,
+    85→  Plus,
+    86→  Check,
+    87→  RefreshCw,
+    88→  FileSpreadsheet,
+    89→  Lightbulb,
+    90→  Quote,
+    91→  Flower2,
+    92→  Stethoscope,
+    93→} from 'lucide-react'
+    94→
+    95→// ─── Types ──────────────────────────────────────────────────────────────────
+    96→
+    97→type ImpactLevel = 'high' | 'medium' | 'low'
+    98→type RiskLevel = 'low' | 'medium' | 'high'
+    99→
+   100→interface DailyForecast {
+   101→  day: string
+   102→  date: string
+   103→  value: number
+   104→  label: string
+   105→  emoji?: string
+   106→  detail?: string
+   107→}
+   108→
+   109→interface Prediction {
+   110→  id: string
+   111→  title: string
+   112→  icon: React.ElementType
+   113→  gradient: string
+   114→  accentColor: string
+   115→  confidence: number
+   116→  data: DailyForecast[]
+   117→  summary: string
+   118→  highlights: { type: 'positive' | 'warning' | 'info'; text: string }[]
+   119→  recommendations: string[]
+   120→  chartType: 'emoji' | 'bar' | 'area'
+   121→}
+   122→
+   123→interface PatternInsight {
+   124→  id: string
+   125→  title: string
+   126→  description: string
+   127→  confidence: number
+   128→  delta: string
+   129→  direction: 'up' | 'down'
+   130→  icon: React.ElementType
+   131→  color: string
+   132→  chartData: { label: string; value: number; baseline: number }[]
+   133→  recommendation: string
+   134→}
+   135→
+   136→interface Recommendation {
+   137→  id: string
+   138→  title: string
+   139→  description: string
+   140→  impact: ImpactLevel
+   141→  icon: React.ElementType
+   142→  category: 'nutrition' | 'exercise' | 'lifestyle' | 'selfcare'
+   143→  cyclePhase?: string
+   144→  evidence: string
+   145→}
+   146→
+   147→interface RiskAssessment {
+   148→  id: string
+   149→  condition: string
+   150→  riskScore: number
+   151→  riskLevel: RiskLevel
+   152→  icon: React.ElementType
+   153→  color: string
+   154→  contributingFactors: string[]
+   155→  preventionTips: string[]
+   156→  trend: 'improving' | 'stable' | 'worsening'
+   157→}
+   158→
+   159→// ─── Mock Data: Health Predictability Score ──────────────────────────────────
+   160→
+   161→const PREDICTABILITY_SCORE = 87
+   162→
+   163→const SCORE_BREAKDOWN = [
+   164→  { label: 'Cycle Regularity', value: 92, color: 'from-violet-500 to-purple-500', icon: Calendar },
+   165→  { label: 'Symptom Patterns', value: 84, color: 'from-fuchsia-500 to-pink-500', icon: Activity },
+   166→  { label: 'Mood Stability', value: 78, color: 'from-indigo-500 to-blue-500', icon: Smile },
+   167→  { label: 'Sleep Consistency', value: 89, color: 'from-purple-500 to-violet-600', icon: Moon },
+   168→]
+   169→
+   170→// ─── Mock Data: 7-Day Forecasts ──────────────────────────────────────────────
+   171→
+   172→const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+   173→
+   174→function getDates() {
+   175→  const today = new Date()
+   176→  return Array.from({ length: 7 }, (_, i) => {
+   177→    const d = new Date(today)
+   178→    d.setDate(today.getDate() + i + 1)
+   179→    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+   180→  })
+   181→}
+   182→
+   183→const dates7 = getDates()
+   184→
+   185→const MOOD_FORECAST: DailyForecast[] = [
+   186→  { day: 'Mon', date: dates7[0], value: 78, label: 'Good', emoji: '🙂' },
+   187→  { day: 'Tue', date: dates7[1], value: 85, label: 'Great', emoji: '😊' },
+   188→  { day: 'Wed', date: dates7[2], value: 72, label: 'Good', emoji: '🙂' },
+   189→  { day: 'Thu', date: dates7[3], value: 58, label: 'Okay', emoji: '😐' },
+   190→  { day: 'Fri', date: dates7[4], value: 45, label: 'Low', emoji: '😔' },
+   191→  { day: 'Sat', date: dates7[5], value: 62, label: 'Okay', emoji: '😐' },
+   192→  { day: 'Sun', date: dates7[6], value: 80, label: 'Good', emoji: '🙂' },
+   193→]
+   194→
+   195→const ENERGY_FORECAST: DailyForecast[] = [
+   196→  { day: 'Mon', date: dates7[0], value: 88, label: 'High', detail: 'Peak 10 AM' },
+   197→  { day: 'Tue', date: dates7[1], value: 92, label: 'Very High', detail: 'Peak 11 AM' },
+   198→  { day: 'Wed', date: dates7[2], value: 76, label: 'Moderate', detail: 'Peak 9 AM' },
+   199→  { day: 'Thu', date: dates7[3], value: 54, label: 'Moderate', detail: 'Slump 3 PM' },
+   200→  { day: 'Fri', date: dates7[4], value: 38, label: 'Low', detail: 'Low all day' },
+   201→  { day: 'Sat', date: dates7[5], value: 65, label: 'Moderate', detail: 'Peak 12 PM' },
+   202→  { day: 'Sun', date: dates7[6], value: 82, label: 'High', detail: 'Peak 10 AM' },
+   203→]
+   204→
+   205→const SLEEP_FORECAST: DailyForecast[] = [
+   206→  { day: 'Mon', date: dates7[0], value: 85, label: 'Excellent', detail: 'Deep: 2.1h' },
+   207→  { day: 'Tue', date: dates7[1], value: 78, label: 'Good', detail: 'Deep: 1.8h' },
+   208→  { day: 'Wed', date: dates7[2], value: 72, label: 'Good', detail: 'Deep: 1.5h' },
+   209→  { day: 'Thu', date: dates7[3], value: 58, label: 'Fair', detail: 'Deep: 1.1h' },
+   210→  { day: 'Fri', date: dates7[4], value: 48, label: 'Poor', detail: 'Deep: 0.8h' },
+   211→  { day: 'Sat', date: dates7[5], value: 90, label: 'Excellent', detail: 'Deep: 2.4h' },
+   212→  { day: 'Sun', date: dates7[6], value: 88, label: 'Excellent', detail: 'Deep: 2.2h' },
+   213→]
+   214→
+   215→const STRESS_FORECAST: DailyForecast[] = [
+   216→  { day: 'Mon', date: dates7[0], value: 35, label: 'Low' },
+   217→  { day: 'Tue', date: dates7[1], value: 42, label: 'Low' },
+   218→  { day: 'Wed', date: dates7[2], value: 58, label: 'Moderate' },
+   219→  { day: 'Thu', date: dates7[3], value: 72, label: 'High' },
+   220→  { day: 'Fri', date: dates7[4], value: 82, label: 'Very High' },
+   221→  { day: 'Sat', date: dates7[5], value: 48, label: 'Moderate' },
+   222→  { day: 'Sun', date: dates7[6], value: 32, label: 'Low' },
+   223→]
+   224→
+   225→const PRODUCTIVITY_FORECAST: DailyForecast[] = [
+   226→  { day: 'Mon', date: dates7[0], value: 85, label: 'Best for focus', detail: '9–12 AM' },
+   227→  { day: 'Tue', date: dates7[1], value: 92, label: 'Peak performance', detail: '10 AM–1 PM' },
+   228→  { day: 'Wed', date: dates7[2], value: 78, label: 'Good', detail: '9–11 AM' },
+   229→  { day: 'Thu', date: dates7[3], value: 62, label: 'Moderate', detail: '11 AM–1 PM' },
+   230→  { day: 'Fri', date: dates7[4], value: 38, label: 'Low focus', detail: 'Avoid meetings' },
+   231→  { day: 'Sat', date: dates7[5], value: 55, label: 'Creative', detail: 'Afternoon' },
+   232→  { day: 'Sun', date: dates7[6], value: 70, label: 'Planning', detail: 'Morning' },
+   233→]
+   234→
+   235→const CRAVINGS_FORECAST: DailyForecast[] = [
+   236→  { day: 'Mon', date: dates7[0], value: 25, label: 'Low', detail: 'Hydration' },
+   237→  { day: 'Tue', date: dates7[1], value: 32, label: 'Low', detail: 'Protein focus' },
+   238→  { day: 'Wed', date: dates7[2], value: 48, label: 'Moderate', detail: 'Sugar (PM)' },
+   239→  { day: 'Thu', date: dates7[3], value: 68, label: 'High', detail: 'Chocolate' },
+   240→  { day: 'Fri', date: dates7[4], value: 85, label: 'Very High', detail: 'Carbs + Salt' },
+   241→  { day: 'Sat', date: dates7[5], value: 72, label: 'High', detail: 'Sweet' },
+   242→  { day: 'Sun', date: dates7[6], value: 38, label: 'Moderate', detail: 'Comfort food' },
+   243→]
+   244→
+   245→const PREDICTIONS: Prediction[] = [
+   246→  {
+   247→    id: 'mood',
+   248→    title: 'Mood Forecast',
+   249→    icon: Smile,
+   250→    gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+   251→    accentColor: 'violet',
+   252→    confidence: 89,
+   253→    data: MOOD_FORECAST,
+   254→    summary: 'Mood expected to dip Friday (luteal phase) and recover by Sunday.',
+   255→    highlights: [
+   256→      { type: 'positive', text: 'Tuesday peaks at 85 — schedule social activities' },
+   257→      { type: 'warning', text: 'Friday mood predicted at 45 — plan self-care' },
+   258→      { type: 'info', text: 'Influenced by: progesterone drop, sleep quality, cycle day 22' },
+   259→    ],
+   260→    recommendations: [
+   261→      'Schedule a relaxing activity for Friday evening',
+   262→      'Boost vitamin B6 and magnesium Wednesday–Friday',
+   263→      'Aim for 8h sleep Thursday to buffer Friday dip',
+   264→    ],
+   265→    chartType: 'emoji',
+   266→  },
+   267→  {
+   268→    id: 'energy',
+   269→    title: 'Energy Forecast',
+   270→    icon: Zap,
+   271→    gradient: 'from-amber-400 via-orange-500 to-rose-500',
+   272→    accentColor: 'amber',
+   273→    confidence: 84,
+   274→    data: ENERGY_FORECAST,
+   275→    summary: 'High energy Mon–Wed. Friday low energy warning — protect recovery.',
+   276→    highlights: [
+   277→      { type: 'positive', text: 'Tuesday peaks at 92 — ideal for intense workouts' },
+   278→      { type: 'warning', text: 'Friday predicted at 38 — postpone deadlines' },
+   279→      { type: 'info', text: 'Peak times shift later in luteal phase (10 AM → 12 PM)' },
+   280→    ],
+   281→    recommendations: [
+   282→      'Front-load demanding tasks Mon–Wed',
+   283→      'Light yoga or walking Friday',
+   284→      'Iron-rich meals Thu/Fri to combat fatigue',
+   285→    ],
+   286→    chartType: 'bar',
+   287→  },
+   288→  {
+   289→    id: 'sleep',
+   290→    title: 'Sleep Quality Forecast',
+   291→    icon: Moon,
+   292→    gradient: 'from-indigo-500 via-violet-500 to-purple-600',
+   293→    accentColor: 'indigo',
+   294→    confidence: 86,
+   295→    data: SLEEP_FORECAST,
+   296→    summary: 'Best deep sleep Sat/Sun. Friday sleep quality drops 42% from baseline.',
+   297→    highlights: [
+   298→      { type: 'positive', text: 'Saturday = best deep sleep night (2.4h predicted)' },
+   299→      { type: 'warning', text: 'Friday = poor sleep risk — limit caffeine after noon' },
+   300→      { type: 'info', text: 'Core temp rise during luteal phase disrupts deep sleep' },
+   301→    ],
+   302→    recommendations: [
+   303→      'Keep bedroom at 18–20°C Friday night',
+   304→      'Magnesium glycinate 1h before bed Thursday',
+   305→      'Avoid screens 90 min before bed all week',
+   306→    ],
+   307→    chartType: 'area',
+   308→  },
+   309→  {
+   310→    id: 'stress',
+   311→    title: 'Stress Level Forecast',
+   312→    icon: Brain,
+   313→    gradient: 'from-rose-500 via-pink-500 to-red-500',
+   314→    accentColor: 'rose',
+   315→    confidence: 81,
+   316→    data: STRESS_FORECAST,
+   317→    summary: 'Stress escalates Thu–Fri (luteal cortisol shift). Plan recovery time.',
+   318→    highlights: [
+   319→      { type: 'warning', text: 'Friday = very high stress (82%) — protect boundaries' },
+   320→      { type: 'positive', text: 'Sunday = lowest stress (32%) — reflection & reset' },
+   321→      { type: 'info', text: 'Pattern: stress peaks 2 days pre-period each cycle' },
+   322→    ],
+   323→    recommendations: [
+   324→      '4-7-8 breathing 5 min Thu & Fri mornings',
+   325→      'Reduce caffeine Thursday onward',
+   326→      'Block Friday afternoon for solo work',
+   327→    ],
+   328→    chartType: 'bar',
+   329→  },
+   330→  {
+   331→    id: 'productivity',
+   332→    title: 'Productivity Forecast',
+   333→    icon: Target,
+   334→    gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
+   335→    accentColor: 'emerald',
+   336→    confidence: 83,
+   337→    data: PRODUCTIVITY_FORECAST,
+   338→    summary: 'Tuesday = peak focus. Avoid meetings Friday — switch to admin tasks.',
+   339→    highlights: [
+   340→      { type: 'positive', text: 'Tue 10 AM–1 PM = optimal for deep work' },
+   341→      { type: 'warning', text: 'Friday focus at 38% — batch routine tasks' },
+   342→      { type: 'info', text: 'Best cycle phase for new projects: follicular (now)' },
+   343→    ],
+   344→    recommendations: [
+   345→      'Schedule important calls Mon–Wed only',
+   346→      'Use Friday for inbox + admin',
+   347→      'Plan Q3 goals Sunday morning (planning mode)',
+   348→    ],
+   349→    chartType: 'bar',
+   350→  },
+   351→  {
+   352→    id: 'cravings',
+   353→    title: 'Cravings Forecast',
+   354→    icon: Cookie,
+   355→    gradient: 'from-fuchsia-500 via-purple-500 to-violet-600',
+   356→    accentColor: 'fuchsia',
+   357→    confidence: 79,
+   358→    data: CRAVINGS_FORECAST,
+   359→    summary: 'Cravings spike Fri–Sat (PMS). Prepare healthier alternatives in advance.',
+   360→    highlights: [
+   361→      { type: 'warning', text: 'Friday = very high cravings (85%) — sugar + carbs' },
+   362→      { type: 'positive', text: 'Mon–Tue = low craving window — meal prep time' },
+   363→      { type: 'info', text: 'Trigger time: 3–4 PM Thursday–Saturday' },
+   364→    ],
+   365→    recommendations: [
+   366→      'Prep dark chocolate (85%) for Friday cravings',
+   367→      'Protein + fat snack at 3 PM Thursday',
+   368→      'Complex carbs at dinner Fri/Sat (sweet potato)',
+   369→    ],
+   370→    chartType: 'area',
+   371→  },
+   372→]
+   373→
+   374→// ─── Mock Data: Pattern Detection ────────────────────────────────────────────
+   375→
+   376→const PATTERNS: PatternInsight[] = [
+   377→  {
+   378→    id: 'p1',
+   379→    title: 'Headaches spike 2 days before your period',
+   380→    description: 'Your headaches occur 78% more often 2 days before your period starts, driven by estrogen withdrawal.',
+   381→    confidence: 92,
+   382→    delta: '+78%',
+   383→    direction: 'up',
+   384→    icon: Brain,
+   385→    color: 'rose',
+   386→    chartData: [
+   387→      { label: 'D-5', value: 12, baseline: 14 },
+   388→      { label: 'D-4', value: 15, baseline: 14 },
+   389→      { label: 'D-3', value: 18, baseline: 14 },
+   390→      { label: 'D-2', value: 42, baseline: 14 },
+   391→      { label: 'D-1', value: 38, baseline: 14 },
+   392→      { label: 'D0', value: 35, baseline: 14 },
+   393→      { label: 'D+1', value: 16, baseline: 14 },
+   394→    ],
+   395→    recommendation: 'Take magnesium glycinate (400mg) daily starting D-5. Hydrate aggressively 48h pre-period.',
+   396→  },
+   397→  {
+   398→    id: 'p2',
+   399→    title: 'Sleep quality drops 23% during luteal phase',
+   400→    description: 'Your sleep quality drops 23% during your luteal phase, with deep sleep most affected (–31%).',
+   401→    confidence: 88,
+   402→    delta: '-23%',
+   403→    direction: 'down',
+   404→    icon: Moon,
+   405→    color: 'indigo',
+   406→    chartData: [
+   407→      { label: 'Follicular', value: 88, baseline: 88 },
+   408→      { label: 'Ovulation', value: 91, baseline: 88 },
+   409→      { label: 'Luteal E', value: 76, baseline: 88 },
+   410→      { label: 'Luteal L', value: 65, baseline: 88 },
+   411→      { label: 'Menstrual', value: 82, baseline: 88 },
+   412→    ],
+   413→    recommendation: 'Lower bedroom temp to 18°C during luteal phase. Tart cherry juice 1h before bed boosts melatonin.',
+   414→  },
+   415→  {
+   416→    id: 'p3',
+   417→    title: 'Mood scores are 31% higher during ovulation',
+   418→    description: 'Your mood scores peak during ovulation — 31% higher than the luteal phase average.',
+   419→    confidence: 90,
+   420→    delta: '+31%',
+   421→    direction: 'up',
+   422→    icon: Smile,
+   423→    color: 'amber',
+   424→    chartData: [
+   425→      { label: 'Menstrual', value: 62, baseline: 72 },
+   426→      { label: 'Follicular', value: 78, baseline: 72 },
+   427→      { label: 'Ovulation', value: 94, baseline: 72 },
+   428→      { label: 'Luteal E', value: 75, baseline: 72 },
+   429→      { label: 'Luteal L', value: 55, baseline: 72 },
+   430→    ],
+   431→    recommendation: 'Schedule important social events and presentations during ovulation window (D14±2).',
+   432→  },
+   433→  {
+   434→    id: 'p4',
+   435→    title: 'Energy peaks at 10 AM during follicular phase',
+   436→    description: 'Your energy peaks at 10 AM during follicular phase — 28% higher than your daily average.',
+   437→    confidence: 85,
+   438→    delta: '+28%',
+   439→    direction: 'up',
+   440→    icon: Zap,
+   441→    color: 'orange',
+   442→    chartData: [
+   443→      { label: '6 AM', value: 45, baseline: 60 },
+   444→      { label: '8 AM', value: 68, baseline: 60 },
+   445→      { label: '10 AM', value: 92, baseline: 60 },
+   446→      { label: '12 PM', value: 78, baseline: 60 },
+   447→      { label: '2 PM', value: 58, baseline: 60 },
+   448→      { label: '4 PM', value: 42, baseline: 60 },
+   449→      { label: '6 PM', value: 55, baseline: 60 },
+   450→    ],
+   451→    recommendation: 'Block 9:30–11:30 AM for your hardest cognitive work. Postpone email until afternoon.',
+   452→  },
+   453→  {
+   454→    id: 'p5',
+   455→    title: '8+ glasses water → 40% fewer cramps',
+   456→    description: 'Days you drink 8+ glasses of water correlate with 40% fewer cramps and 22% less bloating.',
+   457→    confidence: 87,
+   458→    delta: '-40%',
+   459→    direction: 'down',
+   460→    icon: Droplet,
+   461→    color: 'cyan',
+   462→    chartData: [
+   463→      { label: '<4 glasses', value: 78, baseline: 60 },
+   464→      { label: '4-6 glasses', value: 62, baseline: 60 },
+   465→      { label: '6-8 glasses', value: 52, baseline: 60 },
+   466→      { label: '8+ glasses', value: 38, baseline: 60 },
+   467→    ],
+   468→    recommendation: 'Set hourly water reminders. Add electrolytes (pinch of salt + lemon) on heavy flow days.',
+   469→  },
+   470→  {
+   471→    id: 'p6',
+   472→    title: 'Morning exercise improves mood by 28%',
+   473→    description: 'Exercise before 9 AM correlates with 28% higher mood scores that day and 19% better sleep.',
+   474→    confidence: 83,
+   475→    delta: '+28%',
+   476→    direction: 'up',
+   477→    icon: Activity,
+   478→    color: 'emerald',
+   479→    chartData: [
+   480→      { label: 'No exercise', value: 58, baseline: 65 },
+   481→      { label: 'Evening', value: 68, baseline: 65 },
+   482→      { label: 'Afternoon', value: 72, baseline: 65 },
+   483→      { label: 'Morning', value: 88, baseline: 65 },
+   484→    ],
+   485→    recommendation: 'Schedule 20-min walk or yoga by 8:30 AM. Even 10 min improves mood scores.',
+   486→  },
+   487→]
+   488→
+   489→// ─── Mock Data: Correlation Matrix ───────────────────────────────────────────
+   490→
+   491→interface CorrelationCell {
+   492→  row: string
+   493→  col: string
+   494→  value: number
+   495→}
+   496→
+   497→const MATRIX_VARIABLES = ['Sleep', 'Mood', 'Energy', 'Stress', 'Water', 'Cramps']
+   498→
+   499→// Symmetric correlation matrix (-1 to +1)
+   500→const CORRELATION_MATRIX: number[][] = [
+   501→  // Sleep  Mood   Energy Stress Water  Cramps
+   502→  [1.00, 0.72, 0.68, -0.58, 0.41, -0.49], // Sleep
+   503→  [0.72, 1.00, 0.74, -0.71, 0.35, -0.43], // Mood
+   504→  [0.68, 0.74, 1.00, -0.65, 0.48, -0.51], // Energy
+   505→  [-0.58, -0.71, -0.65, 1.00, -0.39, 0.62], // Stress
+   506→  [0.41, 0.35, 0.48, -0.39, 1.00, -0.68], // Water
+   507→  [-0.49, -0.43, -0.51, 0.62, -0.68, 1.00], // Cramps
+   508→]
+   509→
+   510→const KEY_CORRELATIONS = [
+   511→  { pair: 'Sleep ↔ Mood', value: 0.72, insight: 'Strong positive — better sleep directly lifts your mood next day.' },
+   512→  { pair: 'Water ↔ Cramps', value: -0.68, insight: 'Strong negative — more hydration, fewer cramps.' },
+   513→  { pair: 'Exercise ↔ Energy', value: 0.81, insight: 'Very strong positive — morning movement fuels all-day energy.' },
+   514→  { pair: 'Stress ↔ Cycle Symptoms', value: 0.65, insight: 'High stress days worsen cramps, headaches & bloating.' },
+   515→  { pair: 'Diet ↔ Skin', value: 0.54, insight: 'Whole-food days correlate with clearer skin 48h later.' },
+   516→]
+   517→
+   518→// ─── Mock Data: 90-Day Trends ────────────────────────────────────────────────
+   519→
+   520→function gen90DayTrend(base: number, variance: number, drift = 0) {
+   521→  const data: { date: string; day: number; value: number }[] = []
+   522→  let v = base
+   523→  for (let i = 89; i >= 0; i--) {
+   524→    const d = new Date()
+   525→    d.setDate(d.getDate() - i)
+   526→    v += (Math.random() - 0.5) * variance + drift
+   527→    v = Math.max(0, Math.min(100, v))
+   528→    data.push({
+   529→      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+   530→      day: 90 - i,
+   531→      value: Math.round(v * 10) / 10,
+   532→    })
+   533→  }
+   534→  return data
+   535→}
+   536→
+   537→const MOOD_TREND_90 = gen90DayTrend(72, 12, 0.05)
+   538→const SYMPTOM_TREND_90 = gen90DayTrend(45, 18, -0.04)
+   539→const SLEEP_TREND_90 = gen90DayTrend(75, 14, 0.02)
+   540→
+   541→const CYCLE_REGULARITY_12 = [
+   542→  { month: 'Aug', length: 32, variance: 4 },
+   543→  { month: 'Sep', length: 30, variance: 3 },
+   544→  { month: 'Oct', length: 29, variance: 2 },
+   545→  { month: 'Nov', length: 31, variance: 3 },
+   546→  { month: 'Dec', length: 28, variance: 2 },
+   547→  { month: 'Jan', length: 29, variance: 1 },
+   548→  { month: 'Feb', length: 28, variance: 2 },
+   549→  { month: 'Mar', length: 29, variance: 1 },
+   550→  { month: 'Apr', length: 28, variance: 1 },
+   551→  { month: 'May', length: 29, variance: 1 },
+   552→  { month: 'Jun', length: 28, variance: 0 },
+   553→  { month: 'Jul', length: 29, variance: 1 },
+   554→]
+   555→
+   556→const SLEEP_MOOD_SCATTER = Array.from({ length: 30 }, () => {
+   557→  const sleep = 5 + Math.random() * 4
+   558→  const mood = 30 + sleep * 8 + (Math.random() - 0.5) * 25
+   559→  return {
+   560→    sleep: Math.round(sleep * 10) / 10,
+   561→    mood: Math.max(0, Math.min(100, Math.round(mood))),
+   562→  }
+   563→})
+   564→
+   565→// ─── Mock Data: Recommendations ──────────────────────────────────────────────
+   566→
+   567→const RECOMMENDATIONS: Recommendation[] = [
+   568→  // Nutrition
+   569→  {
+   570→    id: 'n1',
+   571→    title: 'Add pumpkin seeds to breakfast',
+   572→    description: 'Rich in zinc and magnesium — clinically shown to reduce PMS-related cramps by up to 34%.',
+   573→    impact: 'high',
+   574→    icon: Salad,
+   575→    category: 'nutrition',
+   576→    cyclePhase: 'Luteal phase',
+   577→    evidence: 'Based on 47 days of cramp logs + nutrition tracking',
+   578→  },
+   579→  {
+   580→    id: 'n2',
+   581→    title: 'Switch to complex carbs after 4 PM',
+   582→    description: 'Your sugar cravings spike 3–4 PM. Replacing simple sugars with sweet potato stabilizes blood glucose.',
+   583→    impact: 'medium',
+   584→    icon: Salad,
+   585→    category: 'nutrition',
+   586→    cyclePhase: 'All phases',
+   587→    evidence: 'Pattern: 68% fewer cravings on complex-carb days',
+   588→  },
+   589→  {
+   590→    id: 'n3',
+   591→    title: 'Iron-rich lunch on heavy flow days',
+   592→    description: 'Spinach, lentils, or beetroot at lunch replenishes iron lost during menstruation. Pair with vitamin C.',
+   593→    impact: 'high',
+   594→    icon: Salad,
+   595→    category: 'nutrition',
+   596→    cyclePhase: 'Menstrual phase',
+   597→    evidence: 'Fatigue reduced 41% on iron-supplemented cycle days',
+   598→  },
+   599→  // Exercise
+   600→  {
+   601→    id: 'e1',
+   602→    title: 'Strength training Mon/Wed/Fri 9 AM',
+   603→    description: 'Your follicular-phase energy peaks at 10 AM — 3× weekly strength builds hormone-friendly muscle.',
+   604→    impact: 'high',
+   605→    icon: Dumbbell,
+   606→    category: 'exercise',
+   607→    cyclePhase: 'Follicular + Ovulation',
+   608→    evidence: 'Energy +28%, mood +19% on strength training weeks',
+   609→  },
+   610→  {
+   611→    id: 'e2',
+   612→    title: 'Yoga + walking only during luteal phase',
+   613→    description: 'High-intensity workouts during luteal phase raise cortisol 22%. Switch to restorative movement.',
+   614→    impact: 'medium',
+   615→    icon: Dumbbell,
+   616→    category: 'exercise',
+   617→    cyclePhase: 'Luteal phase',
+   618→    evidence: 'Stress scores 31% lower with cycle-synced exercise',
+   619→  },
+   620→  {
+   621→    id: 'e3',
+   622→    title: '10-minute morning walk before 9 AM',
+   623→    description: 'Morning light + movement regulates circadian rhythm — improves mood 28% and sleep quality 19%.',
+   624→    impact: 'medium',
+   625→    icon: Dumbbell,
+   626→    category: 'exercise',
+   627→    cyclePhase: 'All phases',
+   628→    evidence: '30-day streak: mood avg 78 vs 62 baseline',
+   629→  },
+   630→  // Lifestyle
+   631→  {
+   632→    id: 'l1',
+   633→    title: 'No screens 90 min before bed',
+   634→    description: 'Blue light suppresses melatonin by 23% in your data. Switch to a book or audio after 9:30 PM.',
+   635→    impact: 'high',
+   636→    icon: Sun,
+   637→    category: 'lifestyle',
+   638→    cyclePhase: 'All phases',
+   639→    evidence: 'Deep sleep +42 min on no-screen nights',
+   640→  },
+   641→  {
+   642→    id: 'l2',
+   643→    title: 'Set hydration reminders every 90 min',
+   644→    description: '8+ glasses correlates with 40% fewer cramps. Use a 750ml bottle — refill 4×/day.',
+   645→    impact: 'high',
+   646→    icon: Droplet,
+   647→    category: 'lifestyle',
+   648→    cyclePhase: 'All phases',
+   649→    evidence: 'Strong negative correlation (r = -0.68) over 90 days',
+   650→  },
+   651→  {
+   652→    id: 'l3',
+   653→    title: 'Friday afternoon boundary block',
+   654→    description: 'Your stress peaks Friday. Block 2–5 PM for solo work — no meetings, no calls.',
+   655→    impact: 'medium',
+   656→    icon: Clock,
+   657→    category: 'lifestyle',
+   658→    cyclePhase: 'Luteal phase',
+   659→    evidence: 'Stress predicted at 82% Friday vs 35% Monday',
+   660→  },
+   661→  // Self-Care
+   662→  {
+   663→    id: 's1',
+   664→    title: 'Magnesium glycinate before bed',
+   665→    description: '400mg 1h before sleep improves deep sleep by 31% during luteal phase. Gentle on stomach.',
+   666→    impact: 'high',
+   667→    icon: Heart,
+   668→    category: 'selfcare',
+   669→    cyclePhase: 'Luteal phase',
+   670→    evidence: 'Sleep quality +18 points over 28-day trial',
+   671→  },
+   672→  {
+   673→    id: 's2',
+   674→    title: '4-7-8 breathing Thursday + Friday',
+   675→    description: '5-min morning practice reduces predicted stress spike by 22%. Inhale 4, hold 7, exhale 8.',
+   676→    impact: 'medium',
+   677→    icon: Wind,
+   678→    category: 'selfcare',
+   679→    cyclePhase: 'Luteal phase',
+   680→    evidence: 'Cortisol dropped 14% on breathing-practice days',
+   681→  },
+   682→  {
+   683→    id: 's3',
+   684→    title: 'Warm bath + Epsom salts Saturday',
+   685→    description: 'Magnesium absorption + core temp drop post-bath = best deep sleep night of your week.',
+   686→    impact: 'medium',
+   687→    icon: Heart,
+   688→    category: 'selfcare',
+   689→    cyclePhase: 'All phases',
+   690→    evidence: 'Saturday deep sleep 2.4h vs 1.4h weekly avg',
+   691→  },
+   692→]
+   693→
+   694→const REC_CATEGORIES = [
+   695→  { id: 'nutrition' as const, label: 'Nutrition', icon: Salad, color: 'emerald', gradient: 'from-emerald-500 to-teal-500' },
+   696→  { id: 'exercise' as const, label: 'Exercise', icon: Dumbbell, color: 'orange', gradient: 'from-orange-500 to-amber-500' },
+   697→  { id: 'lifestyle' as const, label: 'Lifestyle', icon: Sun, color: 'violet', gradient: 'from-violet-500 to-purple-500' },
+   698→  { id: 'selfcare' as const, label: 'Self-Care', icon: Heart, color: 'rose', gradient: 'from-rose-500 to-pink-500' },
+   699→]
+   700→
+   701→// ─── Mock Data: Risk Assessment ──────────────────────────────────────────────
+   702→
+   703→const RISK_ASSESSMENTS: RiskAssessment[] = [
+   704→  {
+   705→    id: 'pcos',
+   706→    condition: 'PCOS Risk',
+   707→    riskScore: 28,
+   708→    riskLevel: 'low',
+   709→    icon: Flower2,
+   710→    color: 'amber',
+   711→    contributingFactors: [
+   712→      'Regular cycle (29-day average) lowers risk',
+   713→      'BMI within healthy range',
+   714→      'Mild acne reported in luteal phase',
+   715→      'Family history: none reported',
+   716→    ],
+   717→    preventionTips: [
+   718→      'Maintain current low-sugar diet',
+   719→      'Continue strength training 3×/week',
+   720→      'Annual hormone panel check-up',
+   721→    ],
+   722→    trend: 'improving',
+   723→  },
+   724→  {
+   725→    id: 'pmdd',
+   726→    condition: 'PMS / PMDD Risk',
+   727→    riskScore: 62,
+   728→    riskLevel: 'medium',
+   729→    icon: Brain,
+   730→    color: 'rose',
+   731→    contributingFactors: [
+   732→      'Mood drops 31% in late luteal phase',
+   733→      'Severe cravings 5 days pre-period',
+   734→      'Sleep quality drops 23% pre-period',
+   735→      'Stress peaks Friday of luteal week',
+   736→    ],
+   737→    preventionTips: [
+   738→      'Start magnesium + B6 7 days before period',
+   739→      'Cognitive Behavioral Therapy self-help module',
+   740→      'Track PMDD-specific symptoms 2 cycles',
+   741→      'Consider SSRI discussion if patterns persist',
+   742→    ],
+   743→    trend: 'stable',
+   744→  },
+   745→  {
+   746→    id: 'iron',
+   747→    condition: 'Iron Deficiency Risk',
+   748→    riskScore: 54,
+   749→    riskLevel: 'medium',
+   750→    icon: Droplet,
+   751→    color: 'red',
+   752→    contributingFactors: [
+   753→      'Heavy flow reported (4–5 days)',
+   754→      'Fatigue scores spike during menstrual phase',
+   755→      'Iron intake tracked below RDA 60% of days',
+   756→      'No iron supplement currently',
+   757→    ],
+   758→    preventionTips: [
+   759→      'Add lentils, spinach, beetroot 3×/week',
+   760→      'Pair iron-rich foods with vitamin C',
+   761→      'Get serum ferritin tested next cycle',
+   762→      'Consider liquid iron supplement during period',
+   763→    ],
+   764→    trend: 'worsening',
+   765→  },
+   766→  {
+   767→    id: 'vitd',
+   768→    condition: 'Vitamin D Deficiency Risk',
+   769→    riskScore: 48,
+   770→    riskLevel: 'medium',
+   771→    icon: Sun,
+   772→    color: 'amber',
+   773→    contributingFactors: [
+   774→      'Indoor lifestyle — 78% days tracked',
+   775→      'Sunlight exposure < 15 min/day',
+   776→      'Mood dips correlate with low-sun days',
+   777→      'Diet low in fatty fish & eggs',
+   778→    ],
+   779→    preventionTips: [
+   780→      '15-min morning sunlight before 10 AM',
+   781→      'Add 1 egg + fortified milk daily',
+   782→      'Consider 2000 IU D3 supplement',
+   783→      'Test 25(OH)D levels at next check-up',
+   784→    ],
+   785→    trend: 'improving',
+   786→  },
+   787→  {
+   788→    id: 'thyroid',
+   789→    condition: 'Thyroid Risk',
+   790→    riskScore: 18,
+   791→    riskLevel: 'low',
+   792→    icon: Activity,
+   793→    color: 'purple',
+   794→    contributingFactors: [
+   795→      'Energy levels stable across cycle',
+   796→      'Weight stable (±1.2 kg over 90 days)',
+   797→      'No cold intolerance reported',
+   798→      'Regular bowel habits',
+   799→    ],
+   800→    preventionTips: [
+   801→      'Maintain iodine intake (seaweed, dairy)',
+   802→      'Annual TSH screening at next physical',
+   803→      'Continue selenium-rich foods (Brazil nuts)',
+   804→    ],
+   805→    trend: 'stable',
+   806→  },
+   807→]
+   808→
+   809→// ─── Mock Data: Monthly Report ───────────────────────────────────────────────
+   810→
+   811→const MONTHLY_REPORT = {
+   812→  month: 'July 2025',
+   813→  keyFindings: [
+   814→    'Cycle regularity improved to 92% — most consistent 6-month stretch',
+   815→    'Sleep quality averaged 78/100 (up from 71 last month)',
+   816→    'Mood scores 8% higher than June — driven by follicular-phase gains',
+   817→    'Cramping intensity decreased 19% with hydration protocol',
+   818→  ],
+   819→  improvements: [
+   820→    { metric: 'Sleep Quality', delta: '+10%', from: 71, to: 78 },
+   821→    { metric: 'Mood Score', delta: '+8%', from: 68, to: 73 },
+   822→    { metric: 'Cramp Severity', delta: '-19%', from: 62, to: 50 },
+   823→    { metric: 'Energy Levels', delta: '+5%', from: 70, to: 74 },
+   824→  ],
+   825→  concerns: [
+   826→    'Stress levels rose 12% in luteal phase vs June',
+   827→    'Iron intake below RDA on 18/30 days',
+   828→    'Friday mood dip pattern persists (3rd cycle)',
+   829→  ],
+   830→  goals: [
+   831→    'Maintain hydration streak (currently 12 days)',
+   832→    'Reduce screen time after 9 PM to 4 nights/week',
+   833→    'Add iron-rich food to 5+ dinners/week',
+   834→    'Complete 3 strength workouts/week',
+   835→  ],
+   836→}
+   837→
+   838→// ─── Mock Data: AI Model Confidence ──────────────────────────────────────────
+   839→
+   840→const AI_MODEL_INFO = {
+   841→  dataPoints: 12480,
+   842→  accuracy: 91.4,
+   843→  lastUpdated: '2 hours ago',
+   844→  nextUpdate: 'in 4 hours',
+   845→  dataSources: [
+   846→    { label: 'Cycle logs', count: 12, icon: Calendar, classes: 'bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400' },
+   847→    { label: 'Mood entries', count: 247, icon: Smile, classes: 'bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400' },
+   848→    { label: 'Sleep entries', count: 89, icon: Moon, classes: 'bg-indigo-100 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400' },
+   849→    { label: 'Symptom logs', count: 412, icon: Activity, classes: 'bg-violet-100 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400' },
+   850→    { label: 'Nutrition logs', count: 168, icon: Salad, classes: 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400' },
+   851→    { label: 'Exercise logs', count: 94, icon: Dumbbell, classes: 'bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400' },
+   852→  ],
+   853→  howItWorks: [
+   854→    {
+   855→      step: 1,
+   856→      title: 'Data Collection',
+   857→      description: 'We aggregate your cycle, mood, sleep, symptoms, nutrition, and exercise data points across all Aaranya modules.',
+   858→    },
+   859→    {
+   860→      step: 2,
+   861→      title: 'Pattern Recognition',
+   862→      description: 'Our ML models (XGBoost + LSTM ensemble) identify recurring patterns across your cycle phases and behaviors.',
+   863→    },
+   864→    {
+   865→      step: 3,
+   866→      title: 'Correlation Analysis',
+   867→      description: 'Pearson and Spearman correlations reveal how your habits interact — e.g., water intake ↔ cramp intensity.',
+   868→    },
+   869→    {
+   870→      step: 4,
+   871→      title: 'Predictive Modeling',
+   872→      description: '7-day forecasts use your historical patterns + current cycle phase to predict mood, energy, sleep, stress, and cravings.',
+   873→    },
+   874→    {
+   875→      step: 5,
+   876→      title: 'Personalized Insights',
+   877→      description: 'Each insight is ranked by confidence score and translated into actionable recommendations you can add to your plan.',
+   878→    },
+   879→  ],
+   880→}
+   881→
+   882→// ─── Helpers ─────────────────────────────────────────────────────────────────
+   883→
+   884→function correlationColor(value: number): string {
+   885→  if (value >= 0.7) return 'bg-emerald-500'
+   886→  if (value >= 0.4) return 'bg-emerald-400/70'
+   887→  if (value >= 0.2) return 'bg-yellow-400/60'
+   888→  if (value > -0.2) return 'bg-slate-300/50'
+   889→  if (value > -0.4) return 'bg-orange-400/60'
+   890→  if (value > -0.7) return 'bg-rose-400/70'
+   891→  return 'bg-rose-500'
+   892→}
+   893→
+   894→function correlationText(value: number): string {
+   895→  const abs = Math.abs(value)
+   896→  const direction = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'
+   897→  let strength = 'weak'
+   898→  if (abs >= 0.7) strength = 'very strong'
+   899→  else if (abs >= 0.4) strength = 'moderate'
+   900→  else if (abs >= 0.2) strength = 'mild'
+   901→  return `${strength} ${direction}`
+   902→}
+   903→
+   904→const impactColors: Record<ImpactLevel, { bg: string; text: string; label: string }> = {
+   905→  high: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', label: 'High Impact' },
+   906→  medium: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300', label: 'Medium Impact' },
+   907→  low: { bg: 'bg-slate-100 dark:bg-slate-800/50', text: 'text-slate-600 dark:text-slate-300', label: 'Low Impact' },
+   908→}
+   909→
+   910→const riskColors: Record<RiskLevel, { bg: string; text: string; ring: string; gradient: string }> = {
+   911→  low: {
+   912→    bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+   913→    text: 'text-emerald-700 dark:text-emerald-300',
+   914→    ring: 'ring-emerald-200 dark:ring-emerald-800',
+   915→    gradient: 'from-emerald-400 to-teal-500',
+   916→  },
+   917→  medium: {
+   918→    bg: 'bg-amber-50 dark:bg-amber-950/30',
+   919→    text: 'text-amber-700 dark:text-amber-300',
+   920→    ring: 'ring-amber-200 dark:ring-amber-800',
+   921→    gradient: 'from-amber-400 to-orange-500',
+   922→  },
+   923→  high: {
+   924→    bg: 'bg-rose-50 dark:bg-rose-950/30',
+   925→    text: 'text-rose-700 dark:text-rose-300',
+   926→    ring: 'ring-rose-200 dark:ring-rose-800',
+   927→    gradient: 'from-rose-500 to-red-500',
+   928→  },
+   929→}
+   930→
+   931→// Animated count-up hook
+   932→function useCountUp(target: number, duration = 1.8) {
+   933→  const [value, setValue] = useState(0)
+   934→  useEffect(() => {
+   935→    let raf = 0
+   936→    const start = performance.now()
+   937→    const tick = (now: number) => {
+   938→      const t = Math.min(1, (now - start) / (duration * 1000))
+   939→      const eased = 1 - Math.pow(1 - t, 3)
+   940→      setValue(Math.round(target * eased))
+   941→      if (t < 1) raf = requestAnimationFrame(tick)
+   942→    }
+   943→    raf = requestAnimationFrame(tick)
+   944→    return () => cancelAnimationFrame(raf)
+   945→  }, [target, duration])
+   946→  return value
+   947→}
+   948→
+   949→// ─── Sub-components ──────────────────────────────────────────────────────────
+   950→
+   951→function HealthScoreGauge({ score }: { score: number }) {
+   952→  const animatedScore = useCountUp(score, 2)
+   953→  const size = 240
+   954→  const stroke = 18
+   955→  const radius = (size - stroke) / 2
+   956→  const circumference = 2 * Math.PI * radius
+   957→  const offset = circumference * (1 - animatedScore / 100)
+   958→
+   959→  return (
+   960→    <div className="relative" style={{ width: size, height: size }}>
+   961→      <svg width={size} height={size} className="-rotate-90">
+   962→        <defs>
+   963→          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+   964→            <stop offset="0%" stopColor="#8b5cf6" />
+   965→            <stop offset="50%" stopColor="#a855f7" />
+   966→            <stop offset="100%" stopColor="#f59e0b" />
+   967→          </linearGradient>
+   968→          <filter id="glow">
+   969→            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+   970→            <feMerge>
+   971→              <feMergeNode in="coloredBlur" />
+   972→              <feMergeNode in="SourceGraphic" />
+   973→            </feMerge>
+   974→          </filter>
+   975→        </defs>
+   976→        {/* Background ring */}
+   977→        <circle
+   978→          cx={size / 2}
+   979→          cy={size / 2}
+   980→          r={radius}
+   981→          fill="none"
+   982→          stroke="oklch(0.91 0.02 325)"
+   983→          strokeWidth={stroke}
+   984→          className="dark:stroke-white/10"
+   985→        />
+   986→        {/* Progress arc */}
+   987→        <motion.circle
+   988→          cx={size / 2}
+   989→          cy={size / 2}
+   990→          r={radius}
+   991→          fill="none"
+   992→          stroke="url(#scoreGradient)"
+   993→          strokeWidth={stroke}
+   994→          strokeLinecap="round"
+   995→          strokeDasharray={circumference}
+   996→          initial={{ strokeDashoffset: circumference }}
+   997→          animate={{ strokeDashoffset: offset }}
+   998→          transition={{ duration: 2, ease: 'easeOut' }}
+   999→          filter="url(#glow)"
+  1000→        />
+  1001→      </svg>
+  1002→      <div className="absolute inset-0 flex flex-col items-center justify-center">
+  1003→        <motion.div
+  1004→          initial={{ opacity: 0, scale: 0.8 }}
+  1005→          animate={{ opacity: 1, scale: 1 }}
+  1006→          transition={{ delay: 0.5, duration: 0.4 }}
+  1007→          className="text-5xl font-bold bg-gradient-to-br from-violet-600 to-amber-500 bg-clip-text text-transparent"
+  1008→        >
+  1009→          {animatedScore}
+  1010→        </motion.div>
+  1011→        <div className="text-xs font-medium text-muted-foreground mt-1">out of 100</div>
+  1012→        <Badge className="mt-2 bg-gradient-to-r from-violet-500 to-amber-500 text-white border-0">
+  1013→          <Sparkles className="h-3 w-3 mr-1" /> Highly Predictable
+  1014→        </Badge>
+  1015→      </div>
+  1016→    </div>
+  1017→  )
+  1018→}
+  1019→
+  1020→function MiniChart({ data, color }: { data: { label: string; value: number; baseline: number }[]; color: string }) {
+  1021→  const max = Math.max(...data.map((d) => Math.max(d.value, d.baseline)))
+  1022→  return (
+  1023→    <div className="h-16 flex items-end gap-1">
+  1024→      {data.map((d, i) => (
+  1025→        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+  1026→          <div className="w-full flex items-end justify-center gap-0.5 h-full">
+  1027→            <div
+  1028→              className={`w-1.5 rounded-t bg-gradient-to-t ${color} transition-all`}
+  1029→              style={{ height: `${(d.value / max) * 100}%` }}
+  1030→            />
+  1031→            <div
+  1032→              className="w-0.5 rounded-t bg-muted-foreground/30"
+  1033→              style={{ height: `${(d.baseline / max) * 100}%` }}
+  1034→            />
+  1035→          </div>
+  1036→          <span className="text-[8px] text-muted-foreground">{d.label}</span>
+  1037→        </div>
+  1038→      ))}
+  1039→    </div>
+  1040→  )
+  1041→}
+  1042→
+  1043→function ForecastCard({ prediction, index }: { prediction: Prediction; index: number }) {
+  1044→  const Icon = prediction.icon
+  1045→  return (
+  1046→    <motion.div
+  1047→      initial={{ opacity: 0, y: 20 }}
+  1048→      animate={{ opacity: 1, y: 0 }}
+  1049→      transition={{ duration: 0.4, delay: index * 0.08 }}
+  1050→      whileHover={{ y: -4 }}
+  1051→      className="h-full"
+  1052→    >
+  1053→      <Card className="overflow-hidden h-full border-violet-200/40 dark:border-violet-800/30 bg-gradient-to-br from-white to-violet-50/30 dark:from-card dark:to-violet-950/10 backdrop-blur-sm">
+  1054→        <div className={`h-1.5 bg-gradient-to-r ${prediction.gradient}`} />
+  1055→        <CardHeader className="pb-3">
+  1056→          <div className="flex items-start justify-between">
+  1057→            <div className="flex items-center gap-3">
+  1058→              <div className={`p-2 rounded-xl bg-gradient-to-br ${prediction.gradient} text-white shadow-lg`}>
+  1059→                <Icon className="h-5 w-5" />
+  1060→              </div>
+  1061→              <div>
+  1062→                <CardTitle className="text-base">{prediction.title}</CardTitle>
+  1063→                <p className="text-[11px] text-muted-foreground mt-0.5">7-day forecast</p>
+  1064→              </div>
+  1065→            </div>
+  1066→            <Badge variant="outline" className="text-[10px] gap-1 shrink-0">
+  1067→              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+  1068→              {prediction.confidence}% conf.
+  1069→            </Badge>
+  1070→          </div>
+  1071→        </CardHeader>
+  1072→        <CardContent className="space-y-3">
+  1073→          {/* Summary */}
+  1074→          <div className="rounded-lg bg-violet-50/60 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/30 p-2.5">
+  1075→            <p className="text-xs text-foreground/80 leading-relaxed">{prediction.summary}</p>
+  1076→          </div>
+  1077→
+  1078→          {/* 7-day forecast visualization */}
+  1079→          {prediction.chartType === 'emoji' ? (
+  1080→            <div className="grid grid-cols-7 gap-1">
+  1081→              {prediction.data.map((d, i) => (
+  1082→                <div key={i} className="flex flex-col items-center gap-1">
+  1083→                  <div
+  1084→                    className={cn(
+  1085→                      'text-xl transition-transform hover:scale-125 cursor-default',
+  1086→                      d.value >= 75 ? 'opacity-100' : d.value >= 50 ? 'opacity-80' : 'opacity-60'
+  1087→                    )}
+  1088→                    title={`${d.day} ${d.date}: ${d.label} (${d.value})`}
+  1089→                  >
+  1090→                    {d.emoji}
+  1091→                  </div>
+  1092→                  <div className="w-full bg-muted/60 rounded-full h-1 overflow-hidden">
+  1093→                    <div
+  1094→                      className={`h-full bg-gradient-to-r ${prediction.gradient}`}
+  1095→                      style={{ width: `${d.value}%` }}
+  1096→                    />
+  1097→                  </div>
+  1098→                  <span className="text-[8px] text-muted-foreground">{d.day}</span>
+  1099→                </div>
+  1100→              ))}
+  1101→            </div>
+  1102→          ) : prediction.chartType === 'bar' ? (
+  1103→            <div className="h-28">
+  1104→              <ResponsiveContainer width="100%" height="100%">
+  1105→                <BarChart data={prediction.data} margin={{ top: 4, right: 0, bottom: 0, left: -22 }}>
+  1106→                  <XAxis dataKey="day" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+  1107→                  <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+  1108→                  <Tooltip
+  1109→                    cursor={{ fill: 'rgba(139,92,246,0.08)' }}
+  1110→                    contentStyle={{
+  1111→                      borderRadius: 8,
+  1112→                      border: '1px solid rgba(139,92,246,0.2)',
+  1113→                      fontSize: 11,
+  1114→                      padding: '6px 10px',
+  1115→                    }}
+  1116→                    formatter={(v: number) => [`${v} / 100`, prediction.title]}
+  1117→                  />
+  1118→                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+  1119→                    {prediction.data.map((_, i) => (
+  1120→                      <Cell key={i}>
+  1121→                        <defs>
+  1122→                          <linearGradient id={`bar-${prediction.id}-${i}`} x1="0" y1="0" x2="0" y2="1">
+  1123→                            <stop offset="0%" stopColor="#a855f7" />
+  1124→                            <stop offset="100%" stopColor="#7c3aed" />
+  1125→                          </linearGradient>
+  1126→                        </defs>
+  1127→                      </Cell>
+  1128→                    ))}
+  1129→                  </Bar>
+  1130→                </BarChart>
+  1131→              </ResponsiveContainer>
+  1132→            </div>
+  1133→          ) : (
+  1134→            <div className="h-28">
+  1135→              <ResponsiveContainer width="100%" height="100%">
+  1136→                <AreaChart data={prediction.data} margin={{ top: 4, right: 0, bottom: 0, left: -22 }}>
+  1137→                  <defs>
+  1138→                    <linearGradient id={`area-${prediction.id}`} x1="0" y1="0" x2="0" y2="1">
+  1139→                      <stop offset="0%" stopColor="#a855f7" stopOpacity={0.6} />
+  1140→                      <stop offset="100%" stopColor="#a855f7" stopOpacity={0.05} />
+  1141→                    </linearGradient>
+  1142→                  </defs>
+  1143→                  <XAxis dataKey="day" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+  1144→                  <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+  1145→                  <Tooltip
+  1146→                    contentStyle={{
+  1147→                      borderRadius: 8,
+  1148→                      border: '1px solid rgba(139,92,246,0.2)',
+  1149→                      fontSize: 11,
+  1150→                      padding: '6px 10px',
+  1151→                    }}
+  1152→                    formatter={(v: number) => [`${v} / 100`, prediction.title]}
+  1153→                  />
+  1154→                  <Area
+  1155→                    type="monotone"
+  1156→                    dataKey="value"
+  1157→                    stroke="#a855f7"
+  1158→                    strokeWidth={2}
+  1159→                    fill={`url(#area-${prediction.id})`}
+  1160→                  />
+  1161→                </AreaChart>
+  1162→              </ResponsiveContainer>
+  1163→            </div>
+  1164→          )}
+  1165→
+  1166→          {/* Highlights */}
+  1167→          <div className="space-y-1.5">
+  1168→            {prediction.highlights.map((h, i) => (
+  1169→              <div
+  1170→                key={i}
+  1171→                className={cn(
+  1172→                  'flex items-start gap-1.5 text-[11px] leading-snug',
+  1173→                  h.type === 'positive' && 'text-emerald-700 dark:text-emerald-400',
+  1174→                  h.type === 'warning' && 'text-rose-700 dark:text-rose-400',
+  1175→                  h.type === 'info' && 'text-muted-foreground'
+  1176→                )}
+  1177→              >
+  1178→                {h.type === 'positive' && <ArrowUpRight className="h-3 w-3 mt-0.5 shrink-0" />}
+  1179→                {h.type === 'warning' && <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
+  1180→                {h.type === 'info' && <Info className="h-3 w-3 mt-0.5 shrink-0" />}
+  1181→                <span>{h.text}</span>
+  1182→              </div>
+  1183→            ))}
+  1184→          </div>
+  1185→
+  1186→          <Separator />
+  1187→
+  1188→          {/* Recommendations */}
+  1189→          <div>
+  1190→            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+  1191→              AI Recommendations
+  1192→            </p>
+  1193→            <ul className="space-y-1">
+  1194→              {prediction.recommendations.map((r, i) => (
+  1195→                <li key={i} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
+  1196→                  <CheckCircle2 className="h-3 w-3 mt-0.5 text-violet-500 shrink-0" />
+  1197→                  <span>{r}</span>
+  1198→                </li>
+  1199→              ))}
+  1200→            </ul>
+  1201→          </div>
+  1202→        </CardContent>
+  1203→      </Card>
+  1204→    </motion.div>
+  1205→  )
+  1206→}
+  1207→
+  1208→function PatternCard({ pattern, index }: { pattern: PatternInsight; index: number }) {
+  1209→  const Icon = pattern.icon
+  1210→  const colorMap: Record<string, string> = {
+  1211→    rose: 'from-rose-500 to-pink-500',
+  1212→    indigo: 'from-indigo-500 to-blue-500',
+  1213→    amber: 'from-amber-500 to-orange-500',
+  1214→    orange: 'from-orange-500 to-rose-500',
+  1215→    cyan: 'from-cyan-500 to-blue-500',
+  1216→    emerald: 'from-emerald-500 to-teal-500',
+  1217→  }
+  1218→  return (
+  1219→    <motion.div
+  1220→      initial={{ opacity: 0, y: 20 }}
+  1221→      animate={{ opacity: 1, y: 0 }}
+  1222→      transition={{ duration: 0.4, delay: index * 0.07 }}
+  1223→      whileHover={{ y: -3 }}
+  1224→    >
+  1225→      <Card className="h-full glass border-violet-200/40 dark:border-violet-800/30 overflow-hidden">
+  1226→        <CardHeader className="pb-2">
+  1227→          <div className="flex items-start justify-between gap-2">
+  1228→            <div className="flex items-center gap-2.5">
+  1229→              <div className={`p-2 rounded-lg bg-gradient-to-br ${colorMap[pattern.color]} text-white shadow`}>
+  1230→                <Icon className="h-4 w-4" />
+  1231→              </div>
+  1232→              <CardTitle className="text-sm leading-tight">{pattern.title}</CardTitle>
+  1233→            </div>
+  1234→            <Badge
+  1235→              variant="outline"
+  1236→              className={cn(
+  1237→                'shrink-0 gap-1 text-[10px]',
+  1238→                pattern.direction === 'up'
+  1239→                  ? 'border-rose-200 text-rose-600 dark:border-rose-800 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30'
+  1240→                  : 'border-emerald-200 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
+  1241→              )}
+  1242→            >
+  1243→              {pattern.direction === 'up' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+  1244→              {pattern.delta}
+  1245→            </Badge>
+  1246→          </div>
+  1247→        </CardHeader>
+  1248→        <CardContent className="space-y-3">
+  1249→          <p className="text-[11px] text-muted-foreground leading-relaxed">{pattern.description}</p>
+  1250→
+  1251→          {/* Mini chart */}
+  1252→          <div className="rounded-lg bg-muted/40 dark:bg-muted/20 p-2.5">
+  1253→            <div className="flex items-center justify-between mb-1.5">
+  1254→              <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">
+  1255→                Supporting data
+  1256→              </span>
+  1257→              <div className="flex items-center gap-2 text-[9px]">
+  1258→                <span className="flex items-center gap-0.5">
+  1259→                  <span className="h-1.5 w-1.5 rounded-sm bg-violet-500" /> You
+  1260→                </span>
+  1261→                <span className="flex items-center gap-0.5">
+  1262→                  <span className="h-1.5 w-1.5 rounded-sm bg-muted-foreground/40" /> Baseline
+  1263→                </span>
+  1264→              </div>
+  1265→            </div>
+  1266→            <MiniChart data={pattern.chartData} color={colorMap[pattern.color]} />
+  1267→          </div>
+  1268→
+  1269→          {/* Confidence bar */}
+  1270→          <div className="flex items-center gap-2">
+  1271→            <span className="text-[10px] text-muted-foreground shrink-0">Confidence</span>
+  1272→            <div className="flex-1 h-1.5 bg-muted/60 rounded-full overflow-hidden">
+  1273→              <motion.div
+  1274→                initial={{ width: 0 }}
+  1275→                animate={{ width: `${pattern.confidence}%` }}
+  1276→                transition={{ duration: 1, delay: 0.3 + index * 0.07 }}
+  1277→                className={`h-full bg-gradient-to-r ${colorMap[pattern.color]}`}
+  1278→              />
+  1279→            </div>
+  1280→            <span className="text-[10px] font-semibold">{pattern.confidence}%</span>
+  1281→          </div>
+  1282→
+  1283→          {/* Recommendation */}
+  1284→          <div className="flex items-start gap-1.5 rounded-md bg-violet-50/60 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/30 p-2">
+  1285→            <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+  1286→            <p className="text-[11px] text-foreground/80 leading-snug">{pattern.recommendation}</p>
+  1287→          </div>
+  1288→        </CardContent>
+  1289→      </Card>
+  1290→    </motion.div>
+  1291→  )
+  1292→}
+  1293→
+  1294→function RecommendationCard({ rec, onAdd, added }: { rec: Recommendation; onAdd: (id: string) => void; added: boolean }) {
+  1295→  const Icon = rec.icon
+  1296→  const impact = impactColors[rec.impact]
+  1297→  return (
+  1298→    <motion.div
+  1299→      initial={{ opacity: 0, scale: 0.97 }}
+  1300→      animate={{ opacity: 1, scale: 1 }}
+  1301→      transition={{ duration: 0.3 }}
+  1302→      whileHover={{ y: -2 }}
+  1303→      className="h-full"
+  1304→    >
+  1305→      <Card className="h-full glass border-violet-200/40 dark:border-violet-800/30 flex flex-col">
+  1306→        <CardHeader className="pb-2">
+  1307→          <div className="flex items-start justify-between gap-2">
+  1308→            <div className="flex items-center gap-2.5">
+  1309→              <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-300">
+  1310→                <Icon className="h-4 w-4" />
+  1311→              </div>
+  1312→              <CardTitle className="text-sm leading-tight">{rec.title}</CardTitle>
+  1313→            </div>
+  1314→            <Badge className={cn('text-[9px] border-0', impact.bg, impact.text)}>{impact.label}</Badge>
+  1315→          </div>
+  1316→        </CardHeader>
+  1317→        <CardContent className="flex flex-col flex-1 gap-2.5">
+  1318→          <p className="text-[11px] text-muted-foreground leading-relaxed flex-1">{rec.description}</p>
+  1319→          {rec.cyclePhase && (
+  1320→            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+  1321→              <Calendar className="h-3 w-3" />
+  1322→              <span>{rec.cyclePhase}</span>
+  1323→            </div>
+  1324→          )}
+  1325→          <div className="flex items-start gap-1.5 rounded-md bg-amber-50/50 dark:bg-amber-950/15 p-1.5">
+  1326→            <Database className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+  1327→            <p className="text-[10px] text-muted-foreground leading-snug">{rec.evidence}</p>
+  1328→          </div>
+  1329→          <Button
+  1330→            size="sm"
+  1331→            variant={added ? 'secondary' : 'default'}
+  1332→            className={cn(
+  1333→              'w-full h-8 text-[11px] gap-1.5',
+  1334→              !added && 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700',
+  1335→              added && 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300'
+  1336→            )}
+  1337→            onClick={() => onAdd(rec.id)}
+  1338→            disabled={added}
+  1339→          >
+  1340→            {added ? (
+  1341→              <>
+  1342→                <Check className="h-3.5 w-3.5" /> Added to Plan
+  1343→              </>
+  1344→            ) : (
+  1345→              <>
+  1346→                <Plus className="h-3.5 w-3.5" /> Add to Plan
+  1347→              </>
+  1348→            )}
+  1349→          </Button>
+  1350→        </CardContent>
+  1351→      </Card>
+  1352→    </motion.div>
+  1353→  )
+  1354→}
+  1355→
+  1356→function RiskCard({ risk, index }: { risk: RiskAssessment; index: number }) {
+  1357→  const Icon = risk.icon
+  1358→  const colors = riskColors[risk.riskLevel]
+  1359→  return (
+  1360→    <motion.div
+  1361→      initial={{ opacity: 0, y: 20 }}
+  1362→      animate={{ opacity: 1, y: 0 }}
+  1363→      transition={{ duration: 0.4, delay: index * 0.08 }}
+  1364→      whileHover={{ y: -3 }}
+  1365→    >
+  1366→      <Card className={cn('h-full ring-1', colors.bg, colors.ring)}>
+  1367→        <CardHeader className="pb-3">
+  1368→          <div className="flex items-start justify-between gap-2">
+  1369→            <div className="flex items-center gap-3">
+  1370→              <div className={`p-2.5 rounded-xl bg-gradient-to-br ${colors.gradient} text-white shadow-lg`}>
+  1371→                <Icon className="h-5 w-5" />
+  1372→              </div>
+  1373→              <div>
+  1374→                <CardTitle className="text-base">{risk.condition}</CardTitle>
+  1375→                <div className="flex items-center gap-1.5 mt-0.5">
+  1376→                  <span className={cn('text-[10px] font-semibold uppercase tracking-wide', colors.text)}>
+  1377→                    {risk.riskLevel} risk
+  1378→                  </span>
+  1379→                  {risk.trend === 'improving' && (
+  1380→                    <Badge variant="outline" className="text-[9px] h-4 px-1 gap-0.5 border-emerald-300 text-emerald-600">
+  1381→                      <TrendingDown className="h-2.5 w-2.5" /> Improving
+  1382→                    </Badge>
+  1383→                  )}
+  1384→                  {risk.trend === 'worsening' && (
+  1385→                    <Badge variant="outline" className="text-[9px] h-4 px-1 gap-0.5 border-rose-300 text-rose-600">
+  1386→                      <TrendingUp className="h-2.5 w-2.5" /> Worsening
+  1387→                    </Badge>
+  1388→                  )}
+  1389→                  {risk.trend === 'stable' && (
+  1390→                    <Badge variant="outline" className="text-[9px] h-4 px-1 gap-0.5">
+  1391→                      <Activity className="h-2.5 w-2.5" /> Stable
+  1392→                    </Badge>
+  1393→                  )}
+  1394→                </div>
+  1395→              </div>
+  1396→            </div>
+  1397→            <div className="relative w-14 h-14 shrink-0">
+  1398→              <svg width="56" height="56" className="-rotate-90">
+  1399→                <circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/30" />
+  1400→                <motion.circle
+  1401→                  cx="28"
+  1402→                  cy="28"
+  1403→                  r="22"
+  1404→                  fill="none"
+  1405→                  stroke={risk.riskLevel === 'low' ? '#10b981' : risk.riskLevel === 'medium' ? '#f59e0b' : '#ef4444'}
+  1406→                  strokeWidth="5"
+  1407→                  strokeLinecap="round"
+  1408→                  strokeDasharray={2 * Math.PI * 22}
+  1409→                  initial={{ strokeDashoffset: 2 * Math.PI * 22 }}
+  1410→                  animate={{ strokeDashoffset: 2 * Math.PI * 22 * (1 - risk.riskScore / 100) }}
+  1411→                  transition={{ duration: 1.5, delay: index * 0.08, ease: 'easeOut' }}
+  1412→                />
+  1413→              </svg>
+  1414→              <div className="absolute inset-0 flex items-center justify-center text-sm font-bold">{risk.riskScore}</div>
+  1415→            </div>
+  1416→          </div>
+  1417→        </CardHeader>
+  1418→        <CardContent className="space-y-3">
+  1419→          {/* Contributing factors */}
+  1420→          <div>
+  1421→            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1">
+  1422→              <AlertTriangle className="h-3 w-3" /> Contributing Factors
+  1423→            </p>
+  1424→            <ul className="space-y-1">
+  1425→              {risk.contributingFactors.map((f, i) => (
+  1426→                <li key={i} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
+  1427→                  <span className="h-1 w-1 rounded-full bg-muted-foreground/60 mt-1.5 shrink-0" />
+  1428→                  <span>{f}</span>
+  1429→                </li>
+  1430→              ))}
+  1431→            </ul>
+  1432→          </div>
+  1433→
+  1434→          <Separator />
+  1435→
+  1436→          {/* Prevention tips */}
+  1437→          <div>
+  1438→            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1">
+  1439→              <ShieldAlert className="h-3 w-3" /> Prevention Tips
+  1440→            </p>
+  1441→            <ul className="space-y-1">
+  1442→              {risk.preventionTips.map((t, i) => (
+  1443→                <li key={i} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
+  1444→                  <CheckCircle2 className="h-3 w-3 mt-0.5 text-emerald-500 shrink-0" />
+  1445→                  <span>{t}</span>
+  1446→                </li>
+  1447→              ))}
+  1448→            </ul>
+  1449→          </div>
+  1450→        </CardContent>
+  1451→      </Card>
+  1452→    </motion.div>
+  1453→  )
+  1454→}
+  1455→
+  1456→// Custom tooltip for recharts
+  1457→function ChartTooltip({ active, payload, label }: any) {
+  1458→  if (!active || !payload || payload.length === 0) return null
+  1459→  return (
+  1460→    <div className="rounded-lg border border-violet-200 dark:border-violet-800 bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-2 shadow-lg text-xs">
+  1461→      <p className="font-semibold mb-1">{label}</p>
+  1462→      {payload.map((p: any, i: number) => (
+  1463→        <p key={i} className="text-muted-foreground flex items-center gap-1.5">
+  1464→          <span className="h-2 w-2 rounded-sm" style={{ background: p.color || p.stroke || p.fill }} />
+  1465→          <span>{p.name}:</span>
+  1466→          <span className="font-semibold text-foreground">{p.value}</span>
+  1467→        </p>
+  1468→      ))}
+  1469→    </div>
+  1470→  )
+  1471→}
+  1472→
+  1473→// ─── Main Module ─────────────────────────────────────────────────────────────
+  1474→
+  1475→export default function AIInsightsModule() {
+  1476→  const [activeTab, setActiveTab] = useState('overview')
+  1477→  const [addedRecs, setAddedRecs] = useState<Set<string>>(new Set())
+  1478→
+  1479→  const handleAddRec = (id: string) => {
+  1480→    setAddedRecs((prev) => new Set(prev).add(id))
+  1481→    toast.success('Added to your plan', {
+  1482→      description: 'You can review and customize it in your dashboard.',
+  1483→    })
+  1484→  }
+  1485→
+  1486→  const recsByCategory = useMemo(() => {
+  1487→    const map: Record<string, Recommendation[]> = {}
+  1488→    for (const cat of REC_CATEGORIES) {
+  1489→      map[cat.id] = RECOMMENDATIONS.filter((r) => r.category === cat.id)
+  1490→    }
+  1491→    return map
+  1492→  }, [])
+  1493→
+  1494→  return (
+  1495→    <div className="space-y-6">
+  1496→      {/* ═══ 1. HEADER ═══ */}
+  1497→      <motion.div
+  1498→        initial={{ opacity: 0, y: -10 }}
+  1499→        animate={{ opacity: 1, y: 0 }}
+  1500→        transition={{ duration: 0.5 }}
+  1501→        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-purple-700 to-indigo-800 p-6 md:p-8 text-white shadow-2xl"
+  1502→      >
+  1503→        {/* Decorative blobs */}
+  1504→        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-fuchsia-500/30 blur-3xl" />
+  1505→        <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-amber-400/20 blur-3xl" />
+  1506→        <div className="absolute top-1/2 right-1/3 h-32 w-32 rounded-full bg-violet-400/20 blur-2xl" />
+  1507→
+  1508→        {/* Grid pattern */}
+  1509→        <div
+  1510→          className="absolute inset-0 opacity-[0.07]"
+  1511→          style={{
+  1512→            backgroundImage:
+  1513→              'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+  1514→            backgroundSize: '32px 32px',
+  1515→          }}
+  1516→        />
+  1517→
+  1518→        <div className="relative z-10">
+  1519→          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  1520→            <div className="space-y-3 max-w-2xl">
+  1521→              <div className="flex flex-wrap items-center gap-2">
+  1522→                <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm gap-1.5">
+  1523→                  <BrainCircuit className="h-3.5 w-3.5" /> AI Engine Active
+  1524→                  <span className="relative flex h-2 w-2 ml-1">
+  1525→                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+  1526→                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+  1527→                  </span>
+  1528→                </Badge>
+  1529→                <Badge className="bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 border-0 gap-1 font-semibold">
+  1530→                  <Crown className="h-3.5 w-3.5" /> PREMIUM
+  1531→                </Badge>
+  1532→                <Badge variant="outline" className="border-white/30 text-white gap-1">
+  1533→                  <Cpu className="h-3 w-3" /> v3.2.1
+  1534→                </Badge>
+  1535→              </div>
+  1536→              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
+  1537→                <span className="bg-gradient-to-r from-white via-violet-100 to-amber-200 bg-clip-text text-transparent">
+  1538→                  AI Health Intelligence
+  1539→                </span>
+  1540→              </h1>
+  1541→              <p className="text-violet-100/90 text-sm md:text-base">
+  1542→                Predictive insights powered by your data — patterns, forecasts, and personalized recommendations.
+  1543→              </p>
+  1544→              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-violet-100/80 pt-1">
+  1545→                <span className="flex items-center gap-1">
+  1546→                  <Database className="h-3 w-3" /> {AI_MODEL_INFO.dataPoints.toLocaleString()} data points
+  1547→                </span>
+  1548→                <span className="flex items-center gap-1">
+  1549→                  <CheckCircle2 className="h-3 w-3" /> {AI_MODEL_INFO.accuracy}% accuracy
+  1550→                </span>
+  1551→                <span className="flex items-center gap-1">
+  1552→                  <Clock className="h-3 w-3" /> Updated {AI_MODEL_INFO.lastUpdated}
+  1553→                </span>
+  1554→              </div>
+  1555→            </div>
+  1556→
+  1557→            {/* Right-side stat tiles */}
+  1558→            <div className="grid grid-cols-2 gap-3 shrink-0">
+  1559→              <div className="rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-3 min-w-[120px]">
+  1560→                <div className="flex items-center gap-1.5 text-violet-100/80 text-[10px] uppercase tracking-wide">
+  1561→                  <Sparkles className="h-3 w-3" /> Predictions
+  1562→                </div>
+  1563→                <div className="text-2xl font-bold mt-0.5">6</div>
+  1564→                <div className="text-[10px] text-violet-100/70">7-day forecasts</div>
+  1565→              </div>
+  1566→              <div className="rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-3 min-w-[120px]">
+  1567→                <div className="flex items-center gap-1.5 text-violet-100/80 text-[10px] uppercase tracking-wide">
+  1568→                  <Network className="h-3 w-3" /> Patterns
+  1569→                </div>
+  1570→                <div className="text-2xl font-bold mt-0.5">{PATTERNS.length}</div>
+  1571→                <div className="text-[10px] text-violet-100/70">AI-discovered</div>
+  1572→              </div>
+  1573→              <div className="rounded-xl bg-gradient-to-br from-amber-400/30 to-yellow-500/30 backdrop-blur-md border border-amber-300/30 p-3">
+  1574→                <div className="flex items-center gap-1.5 text-amber-100/90 text-[10px] uppercase tracking-wide">
+  1575→                  <Gauge className="h-3 w-3" /> Predictability
+  1576→                </div>
+  1577→                <div className="text-2xl font-bold mt-0.5 text-white">{PREDICTABILITY_SCORE}%</div>
+  1578→                <div className="text-[10px] text-amber-100/70">Highly predictable</div>
+  1579→              </div>
+  1580→              <div className="rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-3">
+  1581→                <div className="flex items-center gap-1.5 text-violet-100/80 text-[10px] uppercase tracking-wide">
+  1582→                  <ShieldAlert className="h-3 w-3" /> Risk checks
+  1583→                </div>
+  1584→                <div className="text-2xl font-bold mt-0.5">{RISK_ASSESSMENTS.length}</div>
+  1585→                <div className="text-[10px] text-violet-100/70">Conditions tracked</div>
+  1586→              </div>
+  1587→            </div>
+  1588→          </div>
+  1589→        </div>
+  1590→      </motion.div>
+  1591→
+  1592→      {/* ═══ Tabbed Content ═══ */}
+  1593→      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+  1594→        <div className="sticky top-[57px] z-30 -mx-4 px-4 py-2 bg-background/80 backdrop-blur-md border-b border-border/60">
+  1595→          <TabsList className="bg-muted/60 h-auto p-1 gap-0.5 flex flex-wrap">
+  1596→            <TabsTrigger value="overview" className="gap-1.5 text-xs">
+  1597→              <Gauge className="h-3.5 w-3.5" /> Overview
+  1598→            </TabsTrigger>
+  1599→            <TabsTrigger value="predictions" className="gap-1.5 text-xs">
+  1600→              <Sparkles className="h-3.5 w-3.5" /> Predictions
+  1601→            </TabsTrigger>
+  1602→            <TabsTrigger value="patterns" className="gap-1.5 text-xs">
+  1603→              <Network className="h-3.5 w-3.5" /> Patterns
+  1604→            </TabsTrigger>
+  1605→            <TabsTrigger value="trends" className="gap-1.5 text-xs">
+  1606→              <TrendingUp className="h-3.5 w-3.5" /> Trends
+  1607→            </TabsTrigger>
+  1608→            <TabsTrigger value="recommendations" className="gap-1.5 text-xs">
+  1609→              <Lightbulb className="h-3.5 w-3.5" /> Recommendations
+  1610→            </TabsTrigger>
+  1611→            <TabsTrigger value="risk" className="gap-1.5 text-xs">
+  1612→              <ShieldAlert className="h-3.5 w-3.5" /> Risk
+  1613→            </TabsTrigger>
+  1614→          </TabsList>
+  1615→        </div>
+  1616→
+  1617→        {/* ═══ OVERVIEW TAB: Sections 2, 9, 10 ═══ */}
+  1618→        <TabsContent value="overview" className="space-y-6 mt-4">
+  1619→          {/* Section 2: Health Predictability Score */}
+  1620→          <motion.div
+  1621→            initial={{ opacity: 0, y: 15 }}
+  1622→            animate={{ opacity: 1, y: 0 }}
+  1623→            transition={{ duration: 0.4 }}
+  1624→          >
+  1625→            <Card className="glass border-violet-200/40 dark:border-violet-800/30 overflow-hidden">
+  1626→              <CardHeader>
+  1627→                <div className="flex items-center justify-between gap-3 flex-wrap">
+  1628→                  <div>
+  1629→                    <CardTitle className="flex items-center gap-2">
+  1630→                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-amber-500 text-white">
+  1631→                        <Gauge className="h-4 w-4" />
+  1632→                      </div>
+  1633→                      Health Predictability Score
+  1634→                    </CardTitle>
+  1635→                    <CardDescription className="mt-1">
+  1636→                      How reliably your health patterns can be forecast from your data
+  1637→                    </CardDescription>
+  1638→                  </div>
+  1639→                  <Badge className="bg-gradient-to-r from-violet-500 to-amber-500 text-white border-0 gap-1">
+  1640→                    <Star className="h-3 w-3 fill-white" /> Top 12% of users
+  1641→                  </Badge>
+  1642→                </div>
+  1643→              </CardHeader>
+  1644→              <CardContent>
+  1645→                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+  1646→                  {/* Left: Gauge */}
+  1647→                  <div className="flex flex-col items-center">
+  1648→                    <HealthScoreGauge score={PREDICTABILITY_SCORE} />
+  1649→                    <motion.p
+  1650→                      initial={{ opacity: 0 }}
+  1651→                      animate={{ opacity: 1 }}
+  1652→                      transition={{ delay: 1.5 }}
+  1653→                      className="text-center text-sm text-muted-foreground mt-3 max-w-xs"
+  1654→                    >
+  1655→                      Your health patterns are{' '}
+  1656→                      <span className="font-semibold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+  1657→                        {PREDICTABILITY_SCORE}% predictable
+  1658→                      </span>{' '}
+  1659→                      — AI can reliably forecast your week ahead.
+  1660→                    </motion.p>
+  1661→                  </div>
+  1662→
+  1663→                  {/* Right: Breakdown */}
+  1664→                  <div className="space-y-4">
+  1665→                    <div>
+  1666→                      <h4 className="text-sm font-semibold mb-1">Score Breakdown</h4>
+  1667→                      <p className="text-[11px] text-muted-foreground">
+  1668→                        Based on 90 days of cycle, mood, sleep, and symptom data.
+  1669→                      </p>
+  1670→                    </div>
+  1671→                    <div className="space-y-3">
+  1672→                      {SCORE_BREAKDOWN.map((item, i) => {
+  1673→                        const Icon = item.icon
+  1674→                        return (
+  1675→                          <motion.div
+  1676→                            key={item.label}
+  1677→                            initial={{ opacity: 0, x: 10 }}
+  1678→                            animate={{ opacity: 1, x: 0 }}
+  1679→                            transition={{ delay: 0.5 + i * 0.1 }}
+  1680→                            className="space-y-1.5"
+  1681→                          >
+  1682→                            <div className="flex items-center justify-between">
+  1683→                              <span className="flex items-center gap-2 text-sm">
+  1684→                                <Icon className="h-4 w-4 text-violet-500" />
+  1685→                                {item.label}
+  1686→                              </span>
+  1687→                              <span className="text-sm font-semibold">{item.value}%</span>
+  1688→                            </div>
+  1689→                            <div className="h-2 bg-muted/60 rounded-full overflow-hidden">
+  1690→                              <motion.div
+  1691→                                initial={{ width: 0 }}
+  1692→                                animate={{ width: `${item.value}%` }}
+  1693→                                transition={{ duration: 1, delay: 0.7 + i * 0.1, ease: 'easeOut' }}
+  1694→                                className={`h-full bg-gradient-to-r ${item.color} rounded-full`}
+  1695→                              />
+  1696→                            </div>
+  1697→                          </motion.div>
+  1698→                        )
+  1699→                      })}
+  1700→                    </div>
+  1701→                    <Separator />
+  1702→                    <div className="grid grid-cols-3 gap-3 text-center">
+  1703→                      <div>
+  1704→                        <div className="text-lg font-bold text-violet-600 dark:text-violet-400">{AI_MODEL_INFO.dataPoints.toLocaleString()}</div>
+  1705→                        <div className="text-[10px] text-muted-foreground">Data points</div>
+  1706→                      </div>
+  1707→                      <div>
+  1708→                        <div className="text-lg font-bold text-violet-600 dark:text-violet-400">28d</div>
+  1709→                        <div className="text-[10px] text-muted-foreground">Rolling window</div>
+  1710→                      </div>
+  1711→                      <div>
+  1712→                        <div className="text-lg font-bold text-violet-600 dark:text-violet-400">6</div>
+  1713→                        <div className="text-[10px] text-muted-foreground">Data sources</div>
+  1714→                      </div>
+  1715→                    </div>
+  1716→                  </div>
+  1717→                </div>
+  1718→              </CardContent>
+  1719→            </Card>
+  1720→          </motion.div>
+  1721→
+  1722→          {/* Section 9: Monthly AI Report Summary */}
+  1723→          <motion.div
+  1724→            initial={{ opacity: 0, y: 15 }}
+  1725→            animate={{ opacity: 1, y: 0 }}
+  1726→            transition={{ duration: 0.4, delay: 0.1 }}
+  1727→          >
+  1728→            <Card className="glass border-violet-200/40 dark:border-violet-800/30">
+  1729→              <CardHeader>
+  1730→                <div className="flex items-center justify-between gap-3 flex-wrap">
+  1731→                  <div>
+  1732→                    <CardTitle className="flex items-center gap-2">
+  1733→                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+  1734→                        <FileText className="h-4 w-4" />
+  1735→                      </div>
+  1736→                      Monthly AI Report Summary
+  1737→                    </CardTitle>
+  1738→                    <CardDescription className="mt-1">{MONTHLY_REPORT.month}</CardDescription>
+  1739→                  </div>
+  1740→                  <div className="flex gap-2">
+  1741→                    <Button
+  1742→                      size="sm"
+  1743→                      variant="outline"
+  1744→                      className="gap-1.5"
+  1745→                      onClick={() => toast.success('PDF export started', { description: 'Your report will be ready in a moment.' })}
+  1746→                    >
+  1747→                      <Download className="h-3.5 w-3.5" /> PDF
+  1748→                    </Button>
+  1749→                    <Button
+  1750→                      size="sm"
+  1751→                      variant="outline"
+  1752→                      className="gap-1.5"
+  1753→                      onClick={() => toast.success('Excel export started', { description: 'Your data will download shortly.' })}
+  1754→                    >
+  1755→                      <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+  1756→                    </Button>
+  1757→                  </div>
+  1758→                </div>
+  1759→              </CardHeader>
+  1760→              <CardContent className="space-y-5">
+  1761→                {/* Key findings */}
+  1762→                <div>
+  1763→                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+  1764→                    <Sparkles className="h-4 w-4 text-violet-500" /> Key Findings This Month
+  1765→                  </h4>
+  1766→                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+  1767→                    {MONTHLY_REPORT.keyFindings.map((f, i) => (
+  1768→                      <motion.div
+  1769→                        key={i}
+  1770→                        initial={{ opacity: 0, x: -10 }}
+  1771→                        animate={{ opacity: 1, x: 0 }}
+  1772→                        transition={{ delay: 0.1 + i * 0.05 }}
+  1773→                        className="flex items-start gap-2 rounded-lg bg-violet-50/60 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/30 p-2.5"
+  1774→                      >
+  1775→                        <div className="h-5 w-5 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+  1776→                          {i + 1}
+  1777→                        </div>
+  1778→                        <p className="text-[11px] text-foreground/80 leading-snug">{f}</p>
+  1779→                      </motion.div>
+  1780→                    ))}
+  1781→                  </div>
+  1782→                </div>
+  1783→
+  1784→                {/* Improvements from last month */}
+  1785→                <div>
+  1786→                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+  1787→                    <TrendingUp className="h-4 w-4 text-emerald-500" /> Improvements from Last Month
+  1788→                  </h4>
+  1789→                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+  1790→                    {MONTHLY_REPORT.improvements.map((imp, i) => (
+  1791→                      <motion.div
+  1792→                        key={imp.metric}
+  1793→                        initial={{ opacity: 0, y: 10 }}
+  1794→                        animate={{ opacity: 1, y: 0 }}
+  1795→                        transition={{ delay: 0.1 + i * 0.05 }}
+  1796→                        className="rounded-lg border border-emerald-200/60 dark:border-emerald-800/30 bg-emerald-50/40 dark:bg-emerald-950/15 p-2.5"
+  1797→                      >
+  1798→                        <div className="flex items-center justify-between mb-1">
+  1799→                          <span className="text-[10px] text-muted-foreground truncate">{imp.metric}</span>
+  1800→                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">{imp.delta}</span>
+  1801→                        </div>
+  1802→                        <div className="flex items-center gap-1 text-[10px]">
+  1803→                          <span className="text-muted-foreground">{imp.from}</span>
+  1804→                          <ArrowUpRight className="h-2.5 w-2.5 text-emerald-500" />
+  1805→                          <span className="font-semibold">{imp.to}</span>
+  1806→                        </div>
+  1807→                      </motion.div>
+  1808→                    ))}
+  1809→                  </div>
+  1810→                </div>
+  1811→
+  1812→                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1813→                  {/* Areas of concern */}
+  1814→                  <div>
+  1815→                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+  1816→                      <AlertTriangle className="h-4 w-4 text-rose-500" /> Areas of Concern
+  1817→                    </h4>
+  1818→                    <ul className="space-y-1.5">
+  1819→                      {MONTHLY_REPORT.concerns.map((c, i) => (
+  1820→                        <li key={i} className="flex items-start gap-2 text-[11px] text-foreground/80">
+  1821→                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+  1822→                          {c}
+  1823→                        </li>
+  1824→                      ))}
+  1825→                    </ul>
+  1826→                  </div>
+  1827→
+  1828→                  {/* Goals for next month */}
+  1829→                  <div>
+  1830→                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+  1831→                      <Target className="h-4 w-4 text-violet-500" /> Goals for Next Month
+  1832→                    </h4>
+  1833→                    <ul className="space-y-1.5">
+  1834→                      {MONTHLY_REPORT.goals.map((g, i) => (
+  1835→                        <li key={i} className="flex items-start gap-2 text-[11px] text-foreground/80">
+  1836→                          <CheckCircle2 className="h-3 w-3 mt-0.5 text-violet-500 shrink-0" />
+  1837→                          {g}
+  1838→                        </li>
+  1839→                      ))}
+  1840→                    </ul>
+  1841→                  </div>
+  1842→                </div>
+  1843→              </CardContent>
+  1844→            </Card>
+  1845→          </motion.div>
+  1846→
+  1847→          {/* Section 10: AI Model Confidence */}
+  1848→          <motion.div
+  1849→            initial={{ opacity: 0, y: 15 }}
+  1850→            animate={{ opacity: 1, y: 0 }}
+  1851→            transition={{ duration: 0.4, delay: 0.15 }}
+  1852→          >
+  1853→            <Card className="glass border-violet-200/40 dark:border-violet-800/30">
+  1854→              <CardHeader>
+  1855→                <div className="flex items-center justify-between gap-3 flex-wrap">
+  1856→                  <div>
+  1857→                    <CardTitle className="flex items-center gap-2">
+  1858→                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
+  1859→                        <CircuitBoard className="h-4 w-4" />
+  1860→                      </div>
+  1861→                      AI Model Confidence & Transparency
+  1862→                    </CardTitle>
+  1863→                    <CardDescription className="mt-1">
+  1864→                      How Aaranya&apos;s AI works — and why you can trust its insights
+  1865→                    </CardDescription>
+  1866→                  </div>
+  1867→                  <Button variant="outline" size="sm" className="gap-1.5">
+  1868→                    <RefreshCw className="h-3.5 w-3.5" /> Re-train model
+  1869→                  </Button>
+  1870→                </div>
+  1871→              </CardHeader>
+  1872→              <CardContent className="space-y-5">
+  1873→                {/* Stat tiles */}
+  1874→                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  1875→                  <div className="rounded-xl border border-violet-200/50 dark:border-violet-800/30 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 p-3">
+  1876→                    <Database className="h-4 w-4 text-violet-500 mb-1" />
+  1877→                    <div className="text-2xl font-bold">{AI_MODEL_INFO.dataPoints.toLocaleString()}</div>
+  1878→                    <div className="text-[10px] text-muted-foreground">Data points analyzed</div>
+  1879→                  </div>
+  1880→                  <div className="rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 p-3">
+  1881→                    <CheckCircle2 className="h-4 w-4 text-emerald-500 mb-1" />
+  1882→                    <div className="text-2xl font-bold">{AI_MODEL_INFO.accuracy}%</div>
+  1883→                    <div className="text-[10px] text-muted-foreground">Model accuracy</div>
+  1884→                  </div>
+  1885→                  <div className="rounded-xl border border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 p-3">
+  1886→                    <Clock className="h-4 w-4 text-amber-500 mb-1" />
+  1887→                    <div className="text-sm font-bold mt-1">{AI_MODEL_INFO.lastUpdated}</div>
+  1888→                    <div className="text-[10px] text-muted-foreground">Last updated</div>
+  1889→                  </div>
+  1890→                  <div className="rounded-xl border border-fuchsia-200/50 dark:border-fuchsia-800/30 bg-gradient-to-br from-fuchsia-50 to-pink-50 dark:from-fuchsia-950/20 dark:to-pink-950/20 p-3">
+  1891→                    <GitBranch className="h-4 w-4 text-fuchsia-500 mb-1" />
+  1892→                    <div className="text-sm font-bold mt-1">{AI_MODEL_INFO.nextUpdate}</div>
+  1893→                    <div className="text-[10px] text-muted-foreground">Next scheduled update</div>
+  1894→                  </div>
+  1895→                </div>
+  1896→
+  1897→                {/* Data sources */}
+  1898→                <div>
+  1899→                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+  1900→                    <Layers className="h-4 w-4 text-violet-500" /> Data Sources Used
+  1901→                  </h4>
+  1902→                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+  1903→                    {AI_MODEL_INFO.dataSources.map((src) => {
+  1904→                      const Icon = src.icon
+  1905→                      return (
+  1906→                        <div
+  1907→                          key={src.label}
+  1908→                          className="flex items-center justify-between rounded-lg border border-border bg-card/60 dark:bg-card/30 p-2.5"
+  1909→                        >
+  1910→                          <div className="flex items-center gap-2">
+  1911→                            <div className={cn('p-1.5 rounded-md', src.classes)}>
+  1912→                              <Icon className="h-3.5 w-3.5" />
+  1913→                            </div>
+  1914→                            <span className="text-[11px] font-medium">{src.label}</span>
+  1915→                          </div>
+  1916→                          <span className="text-[11px] font-semibold text-muted-foreground">{src.count}</span>
+  1917→                        </div>
+  1918→                      )
+  1919→                    })}
+  1920→                  </div>
+  1921→                </div>
+  1922→
+  1923→                <Separator />
+  1924→
+  1925→                {/* How AI works */}
+  1926→                <div>
+  1927→                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+  1928→                    <Info className="h-4 w-4 text-violet-500" /> How Aaranya&apos;s AI Works
+  1929→                  </h4>
+  1930→                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+  1931→                    {AI_MODEL_INFO.howItWorks.map((step, i) => (
+  1932→                      <motion.div
+  1933→                        key={step.step}
+  1934→                        initial={{ opacity: 0, y: 10 }}
+  1935→                        animate={{ opacity: 1, y: 0 }}
+  1936→                        transition={{ delay: i * 0.08 }}
+  1937→                        className="relative rounded-lg border border-violet-100 dark:border-violet-900/30 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/30 dark:from-violet-950/15 dark:to-fuchsia-950/10 p-3"
+  1938→                      >
+  1939→                        <div className="absolute -top-2 -left-2 h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
+  1940→                          {step.step}
+  1941→                        </div>
+  1942→                        <h5 className="text-[11px] font-semibold mt-2 mb-1">{step.title}</h5>
+  1943→                        <p className="text-[10px] text-muted-foreground leading-snug">{step.description}</p>
+  1944→                      </motion.div>
+  1945→                    ))}
+  1946→                  </div>
+  1947→                </div>
+  1948→
+  1949→                <div className="flex items-start gap-2 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3">
+  1950→                  <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+  1951→                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+  1952→                    <strong className="text-foreground">Privacy first:</strong> Your data never leaves your device unencrypted.
+  1953→                    All predictions are computed locally or in an anonymized, HIPAA-compliant pipeline. You can delete your
+  1954→                    data and reset the model anytime from Settings.
+  1955→                  </p>
+  1956→                </div>
+  1957→              </CardContent>
+  1958→            </Card>
+  1959→          </motion.div>
+  1960→        </TabsContent>
+  1961→
+  1962→        {/* ═══ PREDICTIONS TAB: Section 3 ═══ */}
+  1963→        <TabsContent value="predictions" className="mt-4 space-y-4">
+  1964→          <motion.div
+  1965→            initial={{ opacity: 0, y: 10 }}
+  1966→            animate={{ opacity: 1, y: 0 }}
+  1967→            className="flex items-center justify-between gap-3 flex-wrap"
+  1968→          >
+  1969→            <div>
+  1970→              <h2 className="text-xl font-semibold flex items-center gap-2">
+  1971→                <Sparkles className="h-5 w-5 text-violet-500" /> AI Predictions Dashboard
+  1972→              </h2>
+  1973→              <p className="text-sm text-muted-foreground mt-0.5">
+  1974→                7-day forecasts for mood, energy, sleep, stress, productivity, and cravings.
+  1975→              </p>
+  1976→            </div>
+  1977→            <Badge variant="outline" className="gap-1.5">
+  1978→              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Updated 2h ago · Live model
+  1979→            </Badge>
+  1980→          </motion.div>
+  1981→
+  1982→          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  1983→            {PREDICTIONS.map((p, i) => (
+  1984→              <ForecastCard key={p.id} prediction={p} index={i} />
+  1985→            ))}
+  1986→          </div>
+  1987→        </TabsContent>
+  1988→
+  1989→        {/* ═══ PATTERNS TAB: Sections 4 + 5 ═══ */}
+  1990→        <TabsContent value="patterns" className="mt-4 space-y-6">
+  1991→          {/* Section 4: Pattern Detection Engine */}
+  1992→          <div>
+  1993→            <motion.div
+  1994→              initial={{ opacity: 0, y: 10 }}
+  1995→              animate={{ opacity: 1, y: 0 }}
+  1996→              className="flex items-center justify-between gap-3 flex-wrap mb-4"
+  1997→            >
+  1998→              <div>
+  1999→                <h2 className="text-xl font-semibold flex items-center gap-2">
+  2000→                  <Network className="h-5 w-5 text-violet-500" /> Pattern Detection Engine
+
+[showing lines 1-2000 of 2559; use offset=2001 with limit to continue reading]

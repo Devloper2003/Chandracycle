@@ -1,0 +1,942 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Card,
+     7→  CardContent,
+     8→  CardDescription,
+     9→  CardHeader,
+    10→  CardTitle,
+    11→  CardAction,
+    12→} from '@/components/ui/card'
+    13→import { Badge } from '@/components/ui/badge'
+    14→import { Button } from '@/components/ui/button'
+    15→import { Input } from '@/components/ui/input'
+    16→import { Label } from '@/components/ui/label'
+    17→import { Textarea } from '@/components/ui/textarea'
+    18→import { Progress } from '@/components/ui/progress'
+    19→import { Separator } from '@/components/ui/separator'
+    20→import { ScrollArea } from '@/components/ui/scroll-area'
+    21→import { Checkbox } from '@/components/ui/checkbox'
+    22→import {
+    23→  Dialog,
+    24→  DialogContent,
+    25→  DialogDescription,
+    26→  DialogHeader,
+    27→  DialogTitle,
+    28→  DialogTrigger,
+    29→  DialogFooter,
+    30→  DialogClose,
+    31→} from '@/components/ui/dialog'
+    32→import {
+    33→  Baby,
+    34→  CalendarHeart,
+    35→  Syringe,
+    36→  Pill,
+    37→  BookHeart,
+    38→  Stethoscope,
+    39→  ChevronLeft,
+    40→  ChevronRight,
+    41→  Plus,
+    42→  Check,
+    43→  Clock,
+    44→  Heart,
+    45→  Sparkles,
+    46→  Activity,
+    47→  TrendingUp,
+    48→  AlertCircle,
+    49→  Timer,
+    50→  Star,
+    51→} from 'lucide-react'
+    52→import { useAppStore } from '@/lib/store'
+    53→
+    54→// ─── Configuration (kept — educational reference & options) ─────────────
+    55→const TOTAL_WEEKS = 40
+    56→
+    57→const babyData: Record<number, { size: string; emoji: string; weight: string; length: string; milestone: string }> = {
+    58→  4: { size: 'Poppy Seed', emoji: '🌱', weight: '~1g', length: '~2mm', milestone: 'Embryo implants; neural tube forming' },
+    59→  8: { size: 'Raspberry', emoji: '🫐', weight: '~1g', length: '~1.6cm', milestone: 'Heart beating; limbs forming' },
+    60→  12: { size: 'Plum', emoji: '🫒', weight: '~14g', length: '~5.4cm', milestone: 'Fingers & toes formed; reflexes begin' },
+    61→  16: { size: 'Avocado', emoji: '🥑', weight: '~100g', length: '~11.6cm', milestone: 'Facial expressions; eyes sensitive to light' },
+    62→  20: { size: 'Banana', emoji: '🍌', weight: '~300g', length: '~25cm', milestone: 'Halfway! You may feel kicks' },
+    63→  24: { size: 'Mango', emoji: '🥭', weight: '~600g', length: '~30cm', milestone: 'Lungs developing branches; viable outside womb' },
+    64→  28: { size: 'Eggplant', emoji: '🍆', weight: '~1kg', length: '~37.6cm', milestone: 'Third trimester; eyes opening' },
+    65→  32: { size: 'Squash', emoji: '🥒', weight: '~1.8kg', length: '~42cm', milestone: 'Bones hardening; practicing breathing' },
+    66→  36: { size: 'Honeydew', emoji: '🍈', weight: '~2.6kg', length: '~47cm', milestone: 'Rapid brain growth; head down position' },
+    67→  40: { size: 'Watermelon', emoji: '🍉', weight: '~3.5kg', length: '~50cm', milestone: 'Full term! Ready to meet you' },
+    68→}
+    69→
+    70→const timelineMilestones: { week: number; label: string; detail: string }[] = [
+    71→  { week: 4, label: 'Implantation', detail: 'Embryo attaches to uterine wall' },
+    72→  { week: 8, label: 'Heartbeat', detail: 'Heart begins to beat' },
+    73→  { week: 12, label: 'First Trimester End', detail: 'Risk of miscarriage drops' },
+    74→  { week: 16, label: 'Gender Visible', detail: 'Can see on ultrasound' },
+    75→  { week: 20, label: 'Halfway', detail: 'Anatomy scan ultrasound' },
+    76→  { week: 24, label: 'Viability', detail: 'Baby could survive outside' },
+    77→  { week: 28, label: 'Third Trimester', detail: 'Final stretch begins' },
+    78→  { week: 32, label: 'Positioning', detail: 'Baby moves head-down' },
+    79→  { week: 36, label: 'Early Term', detail: 'Lungs nearly mature' },
+    80→  { week: 40, label: 'Full Term', detail: 'Ready for birth!' },
+    81→]
+    82→
+    83→const commonSymptoms = [
+    84→  { id: 's1', name: 'Morning Sickness', icon: '🤢' },
+    85→  { id: 's2', name: 'Fatigue', icon: '😴' },
+    86→  { id: 's3', name: 'Back Pain', icon: '🦴' },
+    87→  { id: 's4', name: 'Heartburn', icon: '🔥' },
+    88→  { id: 's5', name: 'Swollen Feet', icon: '🦶' },
+    89→  { id: 's6', name: 'Frequent Urination', icon: '🚽' },
+    90→  { id: 's7', name: 'Braxton Hicks', icon: '💫' },
+    91→  { id: 's8', name: 'Insomnia', icon: '🌙' },
+    92→  { id: 's9', name: 'Cravings', icon: '🍫' },
+    93→  { id: 's10', name: 'Mood Swings', icon: '🎭' },
+    94→  { id: 's11', name: 'Round Ligament Pain', icon: '⚡' },
+    95→  { id: 's12', name: 'Shortness of Breath', icon: '😮‍💨' },
+    96→]
+    97→
+    98→interface Appointment {
+    99→  id: string
+   100→  title: string
+   101→  date: string
+   102→  time: string
+   103→  doctor: string
+   104→  type: string
+   105→}
+   106→
+   107→interface Vaccination {
+   108→  id: string
+   109→  name: string
+   110→  dueWeek: number
+   111→  completed: boolean
+   112→  notes: string
+   113→}
+   114→
+   115→interface Medicine {
+   116→  id: string
+   117→  name: string
+   118→  dosage: string
+   119→  time: string
+   120→  takenToday: boolean
+   121→}
+   122→
+   123→interface JournalEntry {
+   124→  id: string
+   125→  date: string
+   126→  content: string
+   127→  mood: string
+   128→}
+   129→
+   130→// ─── Component ────────────────────────────────────────────────────────
+   131→export default function PregnancyModule() {
+   132→  const userProfile = useAppStore((s) => s.userProfile)
+   133→  const [currentWeek, setCurrentWeek] = useState<number | null>(null)
+   134→  const [loading, setLoading] = useState(true)
+   135→  const [checkedSymptoms, setCheckedSymptoms] = useState<string[]>([])
+   136→  const [appointments, setAppointments] = useState<Appointment[]>([])
+   137→  const [vaccinations, setVaccinations] = useState<Vaccination[]>([])
+   138→  const [medicines, setMedicines] = useState<Medicine[]>([])
+   139→  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
+   140→  const [newAppt, setNewAppt] = useState({ title: '', date: '', time: '', doctor: '', type: '' })
+   141→  const [newJournal, setNewJournal] = useState({ content: '', mood: '😊' })
+   142→  const [showJournalForm, setShowJournalForm] = useState(false)
+   143→  const [timelineScroll, setTimelineScroll] = useState(0)
+   144→
+   145→  // Fetch real pregnancy tracking data
+   146→  useEffect(() => {
+   147→    if (!userProfile?.id) {
+   148→      setLoading(false)
+   149→      return
+   150→    }
+   151→    let cancelled = false
+   152→    fetch(`/api/pregnancy?userId=${encodeURIComponent(userProfile.id)}`)
+   153→      .then((r) => (r.ok ? r.json() : []))
+   154→      .then((records: Array<{ week: number; date: string }> = []) => {
+   155→        if (cancelled) return
+   156→        if (Array.isArray(records) && records.length > 0) {
+   157→          // Latest pregnancy record's week = current week
+   158→          setCurrentWeek(records[0].week ?? null)
+   159→        }
+   160→        setLoading(false)
+   161→      })
+   162→      .catch(() => {
+   163→        if (!cancelled) setLoading(false)
+   164→      })
+   165→    return () => {
+   166→      cancelled = true
+   167→    }
+   168→  }, [userProfile?.id])
+   169→
+   170→  const DAYS_REMAINING = currentWeek ? (TOTAL_WEEKS - currentWeek) * 7 : 0
+   171→  const TRIMESTER = currentWeek ? (currentWeek <= 13 ? 1 : currentWeek <= 27 ? 2 : 3) : null
+   172→  const baby = currentWeek ? babyData[currentWeek] || babyData[20] : null
+   173→  const progressPercent = currentWeek ? (currentWeek / TOTAL_WEEKS) * 100 : 0
+   174→  const trimesterLabel = TRIMESTER === 1 ? 'First' : TRIMESTER === 2 ? 'Second' : TRIMESTER === 3 ? 'Third' : '—'
+   175→  const trimesterColor = TRIMESTER === 1 ? 'bg-purple-100 text-purple-700' : TRIMESTER === 2 ? 'bg-violet-100 text-violet-700' : TRIMESTER === 3 ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-muted text-muted-foreground'
+   176→
+   177→  const toggleSymptom = (id: string) => {
+   178→    setCheckedSymptoms((prev) =>
+   179→      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+   180→    )
+   181→  }
+   182→
+   183→  const addAppointment = () => {
+   184→    if (!newAppt.title || !newAppt.date) return
+   185→    const appt: Appointment = {
+   186→      id: Date.now().toString(),
+   187→      title: newAppt.title,
+   188→      date: newAppt.date,
+   189→      time: newAppt.time || 'TBD',
+   190→      doctor: newAppt.doctor || 'TBD',
+   191→      type: newAppt.type || 'Checkup',
+   192→    }
+   193→    setAppointments([...appointments, appt].sort((a, b) => a.date.localeCompare(b.date)))
+   194→    setNewAppt({ title: '', date: '', time: '', doctor: '', type: '' })
+   195→  }
+   196→
+   197→  const toggleVaccination = (id: string) => {
+   198→    setVaccinations((prev) =>
+   199→      prev.map((v) => (v.id === id ? { ...v, completed: !v.completed } : v))
+   200→    )
+   201→  }
+   202→
+   203→  const toggleMedicine = (id: string) => {
+   204→    setMedicines((prev) =>
+   205→      prev.map((m) => (m.id === id ? { ...m, takenToday: !m.takenToday } : m))
+   206→    )
+   207→  }
+   208→
+   209→  const addJournalEntry = () => {
+   210→    if (!newJournal.content.trim()) return
+   211→    const entry: JournalEntry = {
+   212→      id: Date.now().toString(),
+   213→      date: new Date().toISOString().split('T')[0],
+   214→      content: newJournal.content,
+   215→      mood: newJournal.mood,
+   216→    }
+   217→    setJournalEntries([entry, ...journalEntries])
+   218→    setNewJournal({ content: '', mood: '😊' })
+   219→    setShowJournalForm(false)
+   220→  }
+   221→
+   222→  const moods = ['😊', '🥰', '😴', '🤢', '😢', '😤', '🤗', '😌']
+   223→
+   224→  if (loading) {
+   225→    return (
+   226→      <div className="space-y-6 animate-pulse">
+   227→        <div className="h-32 bg-muted rounded-2xl" />
+   228→        <div className="h-80 bg-muted rounded-2xl" />
+   229→      </div>
+   230→    )
+   231→  }
+   232→
+   233→  if (!currentWeek || !baby) {
+   234→    return (
+   235→      <div className="space-y-6">
+   236→        <motion.div
+   237→          initial={{ opacity: 0, y: -10 }}
+   238→          animate={{ opacity: 1, y: 0 }}
+   239→          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+   240→        >
+   241→          <div>
+   242→            <h1 className="text-2xl font-bold tracking-tight text-purple-600 flex items-center gap-2">
+   243→              <Stethoscope className="h-7 w-7" />
+   244→              Pregnancy Companion
+   245→            </h1>
+   246→            <p className="text-muted-foreground text-sm mt-1">
+   247→              Track your pregnancy journey week by week
+   248→            </p>
+   249→          </div>
+   250→        </motion.div>
+   251→        <Card className="border-purple-200/50">
+   252→          <CardContent className="py-2">
+   253→            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+   254→              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100 dark:bg-purple-950/40 mb-4">
+   255→                <Baby className="h-7 w-7 text-purple-500" />
+   256→              </div>
+   257→              <h3 className="text-lg font-semibold">Welcome to Pregnancy Companion</h3>
+   258→              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+   259→                Log your current pregnancy week to unlock baby growth updates, milestone tracking, appointment reminders, vaccination schedules, and a private journal.
+   260→              </p>
+   261→            </div>
+   262→          </CardContent>
+   263→        </Card>
+   264→      </div>
+   265→    )
+   266→  }
+   267→
+   268→  return (
+   269→    <div className="space-y-6">
+   270→      {/* Header */}
+   271→      <motion.div
+   272→        initial={{ opacity: 0, y: -10 }}
+   273→        animate={{ opacity: 1, y: 0 }}
+   274→        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+   275→      >
+   276→        <div>
+   277→          <h1 className="text-2xl font-bold tracking-tight text-purple-600 flex items-center gap-2">
+   278→            <Stethoscope className="h-7 w-7" />
+   279→            Pregnancy Companion
+   280→          </h1>
+   281→          <p className="text-muted-foreground text-sm mt-1">
+   282→            Your journey through {trimesterLabel} Trimester — {DAYS_REMAINING} days to go
+   283→          </p>
+   284→        </div>
+   285→        <Badge className={`${trimesterColor} border-0 px-3 py-1 text-sm self-start hover:${trimesterColor}`}>
+   286→          <Baby className="h-3.5 w-3.5 mr-1.5" />
+   287→          {trimesterLabel} Trimester
+   288→        </Badge>
+   289→      </motion.div>
+   290→
+   291→      {/* Top Row: Week Indicator + Baby Growth */}
+   292→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   293→        {/* Week Indicator */}
+   294→        <motion.div
+   295→          initial={{ opacity: 0, scale: 0.95 }}
+   296→          animate={{ opacity: 1, scale: 1 }}
+   297→          transition={{ delay: 0.1 }}
+   298→        >
+   299→          <Card className="h-full border-purple-200/50 bg-gradient-to-br from-purple-50/80 to-violet-50/50">
+   300→            <CardHeader>
+   301→              <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   302→                <CalendarHeart className="h-4 w-4" />
+   303→                Week Indicator
+   304→              </CardTitle>
+   305→            </CardHeader>
+   306→            <CardContent className="space-y-5">
+   307→              <div className="text-center">
+   308→                <motion.div
+   309→                  initial={{ scale: 0.8 }}
+   310→                  animate={{ scale: 1 }}
+   311→                  transition={{ type: 'spring', stiffness: 200, delay: 0.3 }}
+   312→                  className="inline-flex items-baseline gap-1"
+   313→                >
+   314→                  <span className="text-6xl font-bold text-purple-700">{currentWeek}</span>
+   315→                  <span className="text-2xl text-purple-500 font-medium">/40</span>
+   316→                </motion.div>
+   317→                <p className="text-sm text-purple-600 mt-1 font-medium">Weeks Pregnant</p>
+   318→              </div>
+   319→
+   320→              {/* Progress bar */}
+   321→              <div className="space-y-2">
+   322→                <div className="flex justify-between text-xs text-muted-foreground">
+   323→                  <span>Week 1</span>
+   324→                  <span>{Math.round(progressPercent)}% Complete</span>
+   325→                  <span>Week 40</span>
+   326→                </div>
+   327→                <Progress value={progressPercent} className="h-3 bg-purple-100 [&>div]:bg-gradient-to-r [&>div]:from-purple-400 [&>div]:to-violet-500" />
+   328→              </div>
+   329→
+   330→              <div className="grid grid-cols-3 gap-3">
+   331→                <div className="rounded-lg bg-white/60 p-3 text-center">
+   332→                  <p className="text-xl font-bold text-purple-600">{TRIMESTER}</p>
+   333→                  <p className="text-[10px] text-muted-foreground">Trimester</p>
+   334→                </div>
+   335→                <div className="rounded-lg bg-white/60 p-3 text-center">
+   336→                  <p className="text-xl font-bold text-violet-600">{DAYS_REMAINING}</p>
+   337→                  <p className="text-[10px] text-muted-foreground">Days Left</p>
+   338→                </div>
+   339→                <div className="rounded-lg bg-white/60 p-3 text-center">
+   340→                  <p className="text-xl font-bold text-fuchsia-600">~6</p>
+   341→                  <p className="text-[10px] text-muted-foreground">Months</p>
+   342→                </div>
+   343→              </div>
+   344→            </CardContent>
+   345→          </Card>
+   346→        </motion.div>
+   347→
+   348→        {/* Baby Growth Card */}
+   349→        <motion.div
+   350→          initial={{ opacity: 0, scale: 0.95 }}
+   351→          animate={{ opacity: 1, scale: 1 }}
+   352→          transition={{ delay: 0.2 }}
+   353→        >
+   354→          <Card className="h-full border-purple-200/50">
+   355→            <CardHeader>
+   356→              <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   357→                <Baby className="h-4 w-4" />
+   358→                Baby Growth
+   359→              </CardTitle>
+   360→              <CardDescription>Development at week {currentWeek}</CardDescription>
+   361→            </CardHeader>
+   362→            <CardContent className="space-y-4">
+   363→              <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100">
+   364→                <div className="text-5xl">{baby.emoji}</div>
+   365→                <div>
+   366→                  <p className="text-lg font-bold text-purple-700">Size of a {baby.size}</p>
+   367→                  <p className="text-xs text-muted-foreground">at Week {currentWeek}</p>
+   368→                </div>
+   369→              </div>
+   370→
+   371→              <div className="grid grid-cols-2 gap-3">
+   372→                <div className="rounded-lg bg-purple-50/70 p-3 text-center border border-purple-100/50">
+   373→                  <p className="text-lg font-semibold text-purple-700">{baby.weight}</p>
+   374→                  <p className="text-[10px] text-muted-foreground">Approx. Weight</p>
+   375→                </div>
+   376→                <div className="rounded-lg bg-violet-50/70 p-3 text-center border border-violet-100/50">
+   377→                  <p className="text-lg font-semibold text-violet-700">{baby.length}</p>
+   378→                  <p className="text-[10px] text-muted-foreground">Crown-to-Rump</p>
+   379→                </div>
+   380→              </div>
+   381→
+   382→              <div className="p-3 rounded-lg bg-fuchsia-50/50 border border-fuchsia-100/50">
+   383→                <div className="flex items-start gap-2">
+   384→                  <Star className="h-4 w-4 text-fuchsia-500 mt-0.5 shrink-0" />
+   385→                  <div>
+   386→                    <p className="text-xs font-semibold text-fuchsia-700">This Week&apos;s Milestone</p>
+   387→                    <p className="text-xs text-muted-foreground mt-0.5">{baby.milestone}</p>
+   388→                  </div>
+   389→                </div>
+   390→              </div>
+   391→            </CardContent>
+   392→          </Card>
+   393→        </motion.div>
+   394→      </div>
+   395→
+   396→      {/* 40-Week Timeline */}
+   397→      <motion.div
+   398→        initial={{ opacity: 0, y: 10 }}
+   399→        animate={{ opacity: 1, y: 0 }}
+   400→        transition={{ delay: 0.3 }}
+   401→      >
+   402→        <Card className="border-purple-200/50">
+   403→          <CardHeader>
+   404→            <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   405→              <TrendingUp className="h-4 w-4" />
+   406→              40-Week Timeline
+   407→            </CardTitle>
+   408→            <CardDescription>Key milestones throughout your pregnancy</CardDescription>
+   409→            <CardAction>
+   410→              <div className="flex items-center gap-1">
+   411→                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTimelineScroll(Math.max(0, timelineScroll - 200))}>
+   412→                  <ChevronLeft className="h-4 w-4" />
+   413→                </Button>
+   414→                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTimelineScroll(timelineScroll + 200)}>
+   415→                  <ChevronRight className="h-4 w-4" />
+   416→                </Button>
+   417→              </div>
+   418→            </CardAction>
+   419→          </CardHeader>
+   420→          <CardContent>
+   421→            <ScrollArea className="w-full" id="timeline-scroll">
+   422→              <div className="relative pb-4" style={{ minWidth: `${TOTAL_WEEKS * 28}px` }}>
+   423→                {/* Week markers */}
+   424→                <div className="flex items-end gap-0">
+   425→                  {Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+   426→                    const week = i + 1
+   427→                    const isCurrent = week === currentWeek
+   428→                    const isPast = week < currentWeek
+   429→                    const milestone = timelineMilestones.find((m) => m.week === week)
+   430→                    const isTrimesterStart = week === 1 || week === 14 || week === 28
+   431→
+   432→                    return (
+   433→                      <div key={week} className="flex flex-col items-center relative" style={{ minWidth: '28px' }}>
+   434→                        {/* Milestone flag */}
+   435→                        {milestone && (
+   436→                          <motion.div
+   437→                            initial={{ opacity: 0, y: -8 }}
+   438→                            animate={{ opacity: 1, y: 0 }}
+   439→                            transition={{ delay: 0.4 + i * 0.01 }}
+   440→                            className="absolute -top-14 flex flex-col items-center z-10"
+   441→                          >
+   442→                            <Badge className={`${isPast ? 'bg-purple-100 text-purple-700' : 'bg-violet-100 text-violet-700'} border-0 text-[8px] px-1.5 py-0 h-5 whitespace-nowrap`}>
+   443→                              {milestone.label}
+   444→                            </Badge>
+   445→                            <div className={`w-0.5 h-2 ${isPast ? 'bg-purple-300' : 'bg-violet-300'}`} />
+   446→                          </motion.div>
+   447→                        )}
+   448→                        {/* Week bar */}
+   449→                        <div
+   450→                          className={`
+   451→                            w-5 h-8 rounded-sm transition-colors
+   452→                            ${isCurrent ? 'bg-purple-500 shadow-md shadow-purple-200' : ''}
+   453→                            ${isPast && !isCurrent ? 'bg-purple-300/60' : ''}
+   454→                            ${!isPast && !isCurrent ? 'bg-purple-100/40' : ''}
+   455→                          `}
+   456→                        />
+   457→                        {/* Label */}
+   458→                        <span className={`text-[8px] mt-1 ${isCurrent ? 'text-purple-700 font-bold' : 'text-muted-foreground'}`}>
+   459→                          {week % 4 === 0 || isCurrent || isTrimesterStart ? week : ''}
+   460→                        </span>
+   461→                      </div>
+   462→                    )
+   463→                  })}
+   464→                </div>
+   465→              </div>
+   466→            </ScrollArea>
+   467→
+   468→                {/* Trimester labels */}
+   469→                <div className="flex justify-between text-[10px] text-muted-foreground mt-2 px-1">
+   470→                  <span>1st Trimester</span>
+   471→                  <span>2nd Trimester</span>
+   472→                  <span>3rd Trimester</span>
+   473→                </div>
+   474→                <div className="flex gap-0 mt-1 rounded-full overflow-hidden h-1.5">
+   475→                  <div className="bg-purple-200 flex-1" />
+   476→                  <div className="bg-violet-300 flex-1" />
+   477→                  <div className="bg-fuchsia-200 flex-1" />
+   478→                </div>
+   479→          </CardContent>
+   480→        </Card>
+   481→      </motion.div>
+   482→
+   483→      {/* Middle Row: Symptom Tracker + Appointment Manager */}
+   484→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   485→        {/* Symptom Tracker */}
+   486→        <motion.div
+   487→          initial={{ opacity: 0, x: -10 }}
+   488→          animate={{ opacity: 1, x: 0 }}
+   489→          transition={{ delay: 0.4 }}
+   490→        >
+   491→          <Card className="h-full border-purple-200/50">
+   492→            <CardHeader>
+   493→              <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   494→                <Activity className="h-4 w-4" />
+   495→                Symptom Tracker
+   496→              </CardTitle>
+   497→              <CardDescription>Log how you&apos;re feeling today</CardDescription>
+   498→            </CardHeader>
+   499→            <CardContent>
+   500→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+   501→                {commonSymptoms.map((symptom) => {
+   502→                  const isActive = checkedSymptoms.includes(symptom.id)
+   503→                  return (
+   504→                    <motion.button
+   505→                      key={symptom.id}
+   506→                      whileHover={{ scale: 1.03 }}
+   507→                      whileTap={{ scale: 0.97 }}
+   508→                      onClick={() => toggleSymptom(symptom.id)}
+   509→                      className={`
+   510→                        flex items-center gap-2 p-2.5 rounded-lg border text-xs font-medium transition-all
+   511→                        ${isActive
+   512→                          ? 'border-purple-300 bg-purple-50 text-purple-700 shadow-sm'
+   513→                          : 'border-border/50 bg-card text-muted-foreground hover:border-purple-200'
+   514→                        }
+   515→                      `}
+   516→                    >
+   517→                      <span className="text-base">{symptom.icon}</span>
+   518→                      <span className="truncate">{symptom.name}</span>
+   519→                      {isActive && <Check className="h-3 w-3 text-purple-500 ml-auto shrink-0" />}
+   520→                    </motion.button>
+   521→                  )
+   522→                })}
+   523→              </div>
+   524→              <div className="mt-3 p-3 rounded-lg bg-purple-50/50 border border-purple-100/50">
+   525→                <p className="text-xs text-muted-foreground">
+   526→                  <span className="font-medium text-purple-700">{checkedSymptoms.length}</span> symptom{checkedSymptoms.length !== 1 ? 's' : ''} logged today
+   527→                </p>
+   528→              </div>
+   529→            </CardContent>
+   530→          </Card>
+   531→        </motion.div>
+   532→
+   533→        {/* Appointment Manager */}
+   534→        <motion.div
+   535→          initial={{ opacity: 0, x: 10 }}
+   536→          animate={{ opacity: 1, x: 0 }}
+   537→          transition={{ delay: 0.5 }}
+   538→        >
+   539→          <Card className="h-full border-purple-200/50">
+   540→            <CardHeader>
+   541→              <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   542→                <Clock className="h-4 w-4" />
+   543→                Appointment Manager
+   544→              </CardTitle>
+   545→              <CardDescription>Upcoming appointments</CardDescription>
+   546→              <CardAction>
+   547→                <Dialog>
+   548→                  <DialogTrigger asChild>
+   549→                    <Button size="sm" className="bg-purple-500 hover:bg-purple-600 text-white">
+   550→                      <Plus className="h-4 w-4 mr-1" />
+   551→                      Add
+   552→                    </Button>
+   553→                  </DialogTrigger>
+   554→                  <DialogContent>
+   555→                    <DialogHeader>
+   556→                      <DialogTitle>Add Appointment</DialogTitle>
+   557→                      <DialogDescription>Schedule a new appointment</DialogDescription>
+   558→                    </DialogHeader>
+   559→                    <div className="space-y-3">
+   560→                      <div className="space-y-1.5">
+   561→                        <Label className="text-xs">Title</Label>
+   562→                        <Input
+   563→                          placeholder="e.g., Ultrasound"
+   564→                          value={newAppt.title}
+   565→                          onChange={(e) => setNewAppt({ ...newAppt, title: e.target.value })}
+   566→                        />
+   567→                      </div>
+   568→                      <div className="grid grid-cols-2 gap-3">
+   569→                        <div className="space-y-1.5">
+   570→                          <Label className="text-xs">Date</Label>
+   571→                          <Input
+   572→                            type="date"
+   573→                            value={newAppt.date}
+   574→                            onChange={(e) => setNewAppt({ ...newAppt, date: e.target.value })}
+   575→                          />
+   576→                        </div>
+   577→                        <div className="space-y-1.5">
+   578→                          <Label className="text-xs">Time</Label>
+   579→                          <Input
+   580→                            type="time"
+   581→                            value={newAppt.time}
+   582→                            onChange={(e) => setNewAppt({ ...newAppt, time: e.target.value })}
+   583→                          />
+   584→                        </div>
+   585→                      </div>
+   586→                      <div className="grid grid-cols-2 gap-3">
+   587→                        <div className="space-y-1.5">
+   588→                          <Label className="text-xs">Doctor</Label>
+   589→                          <Input
+   590→                            placeholder="Dr. Name"
+   591→                            value={newAppt.doctor}
+   592→                            onChange={(e) => setNewAppt({ ...newAppt, doctor: e.target.value })}
+   593→                          />
+   594→                        </div>
+   595→                        <div className="space-y-1.5">
+   596→                          <Label className="text-xs">Type</Label>
+   597→                          <Input
+   598→                            placeholder="e.g., Checkup"
+   599→                            value={newAppt.type}
+   600→                            onChange={(e) => setNewAppt({ ...newAppt, type: e.target.value })}
+   601→                          />
+   602→                        </div>
+   603→                      </div>
+   604→                    </div>
+   605→                    <DialogFooter>
+   606→                      <DialogClose asChild>
+   607→                        <Button variant="outline">Cancel</Button>
+   608→                      </DialogClose>
+   609→                      <DialogClose asChild>
+   610→                        <Button onClick={addAppointment} className="bg-purple-500 hover:bg-purple-600 text-white">
+   611→                          Add Appointment
+   612→                        </Button>
+   613→                      </DialogClose>
+   614→                    </DialogFooter>
+   615→                  </DialogContent>
+   616→                </Dialog>
+   617→              </CardAction>
+   618→            </CardHeader>
+   619→            <CardContent>
+   620→              <ScrollArea className="max-h-64">
+   621→                <div className="space-y-2.5">
+   622→                  {appointments.length === 0 ? (
+   623→                    <div className="flex flex-col items-center justify-center py-10 text-center">
+   624→                      <CalendarHeart className="h-7 w-7 text-muted-foreground mb-2" />
+   625→                      <p className="text-sm font-medium">No appointments yet</p>
+   626→                      <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   627→                        Tap “Add Appointment” above to log your scans, lab work, and checkups.
+   628→                      </p>
+   629→                    </div>
+   630→                  ) : (
+   631→                    appointments.map((appt, idx) => (
+   632→                    <motion.div
+   633→                      key={appt.id}
+   634→                      initial={{ opacity: 0, x: 8 }}
+   635→                      animate={{ opacity: 1, x: 0 }}
+   636→                      transition={{ delay: 0.5 + idx * 0.05 }}
+   637→                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+   638→                    >
+   639→                      <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-purple-50 border border-purple-100 shrink-0">
+   640→                        <span className="text-sm font-bold text-purple-700">{appt.date.slice(8)}</span>
+   641→                        <span className="text-[9px] text-purple-500 uppercase">
+   642→                          {new Date(appt.date).toLocaleString('en', { month: 'short' })}
+   643→                        </span>
+   644→                      </div>
+   645→                      <div className="flex-1 min-w-0">
+   646→                        <p className="text-sm font-medium truncate">{appt.title}</p>
+   647→                        <div className="flex items-center gap-2 mt-0.5">
+   648→                          <span className="text-xs text-muted-foreground">{appt.time}</span>
+   649→                          <span className="text-xs text-muted-foreground">•</span>
+   650→                          <span className="text-xs text-muted-foreground">{appt.doctor}</span>
+   651→                        </div>
+   652→                      </div>
+   653→                      <Badge variant="secondary" className="text-[10px] h-5 bg-purple-50 text-purple-700 border-0 shrink-0">
+   654→                        {appt.type}
+   655→                      </Badge>
+   656→                    </motion.div>
+   657→                    ))
+   658→                  )}
+   659→                </div>
+   660→              </ScrollArea>
+   661→            </CardContent>
+   662→          </Card>
+   663→        </motion.div>
+   664→      </div>
+   665→
+   666→      {/* Bottom Row: Vaccination + Medicine */}
+   667→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   668→        {/* Vaccination Tracker */}
+   669→        <motion.div
+   670→          initial={{ opacity: 0, x: -10 }}
+   671→          animate={{ opacity: 1, x: 0 }}
+   672→          transition={{ delay: 0.6 }}
+   673→        >
+   674→          <Card className="h-full border-purple-200/50">
+   675→            <CardHeader>
+   676→              <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   677→                <Syringe className="h-4 w-4" />
+   678→                Vaccination Tracker
+   679→              </CardTitle>
+   680→              <CardDescription>Required vaccinations during pregnancy</CardDescription>
+   681→            </CardHeader>
+   682→            <CardContent>
+   683→              {vaccinations.length === 0 ? (
+   684→                <div className="flex flex-col items-center justify-center py-10 text-center">
+   685→                  <Syringe className="h-7 w-7 text-muted-foreground mb-2" />
+   686→                  <p className="text-sm font-medium">No vaccinations logged</p>
+   687→                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   688→                    Add vaccinations recommended by your doctor to track them here.
+   689→                  </p>
+   690→                </div>
+   691→              ) : (
+   692→                <>
+   693→                  <div className="space-y-3">
+   694→                    {vaccinations.map((vax, idx) => (
+   695→                      <motion.div
+   696→                        key={vax.id}
+   697→                        initial={{ opacity: 0, y: 6 }}
+   698→                        animate={{ opacity: 1, y: 0 }}
+   699→                        transition={{ delay: 0.65 + idx * 0.05 }}
+   700→                        className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-purple-200 transition-colors"
+   701→                      >
+   702→                        <Checkbox
+   703→                          id={`vax-${vax.id}`}
+   704→                          checked={vax.completed}
+   705→                          onCheckedChange={() => toggleVaccination(vax.id)}
+   706→                          className="data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+   707→                        />
+   708→                        <div className="flex-1 min-w-0">
+   709→                          <Label
+   710→                            htmlFor={`vax-${vax.id}`}
+   711→                            className={`text-sm font-medium cursor-pointer ${vax.completed ? 'line-through text-muted-foreground' : ''}`}
+   712→                          >
+   713→                            {vax.name}
+   714→                          </Label>
+   715→                          <div className="flex items-center gap-2 mt-0.5">
+   716→                            <Badge variant="secondary" className="text-[9px] h-4 bg-purple-50 text-purple-600 border-0">
+   717→                              Due: Week {vax.dueWeek}
+   718→                            </Badge>
+   719→                          </div>
+   720→                          <p className="text-[10px] text-muted-foreground mt-0.5">{vax.notes}</p>
+   721→                        </div>
+   722→                        {vax.completed && (
+   723→                          <Check className="h-4 w-4 text-purple-500 shrink-0" />
+   724→                        )}
+   725→                      </motion.div>
+   726→                    ))}
+   727→                  </div>
+   728→                  <div className="mt-3 flex items-center justify-between p-2.5 rounded-lg bg-purple-50/50 border border-purple-100/50">
+   729→                    <span className="text-xs text-muted-foreground">
+   730→                      <span className="font-medium text-purple-700">{vaccinations.filter((v) => v.completed).length}</span> of {vaccinations.length} completed
+   731→                    </span>
+   732→                    <Progress
+   733→                      value={(vaccinations.filter((v) => v.completed).length / vaccinations.length) * 100}
+   734→                      className="w-20 h-1.5 bg-purple-100 [&>div]:bg-purple-500"
+   735→                    />
+   736→                  </div>
+   737→                </>
+   738→              )}
+   739→            </CardContent>
+   740→          </Card>
+   741→        </motion.div>
+   742→
+   743→        {/* Medicine Reminder */}
+   744→        <motion.div
+   745→          initial={{ opacity: 0, x: 10 }}
+   746→          animate={{ opacity: 1, x: 0 }}
+   747→          transition={{ delay: 0.7 }}
+   748→        >
+   749→          <Card className="h-full border-purple-200/50">
+   750→            <CardHeader>
+   751→              <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   752→                <Pill className="h-4 w-4" />
+   753→                Medicine Reminder
+   754→              </CardTitle>
+   755→              <CardDescription>Daily supplements & medications</CardDescription>
+   756→            </CardHeader>
+   757→            <CardContent>
+   758→              {medicines.length === 0 ? (
+   759→                <div className="flex flex-col items-center justify-center py-10 text-center">
+   760→                  <Pill className="h-7 w-7 text-muted-foreground mb-2" />
+   761→                  <p className="text-sm font-medium">No medicines tracked</p>
+   762→                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   763→                    Log your prenatal vitamins and supplements to get daily reminders here.
+   764→                  </p>
+   765→                </div>
+   766→              ) : (
+   767→                <>
+   768→              <div className="space-y-2">
+   769→                {['Morning', 'Evening'].map((timeSlot) => (
+   770→                  <div key={timeSlot}>
+   771→                    <p className="text-xs font-semibold text-purple-600 mb-2 flex items-center gap-1.5">
+   772→                      <Timer className="h-3 w-3" />
+   773→                      {timeSlot}
+   774→                    </p>
+   775→                    <div className="space-y-1.5">
+   776→                      {medicines
+   777→                        .filter((m) => m.time === timeSlot)
+   778→                        .map((med) => (
+   779→                          <div
+   780→                            key={med.id}
+   781→                            onClick={() => toggleMedicine(med.id)}
+   782→                            className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
+   783→                              med.takenToday
+   784→                                ? 'border-purple-200 bg-purple-50/50'
+   785→                                : 'border-border/50 hover:border-purple-200'
+   786→                            }`}
+   787→                          >
+   788→                            <div
+   789→                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+   790→                                med.takenToday
+   791→                                  ? 'border-purple-500 bg-purple-500'
+   792→                                  : 'border-muted-foreground/30'
+   793→                              }`}
+   794→                            >
+   795→                              {med.takenToday && <Check className="h-3 w-3 text-white" />}
+   796→                            </div>
+   797→                            <div className="flex-1 min-w-0">
+   798→                              <p className={`text-sm font-medium ${med.takenToday ? 'line-through text-muted-foreground' : ''}`}>
+   799→                                {med.name}
+   800→                              </p>
+   801→                              <p className="text-[10px] text-muted-foreground">{med.dosage}</p>
+   802→                            </div>
+   803→                            {med.takenToday && (
+   804→                              <Badge className="bg-green-50 text-green-700 border-0 text-[9px] px-1.5 py-0">
+   805→                                Taken
+   806→                              </Badge>
+   807→                            )}
+   808→                          </div>
+   809→                        ))}
+   810→                    </div>
+   811→                    {timeSlot === 'Morning' && <Separator className="my-3" />}
+   812→                  </div>
+   813→                ))}
+   814→              </div>
+   815→              <div className="mt-3 flex items-center justify-between p-2.5 rounded-lg bg-purple-50/50 border border-purple-100/50">
+   816→                <span className="text-xs text-muted-foreground">
+   817→                  <span className="font-medium text-purple-700">{medicines.filter((m) => m.takenToday).length}</span> of {medicines.length} taken today
+   818→                </span>
+   819→                <Progress
+   820→                  value={(medicines.filter((m) => m.takenToday).length / medicines.length) * 100}
+   821→                  className="w-20 h-1.5 bg-purple-100 [&>div]:bg-purple-500"
+   822→                />
+   823→              </div>
+   824→                </>
+   825→              )}
+   826→            </CardContent>
+   827→          </Card>
+   828→        </motion.div>
+   829→      </div>
+   830→
+   831→      {/* Pregnancy Journal */}
+   832→      <motion.div
+   833→        initial={{ opacity: 0, y: 10 }}
+   834→        animate={{ opacity: 1, y: 0 }}
+   835→        transition={{ delay: 0.8 }}
+   836→      >
+   837→        <Card className="border-purple-200/50">
+   838→          <CardHeader>
+   839→            <CardTitle className="text-base text-purple-700 flex items-center gap-2">
+   840→              <BookHeart className="h-4 w-4" />
+   841→              Pregnancy Journal
+   842→            </CardTitle>
+   843→            <CardDescription>Capture your thoughts and memories</CardDescription>
+   844→            <CardAction>
+   845→              <Button
+   846→                size="sm"
+   847→                onClick={() => setShowJournalForm(!showJournalForm)}
+   848→                className="bg-purple-500 hover:bg-purple-600 text-white"
+   849→              >
+   850→                <Plus className="h-4 w-4 mr-1" />
+   851→                New Entry
+   852→              </Button>
+   853→            </CardAction>
+   854→          </CardHeader>
+   855→          <CardContent className="space-y-4">
+   856→            <AnimatePresence>
+   857→              {showJournalForm && (
+   858→                <motion.div
+   859→                  initial={{ opacity: 0, height: 0 }}
+   860→                  animate={{ opacity: 1, height: 'auto' }}
+   861→                  exit={{ opacity: 0, height: 0 }}
+   862→                  className="overflow-hidden"
+   863→                >
+   864→                  <div className="space-y-3 p-4 rounded-lg bg-purple-50/50 border border-purple-100">
+   865→                    <div className="space-y-1.5">
+   866→                      <Label className="text-xs">How are you feeling?</Label>
+   867→                      <div className="flex gap-2">
+   868→                        {moods.map((m) => (
+   869→                          <button
+   870→                            key={m}
+   871→                            onClick={() => setNewJournal({ ...newJournal, mood: m })}
+   872→                            className={`text-2xl p-1.5 rounded-lg transition-all ${
+   873→                              newJournal.mood === m ? 'bg-purple-100 scale-110' : 'hover:bg-muted'
+   874→                            }`}
+   875→                          >
+   876→                            {m}
+   877→                          </button>
+   878→                        ))}
+   879→                      </div>
+   880→                    </div>
+   881→                    <div className="space-y-1.5">
+   882→                      <Label className="text-xs">What&apos;s on your mind?</Label>
+   883→                      <Textarea
+   884→                        placeholder="Write about your day, feelings, or any memories you want to capture..."
+   885→                        value={newJournal.content}
+   886→                        onChange={(e) => setNewJournal({ ...newJournal, content: e.target.value })}
+   887→                        rows={3}
+   888→                      />
+   889→                    </div>
+   890→                    <Button
+   891→                      onClick={addJournalEntry}
+   892→                      size="sm"
+   893→                      className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+   894→                    >
+   895→                      Save Entry
+   896→                    </Button>
+   897→                  </div>
+   898→                </motion.div>
+   899→              )}
+   900→            </AnimatePresence>
+   901→
+   902→            <ScrollArea className="max-h-72">
+   903→              <div className="space-y-3">
+   904→                {journalEntries.length === 0 ? (
+   905→                  <div className="flex flex-col items-center justify-center py-10 text-center">
+   906→                    <BookHeart className="h-7 w-7 text-muted-foreground mb-2" />
+   907→                    <p className="text-sm font-medium">No journal entries yet</p>
+   908→                    <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   909→                      Tap “New Entry” above to start capturing your pregnancy memories.
+   910→                    </p>
+   911→                  </div>
+   912→                ) : (
+   913→                  journalEntries.map((entry, idx) => (
+   914→                    <motion.div
+   915→                      key={entry.id}
+   916→                      initial={{ opacity: 0, y: 8 }}
+   917→                      animate={{ opacity: 1, y: 0 }}
+   918→                      transition={{ delay: 0.85 + idx * 0.05 }}
+   919→                      className="p-4 rounded-lg border border-border/50 hover:border-purple-200 transition-colors"
+   920→                    >
+   921→                      <div className="flex items-center gap-2 mb-2">
+   922→                        <span className="text-xl">{entry.mood}</span>
+   923→                        <span className="text-xs font-medium text-purple-600">
+   924→                          {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+   925→                        </span>
+   926→                        <Badge variant="secondary" className="text-[9px] h-4 bg-purple-50 text-purple-600 border-0 ml-auto">
+   927→                          Week {currentWeek}
+   928→                        </Badge>
+   929→                      </div>
+   930→                      <p className="text-sm text-muted-foreground leading-relaxed">{entry.content}</p>
+   931→                    </motion.div>
+   932→                  ))
+   933→                )}
+   934→              </div>
+   935→            </ScrollArea>
+   936→          </CardContent>
+   937→        </Card>
+   938→      </motion.div>
+   939→    </div>
+   940→  )
+   941→}
+   942→

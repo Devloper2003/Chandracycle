@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useRef, useEffect, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Card,
+     7→  CardContent,
+     8→  CardHeader,
+     9→  CardTitle,
+    10→  CardDescription,
+    11→} from '@/components/ui/card'
+    12→import { Button } from '@/components/ui/button'
+    13→import { Input } from '@/components/ui/input'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Separator } from '@/components/ui/separator'
+    16→import { Progress } from '@/components/ui/progress'
+    17→import {
+    18→  Apple,
+    19→  Utensils,
+    20→  Droplets,
+    21→  Flame,
+    22→  Salad,
+    23→  Wheat,
+    24→  Beef,
+    25→  Send,
+    26→  Sparkles,
+    27→  RotateCcw,
+    28→  User,
+    29→  AlertTriangle,
+    30→  XCircle,
+    31→  CheckCircle2,
+    32→  Leaf,
+    33→  Heart,
+    34→  Brain,
+    35→  Baby,
+    36→  Flower2,
+    37→  SunDim,
+    38→  Scale,
+    39→  Activity,
+    40→  Zap,
+    41→  Timer,
+    42→  Plus,
+    43→  GlassWater,
+    44→  Cookie,
+    45→  Trash2,
+    46→  Sparkle,
+    47→  TrendingUp,
+    48→} from 'lucide-react'
+    49→import { cn } from '@/lib/utils'
+    50→
+    51→// ─── Types ──────────────────────────────────────────────────────────────────
+    52→
+    53→type ConditionId =
+    54→  | 'pcos'
+    55→  | 'fertility'
+    56→  | 'pregnancy'
+    57→  | 'pms'
+    58→  | 'menopause'
+    59→  | 'hormone'
+    60→  | 'weight'
+    61→  | 'wellness'
+    62→
+    63→interface FoodItem {
+    64→  name: string
+    65→  benefit: string
+    66→  emoji: string
+    67→}
+    68→
+    69→interface MealItem {
+    70→  meal: string
+    71→  time: string
+    72→  foods: string[]
+    73→  calories: number
+    74→  emoji: string
+    75→}
+    76→
+    77→interface NutritionTip {
+    78→  title: string
+    79→  description: string
+    80→  icon: 'leaf' | 'flame' | 'droplet' | 'apple' | 'heart' | 'brain' | 'zap'
+    81→}
+    82→
+    83→interface MacroBreakdown {
+    84→  carbs: { pct: number; grams: number }
+    85→  protein: { pct: number; grams: number }
+    86→  fat: { pct: number; grams: number }
+    87→}
+    88→
+    89→interface DietPlan {
+    90→  condition: ConditionId
+    91→  title: string
+    92→  description: string
+    93→  dailyCalories: number
+    94→  macros: MacroBreakdown
+    95→  foodsToEat: FoodItem[]
+    96→  foodsToAvoid: string[]
+    97→  mealPlan: MealItem[]
+    98→  tips: NutritionTip[]
+    99→}
+   100→
+   101→interface ChatMessage {
+   102→  id: string
+   103→  role: 'user' | 'assistant'
+   104→  content: string
+   105→  timestamp: Date
+   106→}
+   107→
+   108→interface ConditionMeta {
+   109→  id: ConditionId
+   110→  label: string
+   111→  short: string
+   112→  icon: React.ElementType
+   113→  // tailwind classes
+   114→  text: string
+   115→  bg: string
+   116→  border: string
+   117→  ring: string
+   118→  gradient: string
+   119→  emoji: string
+   120→}
+   121→
+   122→// ─── Condition Metadata ─────────────────────────────────────────────────────
+   123→
+   124→const conditions: ConditionMeta[] = [
+   125→  {
+   126→    id: 'pcos',
+   127→    label: 'PCOS Diet',
+   128→    short: 'PCOS',
+   129→    icon: Flower2,
+   130→    text: 'text-amber-600 dark:text-amber-400',
+   131→    bg: 'bg-amber-50 dark:bg-amber-950/40',
+   132→    border: 'border-amber-200 dark:border-amber-800',
+   133→    ring: 'ring-amber-400 dark:ring-amber-500',
+   134→    gradient: 'from-amber-400 to-orange-500',
+   135→    emoji: '🌼',
+   136→  },
+   137→  {
+   138→    id: 'fertility',
+   139→    label: 'Fertility Diet',
+   140→    short: 'Fertility',
+   141→    icon: Baby,
+   142→    text: 'text-rose-600 dark:text-rose-400',
+   143→    bg: 'bg-rose-50 dark:bg-rose-950/40',
+   144→    border: 'border-rose-200 dark:border-rose-800',
+   145→    ring: 'ring-rose-400 dark:ring-rose-500',
+   146→    gradient: 'from-rose-400 to-pink-500',
+   147→    emoji: '🌸',
+   148→  },
+   149→  {
+   150→    id: 'pregnancy',
+   151→    label: 'Pregnancy Nutrition',
+   152→    short: 'Pregnancy',
+   153→    icon: Heart,
+   154→    text: 'text-purple-600 dark:text-purple-400',
+   155→    bg: 'bg-purple-50 dark:bg-purple-950/40',
+   156→    border: 'border-purple-200 dark:border-purple-800',
+   157→    ring: 'ring-purple-400 dark:ring-purple-500',
+   158→    gradient: 'from-purple-400 to-violet-500',
+   159→    emoji: '🤰',
+   160→  },
+   161→  {
+   162→    id: 'pms',
+   163→    label: 'PMS & Period Diet',
+   164→    short: 'PMS',
+   165→    icon: Droplets,
+   166→    text: 'text-red-600 dark:text-red-400',
+   167→    bg: 'bg-red-50 dark:bg-red-950/40',
+   168→    border: 'border-red-200 dark:border-red-800',
+   169→    ring: 'ring-red-400 dark:ring-red-500',
+   170→    gradient: 'from-red-400 to-rose-500',
+   171→    emoji: '🩸',
+   172→  },
+   173→  {
+   174→    id: 'menopause',
+   175→    label: 'Menopause Diet',
+   176→    short: 'Menopause',
+   177→    icon: SunDim,
+   178→    text: 'text-orange-600 dark:text-orange-400',
+   179→    bg: 'bg-orange-50 dark:bg-orange-950/40',
+   180→    border: 'border-orange-200 dark:border-orange-800',
+   181→    ring: 'ring-orange-400 dark:ring-orange-500',
+   182→    gradient: 'from-orange-400 to-amber-500',
+   183→    emoji: '🌅',
+   184→  },
+   185→  {
+   186→    id: 'hormone',
+   187→    label: 'Hormone Balance',
+   188→    short: 'Hormones',
+   189→    icon: Activity,
+   190→    text: 'text-teal-600 dark:text-teal-400',
+   191→    bg: 'bg-teal-50 dark:bg-teal-950/40',
+   192→    border: 'border-teal-200 dark:border-teal-800',
+   193→    ring: 'ring-teal-400 dark:ring-teal-500',
+   194→    gradient: 'from-teal-400 to-cyan-500',
+   195→    emoji: '⚖️',
+   196→  },
+   197→  {
+   198→    id: 'weight',
+   199→    label: 'Weight Management',
+   200→    short: 'Weight',
+   201→    icon: Scale,
+   202→    text: 'text-green-600 dark:text-green-400',
+   203→    bg: 'bg-green-50 dark:bg-green-950/40',
+   204→    border: 'border-green-200 dark:border-green-800',
+   205→    ring: 'ring-green-400 dark:ring-green-500',
+   206→    gradient: 'from-green-400 to-emerald-500',
+   207→    emoji: '⚖️',
+   208→  },
+   209→  {
+   210→    id: 'wellness',
+   211→    label: 'General Wellness',
+   212→    short: 'Wellness',
+   213→    icon: Sparkle,
+   214→    text: 'text-sky-600 dark:text-sky-400',
+   215→    bg: 'bg-sky-50 dark:bg-sky-950/40',
+   216→    border: 'border-sky-200 dark:border-sky-800',
+   217→    ring: 'ring-sky-400 dark:ring-sky-500',
+   218→    gradient: 'from-sky-400 to-blue-500',
+   219→    emoji: '✨',
+   220→  },
+   221→]
+   222→
+   223→// ─── Diet Plan Data ─────────────────────────────────────────────────────────
+   224→
+   225→const dietPlans: Record<ConditionId, DietPlan> = {
+   226→  pcos: {
+   227→    condition: 'pcos',
+   228→    title: 'PCOS Nutrition Plan',
+   229→    description:
+   230→      'A low-glycemic, anti-inflammatory diet focused on improving insulin sensitivity, balancing hormones, and supporting sustainable weight management.',
+   231→    dailyCalories: 1800,
+   232→    macros: {
+   233→      carbs: { pct: 40, grams: 180 },
+   234→      protein: { pct: 30, grams: 135 },
+   235→      fat: { pct: 30, grams: 60 },
+   236→    },
+   237→    foodsToEat: [
+   238→      { name: 'Leafy Greens', benefit: 'High fiber & iron, low GI', emoji: '🥬' },
+   239→      { name: 'Berries', benefit: 'Antioxidants, low glycemic', emoji: '🫐' },
+   240→      { name: 'Cinnamon', benefit: 'Improves insulin sensitivity', emoji: '🟤' },
+   241→      { name: 'Quinoa', benefit: 'Complex carb, complete protein', emoji: '🌾' },
+   242→      { name: 'Lentils', benefit: 'Plant protein & fiber', emoji: '🫘' },
+   243→      { name: 'Salmon', benefit: 'Omega-3, anti-inflammatory', emoji: '🐟' },
+   244→      { name: 'Avocado', benefit: 'Monounsaturated fats', emoji: '🥑' },
+   245→      { name: 'Almonds', benefit: 'Magnesium & healthy fats', emoji: '🌰' },
+   246→      { name: 'Chia Seeds', benefit: 'Omega-3 & fiber', emoji: '⚫' },
+   247→      { name: 'Broccoli', benefit: 'Cruciferous, fiber-rich', emoji: '🥦' },
+   248→      { name: 'Eggs', benefit: 'High-quality protein', emoji: '🥚' },
+   249→      { name: 'Greek Yogurt', benefit: 'Probiotics & protein', emoji: '🥛' },
+   250→    ],
+   251→    foodsToAvoid: [
+   252→      'Refined sugars & sweets',
+   253→      'White bread & white rice',
+   254→      'Sugary drinks & sodas',
+   255→      'Processed snacks & chips',
+   256→      'Fried foods',
+   257→      'Excess full-fat sweetened dairy',
+   258→    ],
+   259→    mealPlan: [
+   260→      {
+   261→        meal: 'Breakfast',
+   262→        time: '8:00 AM',
+   263→        foods: ['Veggie omelet with spinach', '½ avocado', 'Green tea'],
+   264→        calories: 380,
+   265→        emoji: '🍳',
+   266→      },
+   267→      {
+   268→        meal: 'Lunch',
+   269→        time: '1:00 PM',
+   270→        foods: ['Quinoa salad with grilled chicken', 'Mixed greens', 'Olive oil dressing'],
+   271→        calories: 520,
+   272→        emoji: '🥗',
+   273→      },
+   274→      {
+   275→        meal: 'Snack',
+   276→        time: '4:00 PM',
+   277→        foods: ['Greek yogurt', 'Chia seeds', 'Mixed berries'],
+   278→        calories: 200,
+   279→        emoji: '🫐',
+   280→      },
+   281→      {
+   282→        meal: 'Dinner',
+   283→        time: '7:00 PM',
+   284→        foods: ['Baked salmon', 'Roasted broccoli', 'Sweet potato'],
+   285→        calories: 540,
+   286→        emoji: '🐟',
+   287→      },
+   288→    ],
+   289→    tips: [
+   290→      {
+   291→        title: 'Choose Low-GI Carbs',
+   292→        description: 'Prioritize complex carbs like quinoa, lentils, and sweet potato to keep blood sugar stable and reduce insulin spikes.',
+   293→        icon: 'leaf',
+   294→      },
+   295→      {
+   296→        title: 'Pair Protein Every Meal',
+   297→        description: 'Combining protein with carbs slows glucose absorption. Aim for 20–30g protein per meal from eggs, fish, legumes, or Greek yogurt.',
+   298→        icon: 'apple',
+   299→      },
+   300→      {
+   301→        title: 'Add Anti-Inflammatory Fats',
+   302→        description: 'Omega-3s from salmon, chia seeds, and walnuts help reduce the chronic inflammation often seen with PCOS.',
+   303→        icon: 'flame',
+   304→      },
+   305→      {
+   306→        title: 'Limit Added Sugars',
+   307→        description: 'Sugar drives insulin resistance. Read labels and choose whole fruit over sweets, and unsweetened drinks over soda.',
+   308→        icon: 'zap',
+   309→      },
+   310→    ],
+   311→  },
+   312→
+   313→  fertility: {
+   314→    condition: 'fertility',
+   315→    title: 'Fertility Boosting Plan',
+   316→    description:
+   317→      'A nutrient-dense plan rich in folate, omega-3, antioxidants, and whole foods to support ovulation, egg quality, and hormonal balance.',
+   318→    dailyCalories: 2000,
+   319→    macros: {
+   320→      carbs: { pct: 45, grams: 225 },
+   321→      protein: { pct: 25, grams: 125 },
+   322→      fat: { pct: 30, grams: 67 },
+   323→    },
+   324→    foodsToEat: [
+   325→      { name: 'Leafy Greens', benefit: 'Folate & iron for ovulation', emoji: '🥬' },
+   326→      { name: 'Beans & Lentils', benefit: 'Plant protein & folate', emoji: '🫘' },
+   327→      { name: 'Whole Grains', benefit: 'B vitamins & fiber', emoji: '🌾' },
+   328→      { name: 'Salmon', benefit: 'Omega-3 & vitamin D', emoji: '🐟' },
+   329→      { name: 'Walnuts', benefit: 'Omega-3 for egg quality', emoji: '🌰' },
+   330→      { name: 'Avocado', benefit: 'Healthy fats for hormones', emoji: '🥑' },
+   331→      { name: 'Berries', benefit: 'Antioxidants protect eggs', emoji: '🍓' },
+   332→      { name: 'Pumpkin Seeds', benefit: 'Zinc supports fertility', emoji: '🎃' },
+   333→      { name: 'Full-Fat Dairy', benefit: 'Linked to healthy ovulation', emoji: '🥛' },
+   334→      { name: 'Olive Oil', benefit: 'Anti-inflammatory fats', emoji: '🫒' },
+   335→      { name: 'Sweet Potatoes', benefit: 'Beta-carotene & fiber', emoji: '🍠' },
+   336→      { name: 'Eggs', benefit: 'Choline & protein', emoji: '🥚' },
+   337→    ],
+   338→    foodsToAvoid: [
+   339→      'Trans fats (margarine, processed foods)',
+   340→      'High-mercury fish (swordfish, king mackerel)',
+   341→      'Excess soy protein isolates',
+   342→      'Refined carbs & added sugars',
+   343→      'More than 200mg caffeine per day',
+   344→      'Alcohol',
+   345→    ],
+   346→    mealPlan: [
+   347→      {
+   348→        meal: 'Breakfast',
+   349→        time: '8:00 AM',
+   350→        foods: ['Oatmeal with walnuts', 'Berries', 'Ground flaxseeds'],
+   351→        calories: 420,
+   352→        emoji: '🥣',
+   353→      },
+   354→      {
+   355→        meal: 'Lunch',
+   356→        time: '1:00 PM',
+   357→        foods: ['Lentil soup', 'Mixed greens salad', 'Olive oil dressing'],
+   358→        calories: 480,
+   359→        emoji: '🍲',
+   360→      },
+   361→      {
+   362→        meal: 'Snack',
+   363→        time: '4:00 PM',
+   364→        foods: ['Greek yogurt', 'Pumpkin seeds', 'Drizzle of honey'],
+   365→        calories: 220,
+   366→        emoji: '🥄',
+   367→      },
+   368→      {
+   369→        meal: 'Dinner',
+   370→        time: '7:00 PM',
+   371→        foods: ['Baked salmon', 'Quinoa', 'Roasted sweet potatoes'],
+   372→        calories: 580,
+   373→        emoji: '🐟',
+   374→      },
+   375→    ],
+   376→    tips: [
+   377→      {
+   378→        title: 'Boost Folate Intake',
+   379→        description: 'Folate is critical for early pregnancy. Load up on leafy greens, lentils, beans, and citrus fruits daily.',
+   380→        icon: 'leaf',
+   381→      },
+   382→      {
+   383→        title: 'Omega-3 for Egg Quality',
+   384→        description: 'Aim for 2 servings of low-mercury fish per week (salmon, sardines) plus plant omega-3s from walnuts, chia, and flax.',
+   385→        icon: 'heart',
+   386→      },
+   387→      {
+   388→        title: 'Limit Caffeine & Alcohol',
+   389→        description: 'Keep caffeine under 200mg/day (about 1 coffee) and avoid alcohol while trying to conceive for best outcomes.',
+   390→        icon: 'zap',
+   391→      },
+   392→      {
+   393→        title: 'Antioxidant-Rich Foods',
+   394→        description: 'Colorful berries, vegetables, and nuts protect reproductive cells from oxidative stress and support egg quality.',
+   395→        icon: 'apple',
+   396→      },
+   397→    ],
+   398→  },
+   399→
+   400→  pregnancy: {
+   401→    condition: 'pregnancy',
+   402→    title: 'Pregnancy Nutrition Plan',
+   403→    description:
+   404→      'A balanced, food-safe plan rich in folate, iron, DHA, calcium, and protein to support baby\'s growth and maternal health.',
+   405→    dailyCalories: 2200,
+   406→    macros: {
+   407→      carbs: { pct: 45, grams: 248 },
+   408→      protein: { pct: 25, grams: 138 },
+   409→      fat: { pct: 30, grams: 73 },
+   410→    },
+   411→    foodsToEat: [
+   412→      { name: 'Spinach', benefit: 'Folate & iron', emoji: '🥬' },
+   413→      { name: 'Lentils', benefit: 'Protein, folate, fiber', emoji: '🫘' },
+   414→      { name: 'Salmon', benefit: 'DHA for baby\'s brain', emoji: '🐟' },
+   415→      { name: 'Eggs', benefit: 'Choline & protein', emoji: '🥚' },
+   416→      { name: 'Greek Yogurt', benefit: 'Calcium & protein', emoji: '🥛' },
+   417→      { name: 'Avocado', benefit: 'Folate & healthy fats', emoji: '🥑' },
+   418→      { name: 'Sweet Potatoes', benefit: 'Vitamin A & fiber', emoji: '🍠' },
+   419→      { name: 'Walnuts', benefit: 'Plant omega-3', emoji: '🌰' },
+   420→      { name: 'Oats', benefit: 'Fiber & B vitamins', emoji: '🥣' },
+   421→      { name: 'Berries', benefit: 'Vitamin C & antioxidants', emoji: '🍓' },
+   422→      { name: 'Broccoli', benefit: 'Calcium & folate', emoji: '🥦' },
+   423→      { name: 'Lean Beef', benefit: 'Iron & protein', emoji: '🥩' },
+   424→    ],
+   425→    foodsToAvoid: [
+   426→      'Raw or undercooked meat & fish',
+   427→      'High-mercury fish (swordfish, shark, tilefish)',
+   428→      'Unpasteurized dairy & soft cheeses',
+   429→      'Raw eggs & raw batter',
+   430→      'Deli meats (unless reheated to steaming)',
+   431→      'Alcohol (no known safe amount)',
+   432→    ],
+   433→    mealPlan: [
+   434→      {
+   435→        meal: 'Breakfast',
+   436→        time: '8:00 AM',
+   437→        foods: ['Oatmeal with berries & walnuts', 'Hard-boiled egg'],
+   438→        calories: 420,
+   439→        emoji: '🥣',
+   440→      },
+   441→      {
+   442→        meal: 'Lunch',
+   443→        time: '1:00 PM',
+   444→        foods: ['Spinach salad with grilled chicken', 'Chickpeas', 'Olive oil'],
+   445→        calories: 540,
+   446→        emoji: '🥗',
+   447→      },
+   448→      {
+   449→        meal: 'Snack',
+   450→        time: '4:00 PM',
+   451→        foods: ['Greek yogurt', 'Sliced banana', 'Almonds'],
+   452→        calories: 240,
+   453→        emoji: '🍌',
+   454→      },
+   455→      {
+   456→        meal: 'Dinner',
+   457→        time: '7:00 PM',
+   458→        foods: ['Baked salmon', 'Quinoa', 'Steamed broccoli'],
+   459→        calories: 580,
+   460→        emoji: '🐟',
+   461→      },
+   462→    ],
+   463→    tips: [
+   464→      {
+   465→        title: 'Prioritize Folate & Iron',
+   466→        description: 'Folate prevents neural tube defects and iron supports increased blood volume. Choose spinach, lentils, fortified grains, and lean meats.',
+   467→        icon: 'leaf',
+   468→      },
+   469→      {
+   470→        title: 'Stay Hydrated',
+   471→        description: 'Aim for 8–12 glasses of water daily. Hydration supports amniotic fluid, digestion, and helps prevent constipation.',
+   472→        icon: 'droplet',
+   473→      },
+   474→      {
+   475→        title: 'Small Frequent Meals',
+   476→        description: 'Eating every 2–3 hours can ease nausea, stabilize energy, and reduce heartburn — especially in the first and third trimesters.',
+   477→        icon: 'apple',
+   478→      },
+   479→      {
+   480→        title: 'Food Safety First',
+   481→        description: 'Avoid raw, undercooked, and unpasteurized foods. Reheat deli meats until steaming. Wash produce thoroughly to protect against listeria and toxoplasmosis.',
+   482→        icon: 'zap',
+   483→      },
+   484→    ],
+   485→  },
+   486→
+   487→  pms: {
+   488→    condition: 'pms',
+   489→    title: 'PMS & Period Nutrition',
+   490→    description:
+   491→      'An anti-inflammatory, magnesium-rich plan to ease cramps, reduce bloating, stabilize mood, and replenish iron during your period.',
+   492→    dailyCalories: 1900,
+   493→    macros: {
+   494→      carbs: { pct: 45, grams: 214 },
+   495→      protein: { pct: 25, grams: 119 },
+   496→      fat: { pct: 30, grams: 63 },
+   497→    },
+   498→    foodsToEat: [
+   499→      { name: 'Dark Chocolate', benefit: 'Magnesium & mood boost', emoji: '🍫' },
+   500→      { name: 'Bananas', benefit: 'Potassium & vitamin B6', emoji: '🍌' },
+   501→      { name: 'Salmon', benefit: 'Omega-3 reduces inflammation', emoji: '🐟' },
+   502→      { name: 'Leafy Greens', benefit: 'Iron replenishes losses', emoji: '🥬' },
+   503→      { name: 'Pumpkin Seeds', benefit: 'Magnesium & zinc', emoji: '🎃' },
+   504→      { name: 'Ginger', benefit: 'Eases nausea & cramps', emoji: '🫚' },
+   505→      { name: 'Turmeric', benefit: 'Anti-inflammatory', emoji: '🟡' },
+   506→      { name: 'Oats', benefit: 'Mood-boosting complex carbs', emoji: '🥣' },
+   507→      { name: 'Berries', benefit: 'Antioxidants', emoji: '🍓' },
+   508→      { name: 'Lentils', benefit: 'Iron & fiber', emoji: '🫘' },
+   509→      { name: 'Yogurt', benefit: 'Calcium reduces PMS', emoji: '🥛' },
+   510→      { name: 'Chamomile Tea', benefit: 'Relaxes muscles', emoji: '🍵' },
+   511→    ],
+   512→    foodsToAvoid: [
+   513→      'Excess salt (causes bloating)',
+   514→      'Caffeine (worsens anxiety & breast tenderness)',
+   515→      'Refined sugars (mood swings)',
+   516→      'Alcohol (worsens PMS symptoms)',
+   517→      'Fried & processed foods',
+   518→      'Carbonated drinks',
+   519→    ],
+   520→    mealPlan: [
+   521→      {
+   522→        meal: 'Breakfast',
+   523→        time: '8:00 AM',
+   524→        foods: ['Oatmeal with banana', 'Dark chocolate chips', 'Chia seeds'],
+   525→        calories: 400,
+   526→        emoji: '🥣',
+   527→      },
+   528→      {
+   529→        meal: 'Lunch',
+   530→        time: '1:00 PM',
+   531→        foods: ['Lentil soup', 'Side salad', 'Pumpkin seeds'],
+   532→        calories: 500,
+   533→        emoji: '🍲',
+   534→      },
+   535→      {
+   536→        meal: 'Snack',
+   537→        time: '4:00 PM',
+   538→        foods: ['Greek yogurt', 'Berries', 'Ginger tea'],
+   539→        calories: 220,
+   540→        emoji: '🫐',
+   541→      },
+   542→      {
+   543→        meal: 'Dinner',
+   544→        time: '7:00 PM',
+   545→        foods: ['Baked salmon', 'Quinoa', 'Sautéed spinach'],
+   546→        calories: 540,
+   547→        emoji: '🐟',
+   548→      },
+   549→    ],
+   550→    tips: [
+   551→      {
+   552→        title: 'Boost Magnesium & Iron',
+   553→        description: 'Magnesium eases cramps and migraines (dark chocolate, pumpkin seeds, leafy greens). Iron-rich foods replace menstrual losses.',
+   554→        icon: 'leaf',
+   555→      },
+   556→      {
+   557→        title: 'Limit Salt & Caffeine',
+   558→        description: 'Reduce salt to ease bloating and breast tenderness. Swap coffee for chamomile or ginger tea to calm the nervous system.',
+   559→        icon: 'droplet',
+   560→      },
+   561→      {
+   562→        title: 'Anti-Inflammatory Foods',
+   563→        description: 'Omega-3s from salmon, turmeric, and ginger reduce prostaglandins — the compounds that drive period cramps.',
+   564→        icon: 'flame',
+   565→      },
+   566→      {
+   567→        title: 'Stay Hydrated',
+   568→        description: 'Drinking plenty of water may sound counterintuitive, but it actually reduces water retention and bloating.',
+   569→        icon: 'droplet',
+   570→      },
+   571→    ],
+   572→  },
+   573→
+   574→  menopause: {
+   575→    condition: 'menopause',
+   576→    title: 'Menopause Nutrition Plan',
+   577→    description:
+   578→      'A phytoestrogen-rich, calcium-boosting plan to ease hot flashes, protect bones, and support heart health during menopause.',
+   579→    dailyCalories: 1700,
+   580→    macros: {
+   581→      carbs: { pct: 40, grams: 170 },
+   582→      protein: { pct: 30, grams: 128 },
+   583→      fat: { pct: 30, grams: 57 },
+   584→    },
+   585→    foodsToEat: [
+   586→      { name: 'Tofu & Edamame', benefit: 'Phytoestrogens ease hot flashes', emoji: '🥢' },
+   587→      { name: 'Flaxseeds', benefit: 'Lignans & omega-3', emoji: '🟤' },
+   588→      { name: 'Leafy Greens', benefit: 'Calcium for bones', emoji: '🥬' },
+   589→      { name: 'Salmon', benefit: 'Omega-3 & vitamin D', emoji: '🐟' },
+   590→      { name: 'Greek Yogurt', benefit: 'Calcium & protein', emoji: '🥛' },
+   591→      { name: 'Berries', benefit: 'Antioxidants for heart', emoji: '🍓' },
+   592→      { name: 'Almonds', benefit: 'Vitamin E & healthy fats', emoji: '🌰' },
+   593→      { name: 'Whole Grains', benefit: 'Fiber & B vitamins', emoji: '🌾' },
+   594→      { name: 'Avocado', benefit: 'Healthy monounsaturated fats', emoji: '🥑' },
+   595→      { name: 'Broccoli', benefit: 'Calcium, cruciferous', emoji: '🥦' },
+   596→      { name: 'Lentils', benefit: 'Fiber & plant protein', emoji: '🫘' },
+   597→      { name: 'Sweet Potatoes', benefit: 'Vitamin A & fiber', emoji: '🍠' },
+   598→    ],
+   599→    foodsToAvoid: [
+   600→      'Excess sugar (worsens hot flashes)',
+   601→      'Spicy foods (trigger hot flashes)',
+   602→      'Caffeine (triggers hot flashes)',
+   603→      'Alcohol (worsens symptoms)',
+   604→      'Highly processed foods',
+   605→      'Excess sodium',
+   606→    ],
+   607→    mealPlan: [
+   608→      {
+   609→        meal: 'Breakfast',
+   610→        time: '8:00 AM',
+   611→        foods: ['Greek yogurt', 'Berries', 'Flaxseeds & almonds'],
+   612→        calories: 380,
+   613→        emoji: '🥛',
+   614→      },
+   615→      {
+   616→        meal: 'Lunch',
+   617→        time: '1:00 PM',
+   618→        foods: ['Tofu stir-fry', 'Broccoli', 'Brown rice'],
+   619→        calories: 480,
+   620→        emoji: '🥡',
+   621→      },
+   622→      {
+   623→        meal: 'Snack',
+   624→        time: '4:00 PM',
+   625→        foods: ['Apple slices', 'Almond butter'],
+   626→        calories: 200,
+   627→        emoji: '🍎',
+   628→      },
+   629→      {
+   630→        meal: 'Dinner',
+   631→        time: '7:00 PM',
+   632→        foods: ['Baked salmon', 'Quinoa', 'Roasted vegetables'],
+   633→        calories: 520,
+   634→        emoji: '🐟',
+   635→      },
+   636→    ],
+   637→    tips: [
+   638→      {
+   639→        title: 'Phytoestrogen-Rich Foods',
+   640→        description: 'Soy foods (tofu, tempeh, edamame) and flaxseeds contain plant estrogens that can help ease hot flashes and night sweats.',
+   641→        icon: 'leaf',
+   642→      },
+   643→      {
+   644→        title: 'Calcium & Vitamin D',
+   645→        description: 'Bone loss accelerates after menopause. Aim for 1200mg calcium and 600–800 IU vitamin D daily from dairy, fish, and fortified foods.',
+   646→        icon: 'apple',
+   647→      },
+   648→      {
+   649→        title: 'Limit Hot Flash Triggers',
+   650→        description: 'Caffeine, alcohol, spicy foods, and sugar are common triggers. Track your symptoms to identify personal culprits.',
+   651→        icon: 'flame',
+   652→      },
+   653→      {
+   654→        title: 'Heart-Healthy Fats',
+   655→        description: 'Estrogen protects the heart, so post-menopause risk rises. Prioritize omega-3s, olive oil, nuts, and avocados.',
+   656→        icon: 'heart',
+   657→      },
+   658→    ],
+   659→  },
+   660→
+   661→  hormone: {
+   662→    condition: 'hormone',
+   663→    title: 'Hormone Balance Plan',
+   664→    description:
+   665→      'A balanced whole-food plan with healthy fats, fiber, and cruciferous vegetables to support natural hormone production and clearance.',
+   666→    dailyCalories: 1900,
+   667→    macros: {
+   668→      carbs: { pct: 40, grams: 190 },
+   669→      protein: { pct: 30, grams: 143 },
+   670→      fat: { pct: 30, grams: 63 },
+   671→    },
+   672→    foodsToEat: [
+   673→      { name: 'Broccoli', benefit: 'Cruciferous, supports estrogen metabolism', emoji: '🥦' },
+   674→      { name: 'Avocado', benefit: 'Healthy fats for hormone production', emoji: '🥑' },
+   675→      { name: 'Salmon', benefit: 'Omega-3 anti-inflammatory', emoji: '🐟' },
+   676→      { name: 'Flaxseeds', benefit: 'Lignans balance estrogen', emoji: '🟤' },
+   677→      { name: 'Sweet Potatoes', benefit: 'Vitamin A & complex carbs', emoji: '🍠' },
+   678→      { name: 'Walnuts', benefit: 'Plant omega-3s', emoji: '🌰' },
+   679→      { name: 'Berries', benefit: 'Antioxidants', emoji: '🍓' },
+   680→      { name: 'Lentils', benefit: 'Fiber supports clearance', emoji: '🫘' },
+   681→      { name: 'Eggs', benefit: 'Choline & protein', emoji: '🥚' },
+   682→      { name: 'Olive Oil', benefit: 'Anti-inflammatory fats', emoji: '🫒' },
+   683→      { name: 'Pumpkin Seeds', benefit: 'Zinc supports hormones', emoji: '🎃' },
+   684→      { name: 'Leafy Greens', benefit: 'Magnesium & B vitamins', emoji: '🥬' },
+   685→    ],
+   686→    foodsToAvoid: [
+   687→      'Refined sugars & high-fructose corn syrup',
+   688→      'Trans fats & hydrogenated oils',
+   689→      'Processed vegetable oils (in excess)',
+   690→      'Excess caffeine',
+   691→      'Alcohol',
+   692→      'Highly processed packaged foods',
+   693→    ],
+   694→    mealPlan: [
+   695→      {
+   696→        meal: 'Breakfast',
+   697→        time: '8:00 AM',
+   698→        foods: ['Veggie scrambled eggs', 'Avocado', 'Sprouted toast'],
+   699→        calories: 400,
+   700→        emoji: '🍳',
+   701→      },
+   702→      {
+   703→        meal: 'Lunch',
+   704→        time: '1:00 PM',
+   705→        foods: ['Mixed bean salad', 'Broccoli', 'Olive oil dressing'],
+   706→        calories: 480,
+   707→        emoji: '🥗',
+   708→      },
+   709→      {
+   710→        meal: 'Snack',
+   711→        time: '4:00 PM',
+   712→        foods: ['Apple', 'Walnuts', 'Pumpkin seeds'],
+   713→        calories: 220,
+   714→        emoji: '🍎',
+   715→      },
+   716→      {
+   717→        meal: 'Dinner',
+   718→        time: '7:00 PM',
+   719→        foods: ['Baked salmon', 'Quinoa', 'Roasted Brussels sprouts'],
+   720→        calories: 540,
+   721→        emoji: '🐟',
+   722→      },
+   723→    ],
+   724→    tips: [
+   725→      {
+   726→        title: 'Healthy Fats for Hormones',
+   727→        description: 'Cholesterol is the building block of estrogen, progesterone, and testosterone. Don\'t fear healthy fats from avocado, olive oil, nuts, and fish.',
+   728→        icon: 'heart',
+   729→      },
+   730→      {
+   731→        title: 'Fiber for Estrogen Clearance',
+   732→        description: 'Cruciferous vegetables (broccoli, cabbage, Brussels sprouts) and fiber-rich foods help the body metabolize and clear excess estrogen.',
+   733→        icon: 'leaf',
+   734→      },
+   735→      {
+   736→        title: 'Limit Endocrine Disruptors',
+   737→        description: 'Reduce ultra-processed foods, plastics, and excess sugar — these can disrupt hormone signaling and worsen imbalance symptoms.',
+   738→        icon: 'zap',
+   739→      },
+   740→      {
+   741→        title: 'Support with Adaptogens',
+   742→        description: 'Foods like ashwagandha, maca, and holy basil may help the body adapt to stress, which is closely tied to cortisol and hormone balance.',
+   743→        icon: 'brain',
+   744→      },
+   745→    ],
+   746→  },
+   747→
+   748→  weight: {
+   749→    condition: 'weight',
+   750→    title: 'Weight Management Plan',
+   751→    description:
+   752→      'A high-protein, fiber-rich, calorie-conscious plan designed to support healthy, sustainable weight loss without deprivation.',
+   753→    dailyCalories: 1600,
+   754→    macros: {
+   755→      carbs: { pct: 40, grams: 160 },
+   756→      protein: { pct: 35, grams: 140 },
+   757→      fat: { pct: 25, grams: 44 },
+   758→    },
+   759→    foodsToEat: [
+   760→      { name: 'Chicken Breast', benefit: 'Lean protein, satiating', emoji: '🍗' },
+   761→      { name: 'Eggs', benefit: 'Protein & healthy fats', emoji: '🥚' },
+   762→      { name: 'Greek Yogurt', benefit: 'High protein, low calorie', emoji: '🥛' },
+   763→      { name: 'Leafy Greens', benefit: 'Volume, fiber, nutrients', emoji: '🥬' },
+   764→      { name: 'Berries', benefit: 'Low-calorie antioxidants', emoji: '🍓' },
+   765→      { name: 'Quinoa', benefit: 'Protein-rich whole grain', emoji: '🌾' },
+   766→      { name: 'Lentils', benefit: 'Plant protein & fiber', emoji: '🫘' },
+   767→      { name: 'Broccoli', benefit: 'High volume, low calorie', emoji: '🥦' },
+   768→      { name: 'Apples', benefit: 'Fiber & satiety', emoji: '🍎' },
+   769→      { name: 'Almonds', benefit: 'Healthy fats, portion-controlled', emoji: '🌰' },
+   770→      { name: 'Cucumber', benefit: 'Hydrating, very low calorie', emoji: '🥒' },
+   771→      { name: 'Cottage Cheese', benefit: 'Slow-digesting protein', emoji: '🧀' },
+   772→    ],
+   773→    foodsToAvoid: [
+   774→      'Sugary drinks & sodas',
+   775→      'Fast food & fried foods',
+   776→      'Refined carbs (white bread, pastries)',
+   777→      'Processed snack foods',
+   778→      'Alcohol (empty calories)',
+   779→      'High-calorie coffee drinks',
+   780→    ],
+   781→    mealPlan: [
+   782→      {
+   783→        meal: 'Breakfast',
+   784→        time: '8:00 AM',
+   785→        foods: ['Greek yogurt', 'Berries', 'Chia seeds'],
+   786→        calories: 320,
+   787→        emoji: '🥛',
+   788→      },
+   789→      {
+   790→        meal: 'Lunch',
+   791→        time: '1:00 PM',
+   792→        foods: ['Grilled chicken salad', 'Quinoa', 'Olive oil dressing'],
+   793→        calories: 450,
+   794→        emoji: '🥗',
+   795→      },
+   796→      {
+   797→        meal: 'Snack',
+   798→        time: '4:00 PM',
+   799→        foods: ['Apple', 'Small handful of almonds'],
+   800→        calories: 180,
+   801→        emoji: '🍎',
+   802→      },
+   803→      {
+   804→        meal: 'Dinner',
+   805→        time: '7:00 PM',
+   806→        foods: ['Baked cod', 'Steamed broccoli', 'Sweet potato'],
+   807→        calories: 460,
+   808→        emoji: '🐟',
+   809→      },
+   810→    ],
+   811→    tips: [
+   812→      {
+   813→        title: 'Prioritize Protein',
+   814→        description: 'Aim for 25–35% of calories from protein. It\'s the most satiating macronutrient and helps preserve muscle during weight loss.',
+   815→        icon: 'apple',
+   816→      },
+   817→      {
+   818→        title: 'Eat High-Volume, Low-Calorie',
+   819→        description: 'Fill half your plate with non-starchy vegetables. They add bulk, fiber, and nutrients for very few calories.',
+   820→        icon: 'leaf',
+   821→      },
+   822→      {
+   823→        title: 'Hydrate Before You Eat',
+   824→        description: 'Drink a glass of water 20 minutes before meals. Thirst is often mistaken for hunger, and water adds zero calories.',
+   825→        icon: 'droplet',
+   826→      },
+   827→      {
+   828→        title: 'Mind Your Beverages',
+   829→        description: 'Liquid calories (soda, juice, sweetened coffee, alcohol) add up fast. Switch to water, sparkling water, or unsweetened tea.',
+   830→        icon: 'zap',
+   831→      },
+   832→    ],
+   833→  },
+   834→
+   835→  wellness: {
+   836→    condition: 'wellness',
+   837→    title: 'General Wellness Plan',
+   838→    description:
+   839→      'A balanced, whole-food foundation built on colorful vegetables, lean proteins, healthy fats, and complex carbs for everyday vitality.',
+   840→    dailyCalories: 2000,
+   841→    macros: {
+   842→      carbs: { pct: 45, grams: 225 },
+   843→      protein: { pct: 25, grams: 125 },
+   844→      fat: { pct: 30, grams: 67 },
+   845→    },
+   846→    foodsToEat: [
+   847→      { name: 'Leafy Greens', benefit: 'Vitamins, minerals, fiber', emoji: '🥬' },
+   848→      { name: 'Berries', benefit: 'Antioxidants & fiber', emoji: '🍓' },
+   849→      { name: 'Salmon', benefit: 'Omega-3 & protein', emoji: '🐟' },
+   850→      { name: 'Quinoa', benefit: 'Complete plant protein', emoji: '🌾' },
+   851→      { name: 'Olive Oil', benefit: 'Heart-healthy fats', emoji: '🫒' },
+   852→      { name: 'Eggs', benefit: 'Protein & choline', emoji: '🥚' },
+   853→      { name: 'Avocado', benefit: 'Healthy fats & potassium', emoji: '🥑' },
+   854→      { name: 'Almonds', benefit: 'Vitamin E & healthy fats', emoji: '🌰' },
+   855→      { name: 'Sweet Potatoes', benefit: 'Vitamin A & fiber', emoji: '🍠' },
+   856→      { name: 'Greek Yogurt', benefit: 'Probiotics & protein', emoji: '🥛' },
+   857→      { name: 'Broccoli', benefit: 'Vitamin C & fiber', emoji: '🥦' },
+   858→      { name: 'Lentils', benefit: 'Plant protein & fiber', emoji: '🫘' },
+   859→    ],
+   860→    foodsToAvoid: [
+   861→      'Highly processed packaged foods',
+   862→      'Sugary drinks & sodas',
+   863→      'Refined grains (in excess)',
+   864→      'Trans fats & hydrogenated oils',
+   865→      'Excess added sugars',
+   866→      'Excess sodium',
+   867→    ],
+   868→    mealPlan: [
+   869→      {
+   870→        meal: 'Breakfast',
+   871→        time: '8:00 AM',
+   872→        foods: ['Oatmeal with berries', 'Walnuts', 'Drizzle of honey'],
+   873→        calories: 420,
+   874→        emoji: '🥣',
+   875→      },
+   876→      {
+   877→        meal: 'Lunch',
+   878→        time: '1:00 PM',
+   879→        foods: ['Quinoa bowl', 'Roasted vegetables', 'Grilled chicken'],
+   880→        calories: 540,
+   881→        emoji: '🥗',
+   882→      },
+   883→      {
+   884→        meal: 'Snack',
+   885→        time: '4:00 PM',
+   886→        foods: ['Apple', 'Almond butter'],
+   887→        calories: 220,
+   888→        emoji: '🍎',
+   889→      },
+   890→      {
+   891→        meal: 'Dinner',
+   892→        time: '7:00 PM',
+   893→        foods: ['Baked salmon', 'Brown rice', 'Steamed greens'],
+   894→        calories: 580,
+   895→        emoji: '🐟',
+   896→      },
+   897→    ],
+   898→    tips: [
+   899→      {
+   900→        title: 'Eat the Rainbow',
+   901→        description: 'Aim for 5+ servings of colorful fruits and vegetables daily. Different colors provide different phytonutrients and antioxidants.',
+   902→        icon: 'leaf',
+   903→      },
+   904→      {
+   905→        title: 'Balance Your Plate',
+   906→        description: 'Build meals with ½ vegetables, ¼ lean protein, ¼ complex carbs, plus a thumb of healthy fat for sustained energy.',
+   907→        icon: 'apple',
+   908→      },
+   909→      {
+   910→        title: 'Stay Hydrated',
+   911→        description: 'Aim for 8 glasses of water a day. Mild dehydration shows up as fatigue, headaches, and cravings before thirst kicks in.',
+   912→        icon: 'droplet',
+   913→      },
+   914→      {
+   915→        title: 'Limit Ultra-Processed Foods',
+   916→        description: 'Choose whole foods in their natural state as often as possible. The fewer ingredients on a label, the better.',
+   917→        icon: 'zap',
+   918→      },
+   919→    ],
+   920→  },
+   921→}
+   922→
+   923→// ─── Quick Prompts ──────────────────────────────────────────────────────────
+   924→
+   925→const quickPrompts = [
+   926→  { icon: Droplets, label: 'Period foods', prompt: 'What should I eat during my period?' },
+   927→  { icon: Flower2, label: 'PCOS weight loss', prompt: 'Best foods for PCOS weight loss' },
+   928→  { icon: Baby, label: 'Fertility foods', prompt: 'Fertility-boosting foods' },
+   929→  { icon: Apple, label: 'PCOS avoid', prompt: 'Foods to avoid with PCOS' },
+   930→  { icon: Cookie, label: 'Snack ideas', prompt: 'Healthy snack ideas' },
+   931→  { icon: GlassWater, label: 'Water intake', prompt: 'How much water should I drink?' },
+   932→]
+   933→
+   934→// ─── Initial Chat Messages ──────────────────────────────────────────────────
+   935→
+   936→const initialMessages: ChatMessage[] = [
+   937→  {
+   938→    id: '1',
+   939→    role: 'assistant',
+   940→    content:
+   941→      "Hi, I'm your AI Diet Advisor 🥑 I'm here to give you practical, evidence-based nutrition guidance for every phase of your health journey — from PCOS to pregnancy to menopause.\n\nPick a health condition above to see a curated diet plan, or ask me anything below. I'll do my best to give you real foods, real meals, and real science. 💚",
+   942→    timestamp: new Date(Date.now() - 300000),
+   943→  },
+   944→]
+   945→
+   946→// ─── Fallback Chat Engine ───────────────────────────────────────────────────
+   947→
+   948→const SAFETY_NOTE =
+   949→  '\n\n⚕️ For personalized medical nutrition advice, consult a registered dietitian.'
+   950→
+   951→function buildFallbackResponse(message: string, condition: ConditionId): string {
+   952→  const msg = message.toLowerCase()
+   953→  const plan = dietPlans[condition]
+   954→  const conditionLabel =
+   955→    conditions.find((c) => c.id === condition)?.label ?? 'General Wellness'
+   956→
+   957→  // Order matters — most specific first.
+   958→  const matchers: { keys: string[]; reply: string }[] = [
+   959→    {
+   960→      keys: ['period', 'menstrual', 'cramp', 'menstruation'],
+   961→      reply:
+   962→        'For your period, focus on foods that fight inflammation and replenish iron 🩸:\n\n• Iron-rich foods: lentils, spinach, lean beef, pumpkin seeds — to replace menstrual losses\n• Magnesium foods: dark chocolate (70%+), bananas, leafy greens — to ease cramps\n• Omega-3s: salmon, walnuts, chia seeds — reduce inflammation and cramp-causing prostaglandins\n• Ginger & turmeric tea — natural anti-inflammatories that soothe cramps and nausea\n\nLimit salt (bloating), caffeine (worsens anxiety & breast tenderness), and refined sugar (mood swings). Sip chamomile or ginger tea and stay well-hydrated.',
+   963→    },
+   964→    {
+   965→      keys: ['pcos'],
+   966→      reply:
+   967→        'For PCOS, the goal is improving insulin sensitivity and reducing inflammation 🌼:\n\n• Eat low-glycemic carbs: quinoa, lentils, sweet potatoes, beans — instead of white rice or bread\n• Pair every carb with protein (eggs, fish, Greek yogurt, tofu) to blunt blood sugar spikes\n• Add omega-3 fats: salmon, chia seeds, walnuts, flaxseeds — to fight inflammation\n• Include cinnamon — studies suggest it improves insulin sensitivity\n• Load up on cruciferous vegetables (broccoli, cauliflower) for hormone balance\n\nAvoid: sugary drinks, refined carbs, fried foods, and excess processed snacks. Even a 5–10% weight loss can significantly improve PCOS symptoms.',
+   968→    },
+   969→    {
+   970→      keys: ['fertility', 'conceiv', 'ovulat', 'trying to get pregnant', 'egg quality'],
+   971→      reply:
+   972→        'Fertility-boosting foods focus on folate, omega-3, and antioxidants 🌸:\n\n• Folate-rich foods: leafy greens, lentils, beans, fortified grains, citrus — essential for early pregnancy\n• Omega-3s: salmon (low-mercury), sardines, walnuts, chia & flax seeds — support egg quality\n• Antioxidant foods: berries, colorful vegetables, dark leafy greens, green tea\n• Zinc: pumpkin seeds, oysters, lean beef — supports ovulation\n• Full-fat dairy (in moderation) has been linked to healthier ovulation in some studies\n\nLimit caffeine to <200mg/day (about 1 coffee), avoid alcohol, skip high-mercury fish (swordfish, shark), and start a prenatal vitamin with folate if you\'re trying to conceive.',
+   973→    },
+   974→    {
+   975→      keys: ['pregnan', 'expecting', 'baby', 'trimester', 'nausea', 'morning sickness'],
+   976→      reply:
+   977→        'Pregnancy nutrition is about supporting baby\'s growth and your health 🤰:\n\n• Folate: spinach, lentils, fortified cereals, citrus — prevents neural tube defects\n• Iron: lean beef, lentils, spinach, fortified grains — supports increased blood volume (pair with vitamin C for absorption)\n• DHA: salmon (low-mercury, 2x/week), walnuts, chia — for baby\'s brain development\n• Calcium: Greek yogurt, milk, fortified plant milks, broccoli, leafy greens\n• Protein: eggs, chicken, fish, beans, Greek yogurt\n\nFood safety: avoid raw/undercooked meat & fish, high-mercury fish, unpasteurized dairy, soft cheeses, raw eggs, and deli meats (unless reheated to steaming). No alcohol. For nausea, try small frequent meals, ginger, and bland carbs like crackers.',
+   978→    },
+   979→    {
+   980→      keys: ['menopause', 'hot flash', 'night sweat', 'perimenopause'],
+   981→      reply:
+   982→        'Menopause nutrition focuses on phytoestrogens, bone health, and heart health 🌅:\n\n• Phytoestrogens: soy foods (tofu, tempeh, edamame), flaxseeds — may ease hot flashes\n• Calcium & vitamin D: Greek yogurt, fortified milks, leafy greens, salmon — protect bones (aim for 1200mg calcium/day)\n• Omega-3s: salmon, walnuts, chia — support heart health as estrogen drops\n• Fiber: whole grains, legumes, vegetables — supports heart and digestion\n\nLimit triggers: caffeine, alcohol, spicy foods, and excess sugar can worsen hot flashes. Eat smaller, more frequent meals if digestion slows.',
+   983→    },
+   984→    {
+   985→      keys: ['hormone', 'hormonal', 'balance hormone', 'estrogen'],
+   986→      reply:
+   987→        'To balance hormones naturally, focus on the building blocks and clearance pathways ⚖️:\n\n• Healthy fats: avocado, olive oil, nuts, salmon — cholesterol is the precursor to estrogen, progesterone, and testosterone\n• Cruciferous vegetables: broccoli, Brussels sprouts, cabbage — support healthy estrogen metabolism\n• Fiber: 25–30g/day from legumes, whole grains, vegetables — helps the body clear excess estrogen\n• Omega-3s: reduce inflammation that disrupts hormone signaling\n• Magnesium & zinc: leafy greens, pumpkin seeds, almonds — cofactors for hormone production\n\nAvoid: trans fats, excess sugar, ultra-processed foods, and excess caffeine — these can disrupt endocrine function.',
+   988→    },
+   989→    {
+   990→      keys: ['weight loss', 'lose weight', 'weight management', 'fat loss', 'losing weight'],
+   991→      reply:
+   992→        'For sustainable weight loss, prioritize protein, fiber, and whole foods ⚖️:\n\n• Protein at every meal: eggs, chicken, fish, Greek yogurt, lentils — most satiating macro, preserves muscle\n• High-volume, low-calorie foods: leafy greens, broccoli, cucumbers, berries — fill up for fewer calories\n• Complex carbs: quinoa, oats, sweet potatoes — keep energy stable\n• Healthy fats in moderation: avocado, olive oil, nuts — portion-controlled (fats are calorie-dense)\n\nAvoid: sugary drinks, fast food, refined carbs, alcohol. Try eating slowly, drinking water before meals, and filling half your plate with vegetables. Aim for a modest 300–500 calorie deficit for sustainable loss of ½–1 lb/week.',
+   993→    },
+   994→    {
+   995→      keys: ['water', 'hydrat', 'drink', 'how much water'],
+   996→      reply:
+   997→        'Hydration is essential for digestion, energy, skin, and hormone balance 💧:\n\n• General guideline: about 8 glasses (2 liters) of water per day for most women\n• If pregnant or breastfeeding: aim for 10–12 glasses daily\n• During your period: extra water helps reduce bloating and replaces fluids lost\n• In hot weather or when exercising: drink more to replace sweat losses\n\nTips:\n• Carry a reusable bottle\n• Drink a glass of water 20 minutes before meals (helps with portion control)\n• Flavor with lemon, cucumber, or mint if plain water is boring\n• Herbal teas (chamomile, ginger, peppermint) count toward hydration\n\nSkip sugary drinks and limit caffeine — both can dehydrate you.',
+   998→    },
+   999→    {
+  1000→      keys: ['snack', 'snacks'],
+  1001→      reply:
+  1002→        'Healthy snack ideas that balance blood sugar and satisfy cravings 🍪:\n\n• Apple slices + almond butter (fiber + healthy fat)\n• Greek yogurt + berries + chia seeds (protein + antioxidants)\n• Handful of almonds + a piece of dark chocolate (magnesium + antioxidants)\n• Carrot & cucumber sticks + hummus (fiber + protein)\n• Hard-boiled egg + cherry tomatoes (protein + vitamins)\n• Edamame (plant protein + fiber)\n• Cottage cheese + pineapple (slow-digesting protein)\n• Trail mix with nuts & seeds (healthy fats + minerals)\n\nAim for snacks that combine protein + fiber or protein + healthy fat — these keep you full longer than carb-only snacks.',
+  1003→    },
+  1004→    {
+  1005→      keys: ['protein', 'high protein'],
+  1006→      reply:
+  1007→        'Protein is essential for hormones, muscle, skin, and satiety 💪:\n\n• Animal sources: eggs, chicken, turkey, salmon, Greek yogurt, cottage cheese, lean beef\n• Plant sources: lentils, chickpeas, tofu, tempeh, edamame, quinoa, chia seeds, hemp seeds\n\nAim for 20–30g protein per meal (about a palm-sized portion). Most women need 0.8–1.2g of protein per kg of body weight daily — more if you\'re active, pregnant, or trying to lose weight. Spreading protein across the day (rather than one big dinner) supports muscle protein synthesis and stable energy.',
+  1008→    },
+  1009→    {
+  1010→      keys: ['iron', 'anemia', 'low iron'],
+  1011→      reply:
+  1012→        'Iron is crucial for women — especially during periods and pregnancy 🩸:\n\n• Heme iron (most absorbable): lean beef, chicken, fish, eggs\n• Non-heme iron: lentils, spinach, tofu, pumpkin seeds, fortified cereals, quinoa\n\nBoost absorption: pair iron-rich foods with vitamin C (citrus, bell peppers, strawberries, tomatoes). For example, squeeze lemon on spinach or pair lentils with tomatoes.\n\nAvoid: drinking tea or coffee with iron-rich meals — tannins block absorption. Wait 1 hour before/after meals for caffeine. If you suspect anemia (fatigue, pale skin, dizziness), ask your doctor for a ferritin test.',
+  1013→    },
+  1014→    {
+  1015→      keys: ['calcium', 'bone'],
+  1016→      reply:
+  1017→        'Calcium supports bones, teeth, muscle function, and even PMS reduction 🦴:\n\n• Dairy: Greek yogurt, milk, cheese, cottage cheese\n• Plant sources: fortified plant milks, tofu (calcium-set), leafy greens (collards, kale), broccoli, almonds, sesame seeds\n\nWomen need 1000mg/day (1200mg after menopause). Vitamin D is essential for calcium absorption — get it from salmon, fortified milks, egg yolks, or 10–15 minutes of sunlight. Weight-bearing exercise (walking, strength training) also strengthens bones.',
+  1018→    },
+  1019→    {
+  1020→      keys: ['magnesium'],
+  1021→      reply:
+  1022→        'Magnesium eases cramps, supports sleep, and helps with mood 🟤:\n\n• Best food sources: pumpkin seeds, almonds, dark chocolate (70%+), spinach, black beans, avocado, cashews, quinoa\n\nWomen need 310–320mg/day. Magnesium is depleted by stress, caffeine, and alcohol — so many women run low.Boosting magnesium-rich foods (or considering a supplement after talking to your doctor) can help with PMS cramps, sleep quality, and anxiety.',
+  1023→    },
+  1024→    {
+  1025→      keys: ['fiber'],
+  1026→      reply:
+  1027→        'Fiber supports digestion, blood sugar control, and hormone clearance 🌾:\n\n• Soluble fiber: oats, beans, lentils, apples, chia seeds, flaxseeds\n• Insoluble fiber: whole grains, wheat bran, vegetables, leafy greens\n\nWomen need 25g/day, but most get only 12–15g. Build up slowly and drink plenty of water to avoid bloating. Fiber binds to excess estrogen and helps the body clear it — important for PCOS, PMS, and hormone balance.',
+  1028→    },
+  1029→    {
+  1030→      keys: ['sugar', 'sweet', 'dessert', 'craving'],
+  1031→      reply:
+  1032→        'Managing sugar cravings starts with stable blood sugar 🍭:\n\n• Swap refined sweets for whole fruit (berries, apples, pears) — fiber slows the sugar hit\n• Pair a sweet with protein or fat (apple + almond butter, dark chocolate + nuts)\n• Choose 70%+ dark chocolate — lower sugar, rich in magnesium\n• Stay hydrated — thirst often masquerades as cravings\n• Get enough sleep — sleep deprivation spikes sugar cravings\n\nIf cravings are intense before your period, that\'s normal — hormones drive it. Satisfy with small portions of quality treats rather than fighting them entirely.',
+  1033→    },
+  1034→    {
+  1035→      keys: ['breakfast'],
+  1036→      reply:
+  1037→        'Great breakfast options that balance blood sugar and energy 🌅:\n\n• Oatmeal with walnuts, berries & flaxseeds\n• Veggie omelet with spinach and avocado\n• Greek yogurt with chia seeds and berries\n• Sprouted toast with mashed avocado and a poached egg\n• Smoothie with spinach, berries, Greek yogurt, and a tablespoon of nut butter\n\nAim for protein + fiber + healthy fat — this trio keeps you full and prevents the mid-morning crash that comes from cereal or pastries alone.',
+  1038→    },
+  1039→    {
+  1040→      keys: ['lunch', 'dinner', 'meal'],
+  1041→      reply:
+  1042→        'Build a balanced plate for any meal 🍽️:\n\n• ½ plate vegetables: leafy greens, roasted veggies, colorful salads\n• ¼ plate lean protein: salmon, chicken, tofu, lentils, eggs\n• ¼ plate complex carbs: quinoa, sweet potato, brown rice, beans\n• + a thumb of healthy fat: olive oil, avocado, nuts, seeds\n\nThis formula works for PCOS, fertility, pregnancy, weight management, and general wellness. Add herbs and spices (turmeric, ginger, cinnamon, garlic) for flavor and anti-inflammatory benefits.',
+  1043→    },
+  1044→    {
+  1045→      keys: ['caffeine', 'coffee'],
+  1046→      reply:
+  1047→        'Caffeine affects women differently across life stages ☕:\n\n• Fertility: limit to <200mg/day (about 1 coffee) — high caffeine may reduce fertility\n• Pregnancy: keep under 200mg/day — excess linked to miscarriage risk\n• PMS & periods: caffeine can worsen anxiety, breast tenderness, and cramps\n• Menopause: caffeine can trigger hot flashes in some women\n\nIf you\'re sensitive, swap coffee for green tea (lower caffeine, high antioxidants), herbal teas (chamomile, ginger, peppermint), or warm lemon water. Avoid caffeine after 2pm to protect sleep.',
+  1048→    },
+  1049→    {
+  1050→      keys: ['supplement', 'vitamin', 'prenatal', 'omega-3', 'fish oil'],
+  1051→      reply:
+  1052→        'Key supplements many women benefit from (always check with a doctor first) 💊:\n\n• Prenatal vitamin with folate — if trying to conceive or pregnant (400–800mcg folate)\n• Vitamin D — most women are low; aim for 600–1000 IU/day (or more if deficient)\n• Omega-3 (DHA/EPA) — if you don\'t eat fish 2x/week; especially important in pregnancy for baby\'s brain\n• Iron — only if bloodwork shows deficiency; supplement with vitamin C\n• Magnesium — for PMS, sleep, and stress (200–400mg glycinate)\n• B12 — if you\'re vegetarian or vegan\n\nFood first, supplements second. Always confirm dosages with a healthcare provider based on your bloodwork.',
+  1053→    },
+  1054→    {
+  1055→      keys: ['omega', 'fish oil', 'dha', 'epa'],
+  1056→      reply:
+  1057→        'Omega-3 fatty acids are powerful for women\'s health 🐟:\n\n• Best food sources: salmon, sardines, mackerel (low-mercury), walnuts, chia seeds, flaxseeds, hemp seeds\n• Benefits: reduce inflammation, support brain & heart health, balance hormones, ease period cramps, and support baby\'s brain development in pregnancy\n\nAim for 2 servings of low-mercury fish per week. If you don\'t eat fish, consider an algae-based DHA/EPA supplement (especially in pregnancy).',
+  1058→    },
+  1059→  ]
+  1060→
+  1061→  // Find first matching topic
+  1062→  for (const m of matchers) {
+  1063→    if (m.keys.some((k) => msg.includes(k))) {
+  1064→      return m.reply + SAFETY_NOTE
+  1065→    }
+  1066→  }
+  1067→
+  1068→  // Default — use the selected condition's plan as context
+  1069→  return (
+  1070→    `Great question! Based on the "${conditionLabel}" plan you're viewing, here are some key takeaways:\n\n` +
+  1071→    `• Daily target: ~${plan.dailyCalories} calories with ${plan.macros.carbs.pct}% carbs, ${plan.macros.protein.pct}% protein, ${plan.macros.fat.pct}% fat\n` +
+  1072→    `• Focus foods: ${plan.foodsToEat
+  1073→      .slice(0, 5)
+  1074→      .map((f) => f.name)
+  1075→      .join(', ')}\n` +
+  1076→    `• Avoid: ${plan.foodsToAvoid.slice(0, 3).join(', ')}\n\n` +
+  1077→    `Top tip for this plan: ${plan.tips[0].description}\n\n` +
+  1078→    `Try asking about specific topics like "period foods", "PCOS weight loss", "fertility foods", "water intake", "snack ideas", "iron-rich foods", or "protein" for more targeted guidance. 🌱`
+  1079→  ) + SAFETY_NOTE
+  1080→}
+  1081→
+  1082→// ─── Tip Icon Map ───────────────────────────────────────────────────────────
+  1083→
+  1084→const tipIconMap: Record<NutritionTip['icon'], React.ElementType> = {
+  1085→  leaf: Leaf,
+  1086→  flame: Flame,
+  1087→  droplet: Droplets,
+  1088→  apple: Apple,
+  1089→  heart: Heart,
+  1090→  brain: Brain,
+  1091→  zap: Zap,
+  1092→}
+  1093→
+  1094→// ─── Main Component ─────────────────────────────────────────────────────────
+  1095→
+  1096→export default function DietAdvisorModule() {
+  1097→  const [selectedCondition, setSelectedCondition] = useState<ConditionId>('pcos')
+  1098→  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
+  1099→  const [input, setInput] = useState('')
+  1100→  const [isLoading, setIsLoading] = useState(false)
+  1101→
+  1102→  // Daily tracker state (starts empty — user logs their own meals & water)
+  1103→  const [waterGlasses, setWaterGlasses] = useState(0)
+  1104→  const [loggedMeals, setLoggedMeals] = useState<
+  1105→    { id: string; name: string; calories: number; type: string }[]
+  1106→  >([])
+  1107→  const [newMeal, setNewMeal] = useState('')
+  1108→  const [newMealCalories, setNewMealCalories] = useState('')
+  1109→  const [newMealType, setNewMealType] = useState('Snack')
+  1110→
+  1111→  const scrollRef = useRef<HTMLDivElement>(null)
+  1112→  const inputRef = useRef<HTMLInputElement>(null)
+  1113→
+  1114→  const plan = dietPlans[selectedCondition]
+  1115→  const conditionMeta = useMemo(
+  1116→    () => conditions.find((c) => c.id === selectedCondition)!,
+  1117→    [selectedCondition]
+  1118→  )
+  1119→
+  1120→  const loggedCalories = loggedMeals.reduce((s, m) => s + m.calories, 0)
+  1121→  const calorieProgress = Math.min(
+  1122→    100,
+  1123→    Math.round((loggedCalories / plan.dailyCalories) * 100)
+  1124→  )
+  1125→
+  1126→  useEffect(() => {
+  1127→    if (scrollRef.current) {
+  1128→      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  1129→    }
+  1130→  }, [messages, isLoading])
+  1131→
+  1132→  const handleSelectCondition = (id: ConditionId) => {
+  1133→    setSelectedCondition(id)
+  1134→  }
+  1135→
+  1136→  const sendMessage = async (text: string) => {
+  1137→    if (!text.trim() || isLoading) return
+  1138→
+  1139→    const userMessage: ChatMessage = {
+  1140→      id: Date.now().toString(),
+  1141→      role: 'user',
+  1142→      content: text.trim(),
+  1143→      timestamp: new Date(),
+  1144→    }
+  1145→
+  1146→    setMessages((prev) => [...prev, userMessage])
+  1147→    setInput('')
+  1148→    setIsLoading(true)
+  1149→
+  1150→    try {
+  1151→      const history = messages.slice(-10).map((m) => ({
+  1152→        role: m.role,
+  1153→        content: m.content,
+  1154→      }))
+  1155→
+  1156→      const response = await fetch('/api/diet-chat', {
+  1157→        method: 'POST',
+  1158→        headers: { 'Content-Type': 'application/json' },
+  1159→        body: JSON.stringify({
+  1160→          message: text.trim(),
+  1161→          condition: selectedCondition,
+  1162→          history,
+  1163→        }),
+  1164→      })
+  1165→
+  1166→      const data = await response.json()
+  1167→
+  1168→      if (response.ok && data.success && data.response) {
+  1169→        // Ensure safety note is included
+  1170→        const content = data.response.includes(
+  1171→          'consult a registered dietitian'
+  1172→        )
+  1173→          ? data.response
+  1174→          : data.response + SAFETY_NOTE
+  1175→        setMessages((prev) => [
+  1176→          ...prev,
+  1177→          {
+  1178→            id: (Date.now() + 1).toString(),
+  1179→            role: 'assistant',
+  1180→            content,
+  1181→            timestamp: new Date(),
+  1182→          },
+  1183→        ])
+  1184→      } else {
+  1185→        // Smart local fallback
+  1186→        const fallback = buildFallbackResponse(text.trim(), selectedCondition)
+  1187→        setMessages((prev) => [
+  1188→          ...prev,
+  1189→          {
+  1190→            id: (Date.now() + 1).toString(),
+  1191→            role: 'assistant',
+  1192→            content: fallback,
+  1193→            timestamp: new Date(),
+  1194→          },
+  1195→        ])
+  1196→      }
+  1197→    } catch {
+  1198→      // Network or other error — use smart local fallback
+  1199→      const fallback = buildFallbackResponse(text.trim(), selectedCondition)
+  1200→      setMessages((prev) => [
+  1201→        ...prev,
+  1202→        {
+  1203→          id: (Date.now() + 1).toString(),
+  1204→          role: 'assistant',
+  1205→          content: fallback,
+  1206→          timestamp: new Date(),
+  1207→        },
+  1208→      ])
+  1209→    } finally {
+  1210→      setIsLoading(false)
+  1211→    }
+  1212→  }
+  1213→
+  1214→  const handleSubmit = (e: React.FormEvent) => {
+  1215→    e.preventDefault()
+  1216→    sendMessage(input)
+  1217→  }
+  1218→
+  1219→  const resetConversation = () => {
+  1220→    setMessages(initialMessages)
+  1221→  }
+  1222→
+  1223→  const formatTime = (date: Date) =>
+  1224→    date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  1225→
+  1226→  const addMeal = () => {
+  1227→    if (!newMeal.trim() || !newMealCalories) return
+  1228→    setLoggedMeals((prev) => [
+  1229→      ...prev,
+  1230→      {
+  1231→        id: Date.now().toString(),
+  1232→        name: newMeal.trim(),
+  1233→        calories: parseInt(newMealCalories) || 0,
+  1234→        type: newMealType,
+  1235→      },
+  1236→    ])
+  1237→    setNewMeal('')
+  1238→    setNewMealCalories('')
+  1239→  }
+  1240→
+  1241→  const removeMeal = (id: string) => {
+  1242→    setLoggedMeals((prev) => prev.filter((m) => m.id !== id))
+  1243→  }
+  1244→
+  1245→  return (
+  1246→    <div className="space-y-6 pb-6">
+  1247→      {/* ─── 1. Header ─────────────────────────────────────────────── */}
+  1248→      <motion.div
+  1249→        initial={{ opacity: 0, y: -10 }}
+  1250→        animate={{ opacity: 1, y: 0 }}
+  1251→        transition={{ duration: 0.4 }}
+  1252→        className="space-y-3"
+  1253→      >
+  1254→        <div className="flex flex-wrap items-start justify-between gap-3">
+  1255→          <div className="space-y-1.5">
+  1256→            <div className="flex items-center gap-2 flex-wrap">
+  1257→              <h2 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 bg-clip-text text-transparent">
+  1258→                AI Diet Advisor
+  1259→              </h2>
+  1260→              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 hover:bg-emerald-100">
+  1261→                <Sparkles className="h-3 w-3 mr-1" /> AI-Powered
+  1262→              </Badge>
+  1263→            </div>
+  1264→            <p className="text-sm md:text-base text-muted-foreground">
+  1265→              Expert nutrition guidance for every phase of your health journey
+  1266→            </p>
+  1267→          </div>
+  1268→        </div>
+  1269→      </motion.div>
+  1270→
+  1271→      {/* ─── 2. Health Condition Selector ─────────────────────────── */}
+  1272→      <div className="space-y-3">
+  1273→        <div className="flex items-center gap-2">
+  1274→          <Salad className="h-4 w-4 text-emerald-500" />
+  1275→          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+  1276→            Choose Your Health Goal
+  1277→          </h3>
+  1278→        </div>
+  1279→        <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x">
+  1280→          {conditions.map((c) => {
+  1281→            const isSelected = selectedCondition === c.id
+  1282→            const Icon = c.icon
+  1283→            return (
+  1284→              <motion.button
+  1285→                key={c.id}
+  1286→                onClick={() => handleSelectCondition(c.id)}
+  1287→                whileHover={{ y: -2 }}
+  1288→                whileTap={{ scale: 0.97 }}
+  1289→                className={cn(
+  1290→                  'shrink-0 snap-start w-36 md:w-40 text-left rounded-2xl p-4 border-2 transition-all duration-200',
+  1291→                  isSelected
+  1292→                    ? cn(c.bg, c.border, 'shadow-md ring-2', c.ring)
+  1293→                    : 'glass border-transparent hover:border-border'
+  1294→                )}
+  1295→              >
+  1296→                <div className="flex items-center justify-between mb-2">
+  1297→                  <div
+  1298→                    className={cn(
+  1299→                      'flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm',
+  1300→                      c.gradient
+  1301→                    )}
+  1302→                  >
+  1303→                    <Icon className="h-5 w-5" />
+  1304→                  </div>
+  1305→                  <span className="text-lg">{c.emoji}</span>
+  1306→                </div>
+  1307→                <p
+  1308→                  className={cn(
+  1309→                    'text-sm font-semibold leading-tight',
+  1310→                    isSelected ? c.text : 'text-foreground'
+  1311→                  )}
+  1312→                >
+  1313→                  {c.label}
+  1314→                </p>
+  1315→              </motion.button>
+  1316→            )
+  1317→          })}
+  1318→        </div>
+  1319→      </div>
+  1320→
+  1321→      {/* ─── 3. Diet Plan Display ─────────────────────────────────── */}
+  1322→      <AnimatePresence mode="wait">
+  1323→        <motion.div
+  1324→          key={selectedCondition}
+  1325→          initial={{ opacity: 0, y: 12 }}
+  1326→          animate={{ opacity: 1, y: 0 }}
+  1327→          exit={{ opacity: 0, y: -8 }}
+  1328→          transition={{ duration: 0.3 }}
+  1329→          className="space-y-4"
+  1330→        >
+  1331→          {/* Plan header card */}
+  1332→          <Card
+  1333→            className={cn(
+  1334→              'border-0 shadow-lg overflow-hidden',
+  1335→              conditionMeta.bg
+  1336→            )}
+  1337→          >
+  1338→            <CardContent className="p-5 md:p-6">
+  1339→              <div className="flex items-start gap-3 mb-2">
+  1340→                <div
+  1341→                  className={cn(
+  1342→                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow',
+  1343→                    conditionMeta.gradient
+  1344→                  )}
+  1345→                >
+  1346→                  <conditionMeta.icon className="h-5 w-5" />
+  1347→                </div>
+  1348→                <div>
+  1349→                  <h3 className={cn('text-xl font-bold', conditionMeta.text)}>
+  1350→                    {plan.title}
+  1351→                  </h3>
+  1352→                  <p className="text-sm text-muted-foreground mt-0.5">
+  1353→                    {plan.description}
+  1354→                  </p>
+  1355→                </div>
+  1356→              </div>
+  1357→            </CardContent>
+  1358→          </Card>
+  1359→
+  1360→          {/* Calorie target + Macros */}
+  1361→          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+  1362→            {/* Daily Calorie Target */}
+  1363→            <Card className="glass border-0 shadow-sm">
+  1364→              <CardContent className="p-5 flex flex-col items-center text-center">
+  1365→                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 mb-2">
+  1366→                  <Flame className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+  1367→                </div>
+  1368→                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+  1369→                  Daily Calories
+  1370→                </p>
+  1371→                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+  1372→                  {plan.dailyCalories}
+  1373→                </p>
+  1374→                <p className="text-[11px] text-muted-foreground">kcal / day</p>
+  1375→              </CardContent>
+  1376→            </Card>
+  1377→
+  1378→            {/* Carb card */}
+  1379→            <MacroCard
+  1380→              label="Carbs"
+  1381→              pct={plan.macros.carbs.pct}
+  1382→              grams={plan.macros.carbs.grams}
+  1383→              gradient="from-amber-400 to-orange-500"
+  1384→              bgIcon="bg-amber-100 dark:bg-amber-900/40"
+  1385→              textIcon="text-amber-600 dark:text-amber-400"
+  1386→              icon={Wheat}
+  1387→            />
+  1388→            {/* Protein card */}
+  1389→            <MacroCard
+  1390→              label="Protein"
+  1391→              pct={plan.macros.protein.pct}
+  1392→              grams={plan.macros.protein.grams}
+  1393→              gradient="from-rose-400 to-pink-500"
+  1394→              bgIcon="bg-rose-100 dark:bg-rose-900/40"
+  1395→              textIcon="text-rose-600 dark:text-rose-400"
+  1396→              icon={Beef}
+  1397→            />
+  1398→            {/* Fat card */}
+  1399→            <MacroCard
+  1400→              label="Fat"
+  1401→              pct={plan.macros.fat.pct}
+  1402→              grams={plan.macros.fat.grams}
+  1403→              gradient="from-teal-400 to-cyan-500"
+  1404→              bgIcon="bg-teal-100 dark:bg-teal-900/40"
+  1405→              textIcon="text-teal-600 dark:text-teal-400"
+  1406→              icon={Droplets}
+  1407→            />
+  1408→          </div>
+  1409→
+  1410→          {/* Foods to Eat + Foods to Avoid */}
+  1411→          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1412→            <Card className="glass border-0 shadow-sm lg:col-span-2">
+  1413→              <CardHeader className="pb-3">
+  1414→                <div className="flex items-center gap-2">
+  1415→                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
+  1416→                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+  1417→                  </div>
+  1418→                  <CardTitle className="text-base">Foods to Eat</CardTitle>
+  1419→                  <Badge variant="secondary" className="text-[10px]">
+  1420→                    {plan.foodsToEat.length} foods
+  1421→                  </Badge>
+  1422→                </div>
+  1423→              </CardHeader>
+  1424→              <CardContent>
+  1425→                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+  1426→                  {plan.foodsToEat.map((food, i) => (
+  1427→                    <motion.div
+  1428→                      key={food.name}
+  1429→                      initial={{ opacity: 0, scale: 0.95 }}
+  1430→                      animate={{ opacity: 1, scale: 1 }}
+  1431→                      transition={{ duration: 0.2, delay: i * 0.03 }}
+  1432→                      className="group rounded-xl border border-border/60 bg-card/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-200 dark:hover:border-emerald-800 transition-all p-3 cursor-default"
+  1433→                    >
+  1434→                      <div className="flex items-start gap-2">
+  1435→                        <span className="text-2xl shrink-0 leading-none mt-0.5">
+  1436→                          {food.emoji}
+  1437→                        </span>
+  1438→                        <div className="min-w-0">
+  1439→                          <p className="text-sm font-medium leading-tight">
+  1440→                            {food.name}
+  1441→                          </p>
+  1442→                          <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+  1443→                            {food.benefit}
+  1444→                          </p>
+  1445→                        </div>
+  1446→                      </div>
+  1447→                    </motion.div>
+  1448→                  ))}
+  1449→                </div>
+  1450→              </CardContent>
+  1451→            </Card>
+  1452→
+  1453→            {/* Foods to Avoid */}
+  1454→            <Card className="glass border-0 shadow-sm">
+  1455→              <CardHeader className="pb-3">
+  1456→                <div className="flex items-center gap-2">
+  1457→                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/40">
+  1458→                    <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+  1459→                  </div>
+  1460→                  <CardTitle className="text-base">Avoid or Limit</CardTitle>
+  1461→                </div>
+  1462→              </CardHeader>
+  1463→              <CardContent>
+  1464→                <ul className="space-y-2.5">
+  1465→                  {plan.foodsToAvoid.map((food, i) => (
+  1466→                    <motion.li
+  1467→                      key={food}
+  1468→                      initial={{ opacity: 0, x: -8 }}
+  1469→                      animate={{ opacity: 1, x: 0 }}
+  1470→                      transition={{ duration: 0.2, delay: i * 0.04 }}
+  1471→                      className="flex items-start gap-2 text-sm"
+  1472→                    >
+  1473→                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 mt-0.5">
+  1474→                        <XCircle className="h-3 w-3 text-red-500" />
+  1475→                      </span>
+  1476→                      <span className="text-foreground/90 leading-snug">
+  1477→                        {food}
+  1478→                      </span>
+  1479→                    </motion.li>
+  1480→                  ))}
+  1481→                </ul>
+  1482→              </CardContent>
+  1483→            </Card>
+  1484→          </div>
+  1485→
+  1486→          {/* Sample Meal Plan */}
+  1487→          <Card className="glass border-0 shadow-sm">
+  1488→            <CardHeader className="pb-3">
+  1489→              <div className="flex items-center gap-2">
+  1490→                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
+  1491→                  <Utensils className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+  1492→                </div>
+  1493→                <CardTitle className="text-base">Sample Daily Meal Plan</CardTitle>
+  1494→                <Badge
+  1495→                  variant="secondary"
+  1496→                  className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+  1497→                >
+  1498→                  {plan.mealPlan.reduce((s, m) => s + m.calories, 0)} kcal
+  1499→                </Badge>
+  1500→              </div>
+  1501→              <CardDescription className="text-xs">
+  1502→                A balanced day of eating tailored to {plan.title.toLowerCase()}
+  1503→              </CardDescription>
+  1504→            </CardHeader>
+  1505→            <CardContent>
+  1506→              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  1507→                {plan.mealPlan.map((meal, i) => (
+  1508→                  <motion.div
+  1509→                    key={meal.meal}
+  1510→                    initial={{ opacity: 0, y: 10 }}
+  1511→                    animate={{ opacity: 1, y: 0 }}
+  1512→                    transition={{ duration: 0.25, delay: i * 0.06 }}
+  1513→                    className="rounded-2xl border border-border/60 bg-card/50 p-4 hover:shadow-sm transition-shadow"
+  1514→                  >
+  1515→                    <div className="flex items-center justify-between mb-2">
+  1516→                      <span className="text-2xl">{meal.emoji}</span>
+  1517→                      <Badge
+  1518→                        variant="secondary"
+  1519→                        className="text-[10px] h-5"
+  1520→                      >
+  1521→                        {meal.calories} kcal
+  1522→                      </Badge>
+  1523→                    </div>
+  1524→                    <p className="font-semibold text-sm">{meal.meal}</p>
+  1525→                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-2">
+  1526→                      <Timer className="h-3 w-3" />
+  1527→                      {meal.time}
+  1528→                    </div>
+  1529→                    <Separator className="mb-2" />
+  1530→                    <ul className="space-y-1">
+  1531→                      {meal.foods.map((food) => (
+  1532→                        <li
+  1533→                          key={food}
+  1534→                          className="text-[11px] text-foreground/80 leading-snug flex items-start gap-1"
+  1535→                        >
+  1536→                          <span className="text-emerald-500 mt-0.5">•</span>
+  1537→                          <span>{food}</span>
+  1538→                        </li>
+  1539→                      ))}
+  1540→                    </ul>
+  1541→                  </motion.div>
+  1542→                ))}
+  1543→              </div>
+  1544→            </CardContent>
+  1545→          </Card>
+  1546→
+  1547→          {/* Nutrition Tips */}
+  1548→          <Card className="glass border-0 shadow-sm">
+  1549→            <CardHeader className="pb-3">
+  1550→              <div className="flex items-center gap-2">
+  1551→                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
+  1552→                  <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+  1553→                </div>
+  1554→                <CardTitle className="text-base">Nutrition Tips</CardTitle>
+  1555→              </div>
+  1556→            </CardHeader>
+  1557→            <CardContent>
+  1558→              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+  1559→                {plan.tips.map((tip, i) => {
+  1560→                  const TipIcon = tipIconMap[tip.icon]
+  1561→                  return (
+  1562→                    <motion.div
+  1563→                      key={tip.title}
+  1564→                      initial={{ opacity: 0, y: 8 }}
+  1565→                      animate={{ opacity: 1, y: 0 }}
+  1566→                      transition={{ duration: 0.25, delay: i * 0.06 }}
+  1567→                      className="flex gap-3 rounded-xl border border-border/60 bg-card/50 p-4"
+  1568→                    >
+  1569→                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
+  1570→                        <TipIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+  1571→                      </div>
+  1572→                      <div>
+  1573→                        <p className="font-semibold text-sm">{tip.title}</p>
+  1574→                        <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+  1575→                          {tip.description}
+  1576→                        </p>
+  1577→                      </div>
+  1578→                    </motion.div>
+  1579→                  )
+  1580→                })}
+  1581→              </div>
+  1582→            </CardContent>
+  1583→          </Card>
+  1584→        </motion.div>
+  1585→      </AnimatePresence>
+  1586→
+  1587→      {/* ─── 4. AI Diet Coach Chat ────────────────────────────────── */}
+  1588→      <Card className="border-0 glass shadow-lg overflow-hidden">
+  1589→        <CardHeader className="pb-3">
+  1590→          <div className="flex items-center justify-between">
+  1591→            <div className="flex items-center gap-2">
+  1592→              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow">
+  1593→                <Apple className="h-5 w-5" />
+  1594→              </div>
+  1595→              <div>
+  1596→                <CardTitle className="text-base flex items-center gap-2">
+  1597→                  AI Diet Coach
+  1598→                </CardTitle>
+  1599→                <p className="text-[11px] text-muted-foreground">
+  1600→                  Context: {conditionMeta.label}
+  1601→                </p>
+  1602→              </div>
+  1603→            </div>
+  1604→            <Button
+  1605→              variant="ghost"
+  1606→              size="sm"
+  1607→              onClick={resetConversation}
+  1608→              className="text-muted-foreground h-8"
+  1609→            >
+  1610→              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
+  1611→            </Button>
+  1612→          </div>
+  1613→        </CardHeader>
+  1614→
+  1615→        <CardContent className="p-0">
+  1616→          {/* Messages Area */}
+  1617→          <div
+  1618→            ref={scrollRef}
+  1619→            className="h-[440px] overflow-y-auto px-4 diet-scroll"
+  1620→          >
+  1621→            <div className="space-y-4 py-2">
+  1622→              {messages.map((message) => (
+  1623→                <motion.div
+  1624→                  key={message.id}
+  1625→                  initial={{ opacity: 0, y: 10 }}
+  1626→                  animate={{ opacity: 1, y: 0 }}
+  1627→                  transition={{ duration: 0.3 }}
+  1628→                  className={cn(
+  1629→                    'flex gap-3',
+  1630→                    message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+  1631→                  )}
+  1632→                >
+  1633→                  <div
+  1634→                    className={cn(
+  1635→                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+  1636→                      message.role === 'assistant'
+  1637→                        ? 'bg-emerald-100 dark:bg-emerald-900/50'
+  1638→                        : 'bg-primary/10'
+  1639→                    )}
+  1640→                  >
+  1641→                    {message.role === 'assistant' ? (
+  1642→                      <Apple className="h-4 w-4 text-emerald-600" />
+  1643→                    ) : (
+  1644→                      <User className="h-4 w-4 text-primary" />
+  1645→                    )}
+  1646→                  </div>
+  1647→
+  1648→                  <div
+  1649→                    className={cn(
+  1650→                      'max-w-[80%] rounded-2xl px-4 py-3',
+  1651→                      message.role === 'assistant'
+  1652→                        ? 'bg-muted/60 rounded-tl-sm'
+  1653→                        : 'bg-primary text-primary-foreground rounded-tr-sm'
+  1654→                    )}
+  1655→                  >
+  1656→                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+  1657→                      {message.content}
+  1658→                    </p>
+  1659→                    <p
+  1660→                      className={cn(
+  1661→                        'text-[10px] mt-1.5',
+  1662→                        message.role === 'assistant'
+  1663→                          ? 'text-muted-foreground'
+  1664→                          : 'text-primary-foreground/60'
+  1665→                      )}
+  1666→                    >
+  1667→                      {formatTime(message.timestamp)}
+  1668→                    </p>
+  1669→                  </div>
+  1670→                </motion.div>
+  1671→              ))}
+  1672→
+  1673→              {/* Typing indicator */}
+  1674→              <AnimatePresence>
+  1675→                {isLoading && (
+  1676→                  <motion.div
+  1677→                    initial={{ opacity: 0, y: 10 }}
+  1678→                    animate={{ opacity: 1, y: 0 }}
+  1679→                    exit={{ opacity: 0, y: -10 }}
+  1680→                    className="flex gap-3"
+  1681→                  >
+  1682→                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+  1683→                      <Sparkles className="h-4 w-4 text-emerald-600 animate-pulse" />
+  1684→                    </div>
+  1685→                    <div className="bg-muted/60 rounded-2xl rounded-tl-sm px-4 py-3">
+  1686→                      <div className="flex gap-1.5">
+  1687→                        <span
+  1688→                          className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce"
+  1689→                          style={{ animationDelay: '0ms' }}
+  1690→                        />
+  1691→                        <span
+  1692→                          className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce"
+  1693→                          style={{ animationDelay: '150ms' }}
+  1694→                        />
+  1695→                        <span
+  1696→                          className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce"
+  1697→                          style={{ animationDelay: '300ms' }}
+  1698→                        />
+  1699→                      </div>
+  1700→                    </div>
+  1701→                  </motion.div>
+  1702→                )}
+  1703→              </AnimatePresence>
+  1704→            </div>
+  1705→          </div>
+  1706→
+  1707→          <Separator />
+  1708→
+  1709→          {/* Quick Prompts */}
+  1710→          <div className="px-4 py-3">
+  1711→            <div className="flex gap-2 overflow-x-auto pb-1">
+  1712→              {quickPrompts.map((p) => (
+  1713→                <Button
+  1714→                  key={p.label}
+  1715→                  variant="outline"
+  1716→                  size="sm"
+  1717→                  className="shrink-0 text-xs h-8 gap-1.5 rounded-full border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+  1718→                  onClick={() => sendMessage(p.prompt)}
+  1719→                  disabled={isLoading}
+  1720→                >
+  1721→                  <p.icon className="h-3 w-3" />
+  1722→                  {p.label}
+  1723→                </Button>
+  1724→              ))}
+  1725→            </div>
+  1726→          </div>
+  1727→
+  1728→          <Separator />
+  1729→
+  1730→          {/* Input Area */}
+  1731→          <form onSubmit={handleSubmit} className="flex items-center gap-2 p-4">
+  1732→            <Input
+  1733→              ref={inputRef}
+  1734→              value={input}
+  1735→              onChange={(e) => setInput(e.target.value)}
+  1736→              placeholder="Ask me about nutrition, foods, meal ideas..."
+  1737→              className="flex-1 rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-emerald-400"
+  1738→              disabled={isLoading}
+  1739→            />
+  1740→            <Button
+  1741→              type="submit"
+  1742→              size="icon"
+  1743→              className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+  1744→              disabled={isLoading || !input.trim()}
+  1745→            >
+  1746→              <Send className="h-4 w-4" />
+  1747→            </Button>
+  1748→          </form>
+  1749→        </CardContent>
+  1750→      </Card>
+  1751→
+  1752→      {/* Safety note */}
+  1753→      <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-2.5">
+  1754→        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+  1755→        <p className="text-xs text-amber-700 dark:text-amber-400">
+  1756→          AI Diet Advisor provides general nutrition guidance, not medical
+  1757→          nutrition therapy. For personalized medical nutrition advice, consult
+  1758→          a registered dietitian.
+  1759→        </p>
+  1760→      </div>
+  1761→
+  1762→      {/* ─── 5. Daily Nutrition Tracker ───────────────────────────── */}
+  1763→      <Card className="glass border-0 shadow-sm">
+  1764→        <CardHeader className="pb-3">
+  1765→          <div className="flex items-center gap-2">
+  1766→            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
+  1767→              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+  1768→            </div>
+  1769→            <CardTitle className="text-base">Today&apos;s Nutrition Tracker</CardTitle>
+  1770→            <Badge variant="secondary" className="text-[10px]">
+  1771→              {new Date().toLocaleDateString('en-US', {
+  1772→                month: 'short',
+  1773→                day: 'numeric',
+  1774→              })}
+  1775→            </Badge>
+  1776→          </div>
+  1777→          <CardDescription className="text-xs">
+  1778→            Track your daily water, meals, and calorie progress
+  1779→          </CardDescription>
+  1780→        </CardHeader>
+  1781→        <CardContent className="space-y-5">
+  1782→          {/* Water intake */}
+  1783→          <div>
+  1784→            <div className="flex items-center justify-between mb-2">
+  1785→              <div className="flex items-center gap-2">
+  1786→                <Droplets className="h-4 w-4 text-sky-500" />
+  1787→                <p className="text-sm font-medium">Water Intake</p>
+  1788→              </div>
+  1789→              <Badge
+  1790→                variant="secondary"
+  1791→                className="text-[11px] bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+  1792→              >
+  1793→                {waterGlasses} / 8 glasses
+  1794→              </Badge>
+  1795→            </div>
+  1796→            <div className="flex gap-1.5 flex-wrap">
+  1797→              {Array.from({ length: 8 }).map((_, i) => {
+  1798→                const filled = i < waterGlasses
+  1799→                return (
+  1800→                  <motion.button
+  1801→                    key={i}
+  1802→                    onClick={() => setWaterGlasses(i + 1 === waterGlasses ? i : i + 1)}
+  1803→                    whileTap={{ scale: 0.85 }}
+  1804→                    whileHover={{ y: -2 }}
+  1805→                    className={cn(
+  1806→                      'flex h-11 w-9 items-end justify-center rounded-md border-2 transition-all overflow-hidden',
+  1807→                      filled
+  1808→                        ? 'bg-gradient-to-t from-sky-400 to-sky-300 border-sky-300 dark:border-sky-700'
+  1809→                        : 'bg-transparent border-border hover:border-sky-300'
+  1810→                    )}
+  1811→                    aria-label={`Glass ${i + 1} of 8`}
+  1812→                  >
+  1813→                    {filled && (
+  1814→                      <motion.div
+  1815→                        initial={{ height: 0 }}
+  1816→                        animate={{ height: '100%' }}
+  1817→                        transition={{ duration: 0.3 }}
+  1818→                      />
+  1819→                    )}
+  1820→                  </motion.button>
+  1821→                )
+  1822→              })}
+  1823→            </div>
+  1824→            <div className="flex gap-2 mt-2">
+  1825→              <Button
+  1826→                variant="outline"
+  1827→                size="sm"
+  1828→                className="h-7 text-xs"
+  1829→                onClick={() => setWaterGlasses(Math.max(0, waterGlasses - 1))}
+  1830→              >
+  1831→                −1 glass
+  1832→              </Button>
+  1833→              <Button
+  1834→                variant="outline"
+  1835→                size="sm"
+  1836→                className="h-7 text-xs"
+  1837→                onClick={() => setWaterGlasses(Math.min(8, waterGlasses + 1))}
+  1838→              >
+  1839→                +1 glass
+  1840→              </Button>
+  1841→              <Button
+  1842→                variant="ghost"
+  1843→                size="sm"
+  1844→                className="h-7 text-xs text-muted-foreground"
+  1845→                onClick={() => setWaterGlasses(0)}
+  1846→              >
+  1847→                Reset
+  1848→              </Button>
+  1849→            </div>
+  1850→          </div>
+  1851→
+  1852→          <Separator />
+  1853→
+  1854→          {/* Calorie progress */}
+  1855→          <div>
+  1856→            <div className="flex items-center justify-between mb-2">
+  1857→              <div className="flex items-center gap-2">
+  1858→                <Flame className="h-4 w-4 text-orange-500" />
+  1859→                <p className="text-sm font-medium">Daily Calorie Progress</p>
+  1860→              </div>
+  1861→              <span className="text-xs text-muted-foreground">
+  1862→                <span className="font-semibold text-foreground">
+  1863→                  {loggedCalories}
+  1864→                </span>{' '}
+  1865→                / {plan.dailyCalories} kcal
+  1866→              </span>
+  1867→            </div>
+  1868→            <Progress
+  1869→              value={calorieProgress}
+  1870→              className="h-2.5 bg-muted"
+  1871→            />
+  1872→            <p className="text-[11px] text-muted-foreground mt-1.5">
+  1873→              {calorieProgress >= 100
+  1874→                ? '🎯 You\'ve reached your daily target!'
+  1875→                : `${plan.dailyCalories - loggedCalories} kcal remaining for your ${conditionMeta.short} plan`}
+  1876→            </p>
+  1877→          </div>
+  1878→
+  1879→          <Separator />
+  1880→
+  1881→          {/* Today's meals */}
+  1882→          <div>
+  1883→            <div className="flex items-center justify-between mb-2">
+  1884→              <div className="flex items-center gap-2">
+  1885→                <Utensils className="h-4 w-4 text-emerald-500" />
+  1886→                <p className="text-sm font-medium">Today&apos;s Meals</p>
+  1887→              </div>
+  1888→              <Badge variant="secondary" className="text-[11px]">
+  1889→                {loggedMeals.length} logged
+  1890→              </Badge>
+  1891→            </div>
+  1892→
+  1893→            {/* Add meal form */}
+  1894→            <div className="grid grid-cols-12 gap-2 mb-3">
+  1895→              <Input
+  1896→                value={newMeal}
+  1897→                onChange={(e) => setNewMeal(e.target.value)}
+  1898→                placeholder="Meal name..."
+  1899→                className="col-span-12 sm:col-span-5 h-9 text-sm"
+  1900→                onKeyDown={(e) => {
+  1901→                  if (e.key === 'Enter') {
+  1902→                    e.preventDefault()
+  1903→                    addMeal()
+  1904→                  }
+  1905→                }}
+  1906→              />
+  1907→              <Input
+  1908→                value={newMealCalories}
+  1909→                onChange={(e) =>
+  1910→                  setNewMealCalories(e.target.value.replace(/[^0-9]/g, ''))
+  1911→                }
+  1912→                placeholder="kcal"
+  1913→                inputMode="numeric"
+  1914→                className="col-span-6 sm:col-span-3 h-9 text-sm"
+  1915→                onKeyDown={(e) => {
+  1916→                  if (e.key === 'Enter') {
+  1917→                    e.preventDefault()
+  1918→                    addMeal()
+  1919→                  }
+  1920→                }}
+  1921→              />
+  1922→              <select
+  1923→                value={newMealType}
+  1924→                onChange={(e) => setNewMealType(e.target.value)}
+  1925→                className="col-span-6 sm:col-span-2 h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400"
+  1926→              >
+  1927→                <option>Breakfast</option>
+  1928→                <option>Lunch</option>
+  1929→                <option>Dinner</option>
+  1930→                <option>Snack</option>
+  1931→              </select>
+  1932→              <Button
+  1933→                onClick={addMeal}
+  1934→                size="sm"
+  1935→                className="col-span-12 sm:col-span-2 h-9 bg-emerald-600 hover:bg-emerald-700 text-white"
+  1936→                disabled={!newMeal.trim() || !newMealCalories}
+  1937→              >
+  1938→                <Plus className="h-4 w-4 mr-1" /> Add
+  1939→              </Button>
+  1940→            </div>
+  1941→
+  1942→            {/* Logged meals list */}
+  1943→            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+  1944→              <AnimatePresence>
+  1945→                {loggedMeals.length === 0 ? (
+  1946→                  <p className="text-xs text-muted-foreground text-center py-4">
+  1947→                    No meals logged yet. Add your first meal above! 🍽️
+  1948→                  </p>
+  1949→                ) : (
+  1950→                  loggedMeals.map((m) => (
+  1951→                    <motion.div
+  1952→                      key={m.id}
+  1953→                      initial={{ opacity: 0, x: -8 }}
+  1954→                      animate={{ opacity: 1, x: 0 }}
+  1955→                      exit={{ opacity: 0, x: 8 }}
+  1956→                      className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/50 px-3 py-2"
+  1957→                    >
+  1958→                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/40">
+  1959→                        <Utensils className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+  1960→                      </div>
+  1961→                      <div className="flex-1 min-w-0">
+  1962→                        <p className="text-sm font-medium truncate">{m.name}</p>
+  1963→                        <p className="text-[11px] text-muted-foreground">
+  1964→                          {m.type} • {m.calories} kcal
+  1965→                        </p>
+  1966→                      </div>
+  1967→                      <Button
+  1968→                        variant="ghost"
+  1969→                        size="icon"
+  1970→                        className="h-7 w-7 text-muted-foreground hover:text-red-500"
+  1971→                        onClick={() => removeMeal(m.id)}
+  1972→                      >
+  1973→                        <Trash2 className="h-3.5 w-3.5" />
+  1974→                      </Button>
+  1975→                    </motion.div>
+  1976→                  ))
+  1977→                )}
+  1978→              </AnimatePresence>
+  1979→            </div>
+  1980→          </div>
+  1981→        </CardContent>
+  1982→      </Card>
+  1983→    </div>
+  1984→  )
+  1985→}
+  1986→
+  1987→// ─── Sub-components ─────────────────────────────────────────────────────────
+  1988→
+  1989→function MacroCard({
+  1990→  label,
+  1991→  pct,
+  1992→  grams,
+  1993→  gradient,
+  1994→  bgIcon,
+  1995→  textIcon,
+  1996→  icon: Icon,
+  1997→}: {
+  1998→  label: string
+  1999→  pct: number
+  2000→  grams: number
+
+[showing lines 1-2000 of 2034; use offset=2001 with limit to continue reading]

@@ -1,0 +1,611 @@
+  1500→                        </div>
+  1501→                        <p>
+  1502→                          Globally, <strong className="text-foreground">8–13%</strong> of reproductive-age women meet diagnostic criteria, yet up to <strong className="text-foreground">70%</strong> remain undiagnosed. PCOS affects women of all races, ethnicities, and body sizes — though symptoms and presentation may vary.
+  1503→                        </p>
+  1504→                        <p>
+  1505→                          It typically begins after puberty, with most women diagnosed in their 20s and 30s when evaluating irregular cycles or fertility concerns.
+  1506→                        </p>
+  1507→                      </div>
+  1508→                    </AccordionContent>
+  1509→                  </AccordionItem>
+  1510→
+  1511→                  <AccordionItem value="characteristics" className="border-rose-100 dark:border-rose-900/30">
+  1512→                    <AccordionTrigger className="hover:no-underline">
+  1513→                      <div className="flex items-center gap-2.5">
+  1514→                        <Layers className="h-4 w-4 text-pink-500 shrink-0" />
+  1515→                        <span className="font-semibold text-sm">Key Characteristics</span>
+  1516→                      </div>
+  1517→                    </AccordionTrigger>
+  1518→                    <AccordionContent>
+  1519→                      <ul className="space-y-2.5 text-sm text-muted-foreground pl-6">
+  1520→                        {[
+  1521→                          'Irregular or absent menstrual periods due to lack of ovulation',
+  1522→                          'Excess androgen hormones causing acne, hirsutism, and hair loss',
+  1523→                          'Polycystic ovaries (12+ small follicles) visible on ultrasound',
+  1524→                          'Insulin resistance affecting 70% of women with PCOS',
+  1525→                          'Metabolic issues including weight gain and diabetes risk',
+  1526→                          'Long-term risks for cardiovascular and endometrial health',
+  1527→                        ].map((item, i) => (
+  1528→                          <li key={i} className="flex items-start gap-2.5">
+  1529→                            <CheckCircle2 className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+  1530→                            <span>{item}</span>
+  1531→                          </li>
+  1532→                        ))}
+  1533→                      </ul>
+  1534→                    </AccordionContent>
+  1535→                  </AccordionItem>
+  1536→                </Accordion>
+  1537→              </CardContent>
+  1538→            </Card>
+  1539→          </motion.div>
+  1540→
+  1541→          {/* B. Causes & Risk Factors */}
+  1542→          <motion.div
+  1543→            initial={{ opacity: 0, y: 15 }}
+  1544→            animate={{ opacity: 1, y: 0 }}
+  1545→            transition={{ duration: 0.4, delay: 0.1 }}
+  1546→          >
+  1547→            <Card className="border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
+  1548→              <CardHeader>
+  1549→                <CardTitle className="flex items-center gap-2">
+  1550→                  <Dna className="h-5 w-5 text-amber-500" /> Causes &amp; Risk Factors
+  1551→                </CardTitle>
+  1552→                <CardDescription>The four main drivers behind PCOS</CardDescription>
+  1553→              </CardHeader>
+  1554→              <CardContent>
+  1555→                <motion.div
+  1556→                  variants={staggerContainer}
+  1557→                  initial="hidden"
+  1558→                  animate="show"
+  1559→                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+  1560→                >
+  1561→                  {pcosCauses.map((cause) => (
+  1562→                    <motion.div
+  1563→                      key={cause.title}
+  1564→                      variants={staggerItem}
+  1565→                      whileHover={{ y: -3 }}
+  1566→                      className={`rounded-xl border p-4 ${cause.border} ${cause.bg} transition-shadow hover:shadow-md`}
+  1567→                    >
+  1568→                      <div className="flex items-center gap-3 mb-2">
+  1569→                        <div className="rounded-lg bg-white/70 dark:bg-card/60 p-2 shadow-sm">
+  1570→                          {cause.icon}
+  1571→                        </div>
+  1572→                        <h4 className="font-semibold text-sm">{cause.title}</h4>
+  1573→                      </div>
+  1574→                      <p className="text-xs text-muted-foreground leading-relaxed">{cause.desc}</p>
+  1575→                    </motion.div>
+  1576→                  ))}
+  1577→                </motion.div>
+  1578→              </CardContent>
+  1579→            </Card>
+  1580→          </motion.div>
+  1581→
+  1582→          {/* C. Symptoms to Watch */}
+  1583→          <motion.div
+  1584→            initial={{ opacity: 0, y: 15 }}
+  1585→            animate={{ opacity: 1, y: 0 }}
+  1586→            transition={{ duration: 0.4, delay: 0.15 }}
+  1587→          >
+  1588→            <Card className="border-pink-200/50 dark:border-pink-800/30 backdrop-blur-sm">
+  1589→              <CardHeader>
+  1590→                <CardTitle className="flex items-center gap-2">
+  1591→                  <Activity className="h-5 w-5 text-pink-500" /> Symptoms to Watch
+  1592→                </CardTitle>
+  1593→                <CardDescription>Common signs of PCOS with severity indicators</CardDescription>
+  1594→              </CardHeader>
+  1595→              <CardContent>
+  1596→                <motion.div
+  1597→                  variants={staggerContainer}
+  1598→                  initial="hidden"
+  1599→                  animate="show"
+  1600→                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+  1601→                >
+  1602→                  {pcosSymptomsToWatch.map((symptom) => (
+  1603→                    <motion.div
+  1604→                      key={symptom.title}
+  1605→                      variants={staggerItem}
+  1606→                      whileHover={{ y: -3 }}
+  1607→                      className="rounded-xl border border-border bg-card/60 dark:bg-card/40 backdrop-blur-sm p-4 hover:shadow-md transition-shadow"
+  1608→                    >
+  1609→                      <div className="flex items-center justify-between mb-2.5">
+  1610→                        <div className="rounded-lg bg-pink-50 dark:bg-pink-950/30 p-2">
+  1611→                          {symptom.icon}
+  1612→                        </div>
+  1613→                        <Badge variant="secondary" className={`text-[9px] px-2 py-0.5 ${symptom.severityColor}`}>
+  1614→                          {symptom.severity}
+  1615→                        </Badge>
+  1616→                      </div>
+  1617→                      <h4 className="font-semibold text-sm mb-1.5">{symptom.title}</h4>
+  1618→                      <p className="text-xs text-muted-foreground leading-relaxed">{symptom.desc}</p>
+  1619→                    </motion.div>
+  1620→                  ))}
+  1621→                </motion.div>
+  1622→              </CardContent>
+  1623→            </Card>
+  1624→          </motion.div>
+  1625→
+  1626→          {/* D. PCOS Types */}
+  1627→          <motion.div
+  1628→            initial={{ opacity: 0, y: 15 }}
+  1629→            animate={{ opacity: 1, y: 0 }}
+  1630→            transition={{ duration: 0.4, delay: 0.2 }}
+  1631→          >
+  1632→            <Card className="border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
+  1633→              <CardHeader>
+  1634→                <CardTitle className="flex items-center gap-2">
+  1635→                  <Layers className="h-5 w-5 text-amber-500" /> PCOS Types
+  1636→                </CardTitle>
+  1637→                <CardDescription>
+  1638→                  Not all PCOS is the same — identifying your type guides treatment
+  1639→                </CardDescription>
+  1640→              </CardHeader>
+  1641→              <CardContent>
+  1642→                <motion.div
+  1643→                  variants={staggerContainer}
+  1644→                  initial="hidden"
+  1645→                  animate="show"
+  1646→                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+  1647→                >
+  1648→                  {pcosTypes.map((type) => (
+  1649→                    <motion.div
+  1650→                      key={type.name}
+  1651→                      variants={staggerItem}
+  1652→                      whileHover={{ y: -4 }}
+  1653→                      className="rounded-xl overflow-hidden border border-border bg-card/60 dark:bg-card/40 backdrop-blur-sm hover:shadow-lg transition-shadow"
+  1654→                    >
+  1655→                      <div className={`h-20 bg-gradient-to-r ${type.gradient} flex items-center justify-between px-4`}>
+  1656→                        <div className="rounded-lg bg-white/20 backdrop-blur-sm p-2">
+  1657→                          {type.icon}
+  1658→                        </div>
+  1659→                        <Badge className="bg-white/25 text-white border-0 text-[10px] font-bold">
+  1660→                          {type.prevalence}
+  1661→                        </Badge>
+  1662→                      </div>
+  1663→                      <div className="p-4 space-y-2.5">
+  1664→                        <h4 className="font-semibold text-sm">{type.name}</h4>
+  1665→                        <div className="space-y-1.5 text-xs">
+  1666→                          <div className="flex items-start gap-2">
+  1667→                            <span className="text-muted-foreground font-medium shrink-0 w-20">Markers:</span>
+  1668→                            <span className="text-foreground">{type.markers}</span>
+  1669→                          </div>
+  1670→                          <div className="flex items-start gap-2">
+  1671→                            <span className="text-muted-foreground font-medium shrink-0 w-20">Root cause:</span>
+  1672→                            <span className="text-foreground">{type.rootCause}</span>
+  1673→                          </div>
+  1674→                          <div className="flex items-start gap-2">
+  1675→                            <span className="text-muted-foreground font-medium shrink-0 w-20">Approach:</span>
+  1676→                            <span className="text-foreground">{type.approach}</span>
+  1677→                          </div>
+  1678→                        </div>
+  1679→                      </div>
+  1680→                    </motion.div>
+  1681→                  ))}
+  1682→                </motion.div>
+  1683→              </CardContent>
+  1684→            </Card>
+  1685→          </motion.div>
+  1686→
+  1687→          {/* E. Long-term Health Impact */}
+  1688→          <motion.div
+  1689→            initial={{ opacity: 0, y: 15 }}
+  1690→            animate={{ opacity: 1, y: 0 }}
+  1691→            transition={{ duration: 0.4, delay: 0.25 }}
+  1692→          >
+  1693→            <Card className="border-orange-200/50 dark:border-orange-800/30 backdrop-blur-sm">
+  1694→              <CardHeader>
+  1695→                <CardTitle className="flex items-center gap-2">
+  1696→                  <AlertTriangle className="h-5 w-5 text-orange-500" /> Long-term Health Impact
+  1697→                </CardTitle>
+  1698→                <CardDescription>
+  1699→                  Risks associated with unmanaged PCOS — and how to reduce them
+  1700→                </CardDescription>
+  1701→              </CardHeader>
+  1702→              <CardContent>
+  1703→                <motion.div
+  1704→                  variants={staggerContainer}
+  1705→                  initial="hidden"
+  1706→                  animate="show"
+  1707→                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+  1708→                >
+  1709→                  {pcosLongTermRisks.map((risk) => (
+  1710→                    <motion.div
+  1711→                      key={risk.title}
+  1712→                      variants={staggerItem}
+  1713→                      whileHover={{ y: -3 }}
+  1714→                      className="rounded-xl border border-orange-200/60 dark:border-orange-800/40 bg-orange-50/40 dark:bg-orange-950/10 backdrop-blur-sm p-4 hover:shadow-md transition-shadow"
+  1715→                    >
+  1716→                      <div className="flex items-center justify-between mb-2">
+  1717→                        <div className="rounded-lg bg-white/70 dark:bg-card/60 p-2 shadow-sm">
+  1718→                          {risk.icon}
+  1719→                        </div>
+  1720→                        <div className="text-right">
+  1721→                          <div className="text-lg font-bold text-orange-600 dark:text-orange-400 leading-none">{risk.risk}</div>
+  1722→                          <div className="text-[9px] text-muted-foreground mt-0.5">{risk.riskLabel}</div>
+  1723→                        </div>
+  1724→                      </div>
+  1725→                      <h4 className="font-semibold text-sm mb-1">{risk.title}</h4>
+  1726→                      <p className="text-xs text-muted-foreground leading-relaxed mb-2.5">{risk.desc}</p>
+  1727→                      <Separator className="mb-2.5 bg-orange-200/50 dark:bg-orange-800/30" />
+  1728→                      <div className="flex items-start gap-1.5">
+  1729→                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+  1730→                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+  1731→                          <span className="font-medium text-foreground">Prevention: </span>{risk.prevention}
+  1732→                        </p>
+  1733→                      </div>
+  1734→                    </motion.div>
+  1735→                  ))}
+  1736→                </motion.div>
+  1737→              </CardContent>
+  1738→            </Card>
+  1739→          </motion.div>
+  1740→
+  1741→          {/* F. Diagnosis & Testing */}
+  1742→          <motion.div
+  1743→            initial={{ opacity: 0, y: 15 }}
+  1744→            animate={{ opacity: 1, y: 0 }}
+  1745→            transition={{ duration: 0.4, delay: 0.3 }}
+  1746→          >
+  1747→            <Card className="border-rose-200/50 dark:border-rose-800/30 backdrop-blur-sm">
+  1748→              <CardHeader>
+  1749→                <CardTitle className="flex items-center gap-2">
+  1750→                  <FlaskConical className="h-5 w-5 text-rose-500" /> Diagnosis &amp; Testing
+  1751→                </CardTitle>
+  1752→                <CardDescription>How PCOS is identified and confirmed</CardDescription>
+  1753→              </CardHeader>
+  1754→              <CardContent className="space-y-5">
+  1755→                {/* Rotterdam Criteria */}
+  1756→                <div className="rounded-xl border border-rose-200/60 dark:border-rose-800/40 bg-rose-50/40 dark:bg-rose-950/10 p-4">
+  1757→                  <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+  1758→                    <Info className="h-4 w-4 text-rose-500" /> Rotterdam Criteria
+  1759→                  </h4>
+  1760→                  <p className="text-xs text-muted-foreground mb-3">
+  1761→                    Diagnosis requires <strong className="text-foreground">at least 2 of the 3</strong> criteria below (after excluding other conditions):
+  1762→                  </p>
+  1763→                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  1764→                    {[
+  1765→                      { num: '1', label: 'Irregular or absent ovulation', desc: 'Cycles under 21 or over 35 days' },
+  1766→                      { num: '2', label: 'High androgen levels', desc: 'Blood test or physical signs' },
+  1767→                      { num: '3', label: 'Polycystic ovaries', desc: '12+ follicles on ultrasound' },
+  1768→                    ].map((criterion) => (
+  1769→                      <div key={criterion.num} className="rounded-lg bg-white/70 dark:bg-card/50 p-3 border border-rose-100 dark:border-rose-900/30">
+  1770→                        <div className="flex items-center gap-2 mb-1">
+  1771→                          <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+  1772→                            {criterion.num}
+  1773→                          </span>
+  1774→                          <span className="text-xs font-semibold">{criterion.label}</span>
+  1775→                        </div>
+  1776→                        <p className="text-[10px] text-muted-foreground">{criterion.desc}</p>
+  1777→                      </div>
+  1778→                    ))}
+  1779→                  </div>
+  1780→                </div>
+  1781→
+  1782→                {/* Blood tests + Ultrasound grid */}
+  1783→                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  1784→                  {/* Blood tests */}
+  1785→                  <div className="rounded-xl border border-border bg-card/60 dark:bg-card/40 p-4">
+  1786→                    <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+  1787→                      <Droplet className="h-4 w-4 text-amber-500" /> Key Blood Tests
+  1788→                    </h4>
+  1789→                    <ul className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+  1790→                      {pcosBloodTests.map((test) => (
+  1791→                        <li key={test} className="flex items-start gap-2 text-xs text-muted-foreground">
+  1792→                          <CheckCircle2 className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+  1793→                          <span>{test}</span>
+  1794→                        </li>
+  1795→                      ))}
+  1796→                    </ul>
+  1797→                  </div>
+  1798→
+  1799→                  {/* Ultrasound explanation */}
+  1800→                  <div className="space-y-4">
+  1801→                    <div className="rounded-xl border border-border bg-card/60 dark:bg-card/40 p-4">
+  1802→                      <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+  1803→                        <Eye className="h-4 w-4 text-pink-500" /> Pelvic Ultrasound
+  1804→                      </h4>
+  1805→                      <p className="text-xs text-muted-foreground leading-relaxed">
+  1806→                        A transvaginal or abdominal ultrasound checks for <strong className="text-foreground">12 or more follicles (2–9mm)</strong> or enlarged ovarian volume. However, ultrasound is <strong className="text-foreground">not required</strong> for diagnosis if the other two Rotterdam criteria are met.
+  1807→                      </p>
+  1808→                    </div>
+  1809→                    <div className="rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 bg-emerald-50/40 dark:bg-emerald-950/10 p-4">
+  1810→                      <h4 className="font-semibold text-sm flex items-center gap-2 mb-1.5">
+  1811→                        <Stethoscope className="h-4 w-4 text-emerald-500" /> When to Get Tested
+  1812→                      </h4>
+  1813→                      <p className="text-xs text-muted-foreground leading-relaxed">
+  1814→                        Consider evaluation if you have <strong className="text-foreground">irregular periods, excess hair growth, persistent acne, or unexplained weight gain</strong> — especially if symptoms persist for 2+ cycles. Early testing shortens the typical 2–3 year diagnostic delay.
+  1815→                      </p>
+  1816→                    </div>
+  1817→                  </div>
+  1818→                </div>
+  1819→              </CardContent>
+  1820→            </Card>
+  1821→          </motion.div>
+  1822→
+  1823→          {/* G. Treatment Approaches */}
+  1824→          <motion.div
+  1825→            initial={{ opacity: 0, y: 15 }}
+  1826→            animate={{ opacity: 1, y: 0 }}
+  1827→            transition={{ duration: 0.4, delay: 0.35 }}
+  1828→          >
+  1829→            <Card className="border-emerald-200/50 dark:border-emerald-800/30 backdrop-blur-sm">
+  1830→              <CardHeader>
+  1831→                <CardTitle className="flex items-center gap-2">
+  1832→                  <Pill className="h-5 w-5 text-emerald-500" /> Treatment Approaches
+  1833→                </CardTitle>
+  1834→                <CardDescription>Expand each category to learn more</CardDescription>
+  1835→              </CardHeader>
+  1836→              <CardContent>
+  1837→                <Accordion type="single" collapsible className="w-full">
+  1838→                  {pcosTreatmentApproaches.map((approach) => (
+  1839→                    <AccordionItem key={approach.title} value={approach.title} className="border-emerald-100 dark:border-emerald-900/30">
+  1840→                      <AccordionTrigger className="hover:no-underline">
+  1841→                        <div className="flex items-center gap-2.5">
+  1842→                          <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-1.5">
+  1843→                            {approach.icon}
+  1844→                          </div>
+  1845→                          <div className="text-left">
+  1846→                            <div className="font-semibold text-sm">{approach.title}</div>
+  1847→                            <div className="text-[10px] text-muted-foreground font-normal">{approach.desc}</div>
+  1848→                          </div>
+  1849→                        </div>
+  1850→                      </AccordionTrigger>
+  1851→                      <AccordionContent>
+  1852→                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+  1853→                          {approach.items.map((item) => (
+  1854→                            <div key={item.label} className="rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-950/10 p-3">
+  1855→                              <div className="flex items-center gap-1.5 mb-1">
+  1856→                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+  1857→                                <span className="text-xs font-semibold">{item.label}</span>
+  1858→                              </div>
+  1859→                              <p className="text-[11px] text-muted-foreground leading-relaxed pl-5">{item.detail}</p>
+  1860→                            </div>
+  1861→                          ))}
+  1862→                        </div>
+  1863→                      </AccordionContent>
+  1864→                    </AccordionItem>
+  1865→                  ))}
+  1866→                </Accordion>
+  1867→              </CardContent>
+  1868→            </Card>
+  1869→          </motion.div>
+  1870→
+  1871→          {/* H. Latest Research & Statistics */}
+  1872→          <motion.div
+  1873→            initial={{ opacity: 0, y: 15 }}
+  1874→            animate={{ opacity: 1, y: 0 }}
+  1875→            transition={{ duration: 0.4, delay: 0.4 }}
+  1876→          >
+  1877→            <Card className="border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
+  1878→              <CardHeader>
+  1879→                <CardTitle className="flex items-center gap-2">
+  1880→                  <TrendingUp className="h-5 w-5 text-amber-500" /> Latest Research &amp; Statistics
+  1881→                </CardTitle>
+  1882→                <CardDescription>Key data points from global PCOS research</CardDescription>
+  1883→              </CardHeader>
+  1884→              <CardContent>
+  1885→                <motion.div
+  1886→                  variants={staggerContainer}
+  1887→                  initial="hidden"
+  1888→                  animate="show"
+  1889→                  className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+  1890→                >
+  1891→                  {pcosStatistics.map((stat) => (
+  1892→                    <motion.div
+  1893→                      key={stat.label}
+  1894→                      variants={staggerItem}
+  1895→                      whileHover={{ y: -3, scale: 1.02 }}
+  1896→                      className="rounded-xl border border-border bg-card/60 dark:bg-card/40 backdrop-blur-sm p-4 text-center hover:shadow-md transition-shadow"
+  1897→                    >
+  1898→                      <div className="flex justify-center mb-2">
+  1899→                        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-2">
+  1900→                          {stat.icon}
+  1901→                        </div>
+  1902→                      </div>
+  1903→                      <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent leading-tight">
+  1904→                        {stat.value}
+  1905→                      </div>
+  1906→                      <div className="text-xs font-medium mt-1">{stat.label}</div>
+  1907→                      <div className="text-[10px] text-muted-foreground mt-0.5">{stat.sub}</div>
+  1908→                    </motion.div>
+  1909→                  ))}
+  1910→                </motion.div>
+  1911→                <p className="text-[10px] text-muted-foreground mt-4 text-center italic">
+  1912→                  Sources: WHO, NIH, Monash University PCOS Guidelines, and peer-reviewed studies.
+  1913→                </p>
+  1914→              </CardContent>
+  1915→            </Card>
+  1916→          </motion.div>
+  1917→
+  1918→          {/* I. Myths vs Facts */}
+  1919→          <motion.div
+  1920→            initial={{ opacity: 0, y: 15 }}
+  1921→            animate={{ opacity: 1, y: 0 }}
+  1922→            transition={{ duration: 0.4, delay: 0.45 }}
+  1923→          >
+  1924→            <Card className="border-pink-200/50 dark:border-pink-800/30 backdrop-blur-sm">
+  1925→              <CardHeader>
+  1926→                <CardTitle className="flex items-center gap-2">
+  1927→                  <Brain className="h-5 w-5 text-pink-500" /> Myths vs Facts
+  1928→                </CardTitle>
+  1929→                <CardDescription>Clearing up common misconceptions about PCOS</CardDescription>
+  1930→              </CardHeader>
+  1931→              <CardContent className="space-y-3">
+  1932→                <motion.div
+  1933→                  variants={staggerContainer}
+  1934→                  initial="hidden"
+  1935→                  animate="show"
+  1936→                  className="space-y-3"
+  1937→                >
+  1938→                  {pcosMythsFacts.map((item) => (
+  1939→                    <motion.div
+  1940→                      key={item.myth}
+  1941→                      variants={staggerItem}
+  1942→                      className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-xl overflow-hidden border border-border"
+  1943→                    >
+  1944→                      {/* Myth */}
+  1945→                      <div className="bg-red-50/70 dark:bg-red-950/20 p-3.5 border-r-0 md:border-r border-red-100 dark:border-red-900/30">
+  1946→                        <div className="flex items-center gap-1.5 mb-1.5">
+  1947→                          <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+  1948→                            <X className="h-3 w-3 text-red-600 dark:text-red-400" />
+  1949→                          </div>
+  1950→                          <span className="text-[10px] font-bold uppercase tracking-wide text-red-700 dark:text-red-300">Myth</span>
+  1951→                        </div>
+  1952→                        <p className="text-xs text-foreground leading-relaxed">{item.myth}</p>
+  1953→                      </div>
+  1954→                      {/* Fact */}
+  1955→                      <div className="bg-emerald-50/70 dark:bg-emerald-950/20 p-3.5">
+  1956→                        <div className="flex items-center gap-1.5 mb-1.5">
+  1957→                          <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+  1958→                            <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+  1959→                          </div>
+  1960→                          <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Fact</span>
+  1961→                        </div>
+  1962→                        <p className="text-xs text-foreground leading-relaxed">{item.fact}</p>
+  1963→                      </div>
+  1964→                    </motion.div>
+  1965→                  ))}
+  1966→                </motion.div>
+  1967→              </CardContent>
+  1968→            </Card>
+  1969→          </motion.div>
+  1970→
+  1971→          {/* J. FAQ */}
+  1972→          <motion.div
+  1973→            initial={{ opacity: 0, y: 15 }}
+  1974→            animate={{ opacity: 1, y: 0 }}
+  1975→            transition={{ duration: 0.4, delay: 0.5 }}
+  1976→          >
+  1977→            <Card className="border-amber-200/50 dark:border-amber-800/30 backdrop-blur-sm">
+  1978→              <CardHeader>
+  1979→                <CardTitle className="flex items-center gap-2">
+  1980→                  <HelpCircle className="h-5 w-5 text-amber-500" /> Frequently Asked Questions
+  1981→                </CardTitle>
+  1982→                <CardDescription>Answers to the questions women ask most about PCOS</CardDescription>
+  1983→              </CardHeader>
+  1984→              <CardContent>
+  1985→                <Accordion type="single" collapsible className="w-full">
+  1986→                  {pcosFaqs.map((faq, i) => (
+  1987→                    <AccordionItem key={i} value={`faq-${i}`} className="border-amber-100 dark:border-amber-900/30">
+  1988→                      <AccordionTrigger className="hover:no-underline text-sm">
+  1989→                        <span className="font-medium">{faq.q}</span>
+  1990→                      </AccordionTrigger>
+  1991→                      <AccordionContent>
+  1992→                        <p className="text-xs text-muted-foreground leading-relaxed pl-1">{faq.a}</p>
+  1993→                      </AccordionContent>
+  1994→                    </AccordionItem>
+  1995→                  ))}
+  1996→                </Accordion>
+  1997→              </CardContent>
+  1998→            </Card>
+  1999→          </motion.div>
+  2000→
+  2001→          {/* K. Recommended Reading */}
+  2002→          <motion.div
+  2003→            initial={{ opacity: 0, y: 15 }}
+  2004→            animate={{ opacity: 1, y: 0 }}
+  2005→            transition={{ duration: 0.4, delay: 0.55 }}
+  2006→          >
+  2007→            <Card className="border-rose-200/50 dark:border-rose-800/30 bg-gradient-to-br from-amber-50/30 to-pink-50/30 dark:from-amber-950/10 dark:to-pink-950/10 backdrop-blur-sm">
+  2008→              <CardHeader>
+  2009→                <CardTitle className="flex items-center gap-2">
+  2010→                  <BookOpen className="h-5 w-5 text-rose-500" /> Recommended Reading
+  2011→                </CardTitle>
+  2012→                <CardDescription>Trusted sources for further research</CardDescription>
+  2013→              </CardHeader>
+  2014→              <CardContent>
+  2015→                <motion.div
+  2016→                  variants={staggerContainer}
+  2017→                  initial="hidden"
+  2018→                  animate="show"
+  2019→                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+  2020→                >
+  2021→                  {pcosRecommendedReading.map((source) => (
+  2022→                    <motion.a
+  2023→                      key={source.name}
+  2024→                      href={source.url}
+  2025→                      target="_blank"
+  2026→                      rel="noopener noreferrer"
+  2027→                      variants={staggerItem}
+  2028→                      whileHover={{ y: -3 }}
+  2029→                      className="group block rounded-xl border border-border bg-card/60 dark:bg-card/40 backdrop-blur-sm p-4 hover:shadow-md hover:border-rose-200 dark:hover:border-rose-800/50 transition-all"
+  2030→                    >
+  2031→                      <div className="flex items-start justify-between gap-2 mb-1.5">
+  2032→                        <div className="flex items-center gap-2">
+  2033→                          <div className="rounded-lg bg-rose-50 dark:bg-rose-950/30 p-1.5 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/40 transition-colors">
+  2034→                            <BookOpen className="h-3.5 w-3.5 text-rose-500" />
+  2035→                          </div>
+  2036→                          <h4 className="font-semibold text-xs group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+  2037→                            {source.name}
+  2038→                          </h4>
+  2039→                        </div>
+  2040→                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
+  2041→                      </div>
+  2042→                      <p className="text-[11px] text-muted-foreground leading-relaxed">{source.desc}</p>
+  2043→                      <p className="text-[10px] text-rose-500/70 mt-2 truncate">{source.url}</p>
+  2044→                    </motion.a>
+  2045→                  ))}
+  2046→                </motion.div>
+  2047→
+  2048→                {/* Disclaimer */}
+  2049→                <div className="mt-5 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 flex items-start gap-2">
+  2050→                  <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+  2051→                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+  2052→                    <strong className="text-foreground">Medical disclaimer:</strong> This educational content is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your healthcare provider before making decisions about your PCOS care.
+  2053→                  </p>
+  2054→                </div>
+  2055→              </CardContent>
+  2056→            </Card>
+  2057→          </motion.div>
+  2058→
+  2059→        </TabsContent>
+  2060→
+  2061→        {/* ─── Resource Library ────────────────────────────────────────── */}
+  2062→        <TabsContent value="resources" className="mt-4">
+  2063→          <motion.div
+  2064→            initial={{ opacity: 0, y: 15 }}
+  2065→            animate={{ opacity: 1, y: 0 }}
+  2066→            transition={{ duration: 0.4 }}
+  2067→          >
+  2068→            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  2069→              {resourceLibrary.map((resource, index) => (
+  2070→                <motion.div
+  2071→                  key={resource.title}
+  2072→                  initial={{ opacity: 0, y: 15 }}
+  2073→                  animate={{ opacity: 1, y: 0 }}
+  2074→                  transition={{ delay: index * 0.1 }}
+  2075→                  whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(0,0,0,0.08)' }}
+  2076→                  className="cursor-pointer group"
+  2077→                >
+  2078→                  <Card className="overflow-hidden h-full">
+  2079→                    <div className={`h-24 bg-gradient-to-r ${resource.color} flex items-center justify-center relative`}>
+  2080→                      <BookOpen className="h-10 w-10 text-white/70" />
+  2081→                      <div className="absolute top-2 right-2">
+  2082→                        <Badge className="bg-white/20 text-white border-0 text-[9px]">
+  2083→                          {resource.category}
+  2084→                        </Badge>
+  2085→                      </div>
+  2086→                    </div>
+  2087→                    <CardContent className="p-4">
+  2088→                      <h4 className="font-semibold text-sm mb-1 group-hover:text-pink-600 transition-colors flex items-center gap-1">
+  2089→                        {resource.title}
+  2090→                        <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+  2091→                      </h4>
+  2092→                      <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+  2093→                        {resource.description}
+  2094→                      </p>
+  2095→                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+  2096→                        <Clock className="h-3 w-3" />
+  2097→                        <span>{resource.readTime} read</span>
+  2098→                      </div>
+  2099→                    </CardContent>
+  2100→                  </Card>
+  2101→                </motion.div>
+  2102→              ))}
+  2103→            </div>
+  2104→          </motion.div>
+  2105→        </TabsContent>
+  2106→      </Tabs>
+  2107→    </div>
+  2108→  )
+  2109→}
+  2110→

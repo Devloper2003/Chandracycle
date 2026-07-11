@@ -1,0 +1,1042 @@
+     1→'use client'
+     2→
+     3→import { useState, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  LineChart,
+     7→  Line,
+     8→  BarChart,
+     9→  Bar,
+    10→  XAxis,
+    11→  YAxis,
+    12→  CartesianGrid,
+    13→  Tooltip,
+    14→  ResponsiveContainer,
+    15→  RadarChart,
+    16→  PolarGrid,
+    17→  PolarAngleAxis,
+    18→  PolarRadiusAxis,
+    19→  Radar,
+    20→} from 'recharts'
+    21→import {
+    22→  Card,
+    23→  CardContent,
+    24→  CardDescription,
+    25→  CardHeader,
+    26→  CardTitle,
+    27→} from '@/components/ui/card'
+    28→import { Button } from '@/components/ui/button'
+    29→import { Badge } from '@/components/ui/badge'
+    30→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    31→import { Progress } from '@/components/ui/progress'
+    32→import { Separator } from '@/components/ui/separator'
+    33→import { Switch } from '@/components/ui/switch'
+    34→import {
+    35→  Flower2,
+    36→  AlertTriangle,
+    37→  TrendingDown,
+    38→  TrendingUp,
+    39→  Dumbbell,
+    40→  Apple,
+    41→  Moon,
+    42→  BookOpen,
+    43→  ChevronRight,
+    44→  Star,
+    45→  Heart,
+    46→  Activity,
+    47→  Sparkles,
+    48→  FileBarChart,
+    49→  CheckCircle2,
+    50→  Circle,
+    51→  ShieldCheck,
+    52→  Clock,
+    53→  Stethoscope,
+    54→  ExternalLink,
+    55→} from 'lucide-react'
+    56→
+    57→// ─── Types ──────────────────────────────────────────────────────────────────
+    58→
+    59→interface PCOSSymptom {
+    60→  id: string
+    61→  label: string
+    62→  checked: boolean
+    63→  severity: 'none' | 'mild' | 'moderate' | 'severe'
+    64→}
+    65→
+    66→interface Recommendation {
+    67→  category: string
+    68→  icon: React.ReactNode
+    69→  items: string[]
+    70→  priority: 'high' | 'medium' | 'low'
+    71→}
+    72→
+    73→// ─── Mock data ──────────────────────────────────────────────────────────────
+    74→
+    75→const initialSymptoms: PCOSSymptom[] = [
+    76→  { id: 'irregular-periods', label: 'Irregular periods', checked: false, severity: 'none' },
+    77→  { id: 'excess-hair', label: 'Excess hair growth', checked: false, severity: 'none' },
+    78→  { id: 'acne', label: 'Acne', checked: false, severity: 'none' },
+    79→  { id: 'weight-gain', label: 'Weight gain', checked: false, severity: 'none' },
+    80→  { id: 'hair-loss', label: 'Hair loss', checked: false, severity: 'none' },
+    81→  { id: 'skin-tags', label: 'Skin tags', checked: false, severity: 'none' },
+    82→  { id: 'fatigue', label: 'Fatigue', checked: false, severity: 'none' },
+    83→  { id: 'mood-changes', label: 'Mood changes', checked: false, severity: 'none' },
+    84→  { id: 'sleep-issues', label: 'Sleep issues', checked: false, severity: 'none' },
+    85→]
+    86→
+    87→const generateWeightData = () => {
+    88→  const data = []
+    89→  let weight = 72
+    90→  for (let i = 11; i >= 0; i--) {
+    91→    const date = new Date()
+    92→    date.setMonth(date.getMonth() - i)
+    93→    weight += (Math.random() - 0.55) * 1.2
+    94→    data.push({
+    95→      month: date.toLocaleDateString('en-US', { month: 'short' }),
+    96→      weight: Math.round(weight * 10) / 10,
+    97→    })
+    98→  }
+    99→  return data
+   100→}
+   101→
+   102→const sleepQualityData = [
+   103→  { month: 'Jan', quality: 3.2 },
+   104→  { month: 'Feb', quality: 3.5 },
+   105→  { month: 'Mar', quality: 3.8 },
+   106→  { month: 'Apr', quality: 3.4 },
+   107→  { month: 'May', quality: 4.0 },
+   108→  { month: 'Jun', quality: 4.2 },
+   109→  { month: 'Jul', quality: 3.9 },
+   110→  { month: 'Aug', quality: 4.1 },
+   111→  { month: 'Sep', quality: 4.3 },
+   112→  { month: 'Oct', quality: 4.0 },
+   113→  { month: 'Nov', quality: 4.5 },
+   114→  { month: 'Dec', quality: 4.4 },
+   115→]
+   116→
+   117→const reportCardData = [
+   118→  { category: 'Diet', score: 72, fullMark: 100 },
+   119→  { category: 'Exercise', score: 58, fullMark: 100 },
+   120→  { category: 'Sleep', score: 81, fullMark: 100 },
+   121→  { category: 'Stress Mgmt', score: 65, fullMark: 100 },
+   122→  { category: 'Medication', score: 90, fullMark: 100 },
+   123→  { category: 'Symptoms', score: 45, fullMark: 100 },
+   124→]
+   125→
+   126→const resourceLibrary = [
+   127→  {
+   128→    title: 'Understanding PCOS',
+   129→    description: 'A complete guide to Polycystic Ovary Syndrome, its causes, and effects on your body.',
+   130→    category: 'Basics',
+   131→    readTime: '8 min',
+   132→    color: 'from-pink-400 to-rose-400',
+   133→  },
+   134→  {
+   135→    title: 'PCOS-Friendly Diet Plan',
+   136→    description: 'Anti-inflammatory foods and meal plans designed to manage insulin resistance.',
+   137→    category: 'Diet',
+   138→    readTime: '12 min',
+   139→    color: 'from-amber-400 to-orange-400',
+   140→  },
+   141→  {
+   142→    title: 'Exercise & PCOS',
+   143→    description: 'Best workout routines for managing weight and improving insulin sensitivity.',
+   144→    category: 'Fitness',
+   145→    readTime: '6 min',
+   146→    color: 'from-emerald-400 to-teal-400',
+   147→  },
+   148→  {
+   149→    title: 'Mental Health & PCOS',
+   150→    description: 'Coping strategies for anxiety, depression, and body image concerns with PCOS.',
+   151→    category: 'Wellness',
+   152→    readTime: '10 min',
+   153→    color: 'from-purple-400 to-violet-400',
+   154→  },
+   155→  {
+   156→    title: 'Fertility & PCOS',
+   157→    description: 'Understanding ovulation, conception challenges, and treatment options.',
+   158→    category: 'Fertility',
+   159→    readTime: '15 min',
+   160→    color: 'from-sky-400 to-blue-400',
+   161→  },
+   162→  {
+   163→    title: 'When to See a Doctor',
+   164→    description: 'Red flags and signs that warrant professional medical evaluation.',
+   165→    category: 'Medical',
+   166→    readTime: '5 min',
+   167→    color: 'from-red-400 to-pink-400',
+   168→  },
+   169→]
+   170→
+   171→// ─── Circular Gauge Component ───────────────────────────────────────────────
+   172→
+   173→function CircularGauge({ value, size = 180 }: { value: number; size?: number }) {
+   174→  const strokeWidth = 14
+   175→  const radius = (size - strokeWidth) / 2
+   176→  const circumference = 2 * Math.PI * radius
+   177→  const progress = (value / 100) * circumference
+   178→  const center = size / 2
+   179→
+   180→  const getColorZone = (val: number) => {
+   181→    if (val <= 30) return { color: '#22c55e', label: 'Low Risk', bg: 'bg-green-50 dark:bg-green-950/20' }
+   182→    if (val <= 55) return { color: '#eab308', label: 'Moderate Risk', bg: 'bg-yellow-50 dark:bg-yellow-950/20' }
+   183→    if (val <= 75) return { color: '#f97316', label: 'High Risk', bg: 'bg-orange-50 dark:bg-orange-950/20' }
+   184→    return { color: '#ef4444', label: 'Very High Risk', bg: 'bg-red-50 dark:bg-red-950/20' }
+   185→  }
+   186→
+   187→  const zone = getColorZone(value)
+   188→
+   189→  return (
+   190→    <div className="flex flex-col items-center gap-3">
+   191→      <div className={`relative rounded-2xl p-6 ${zone.bg}`}>
+   192→        <svg width={size} height={size} className="transform -rotate-90">
+   193→          {/* Background circle */}
+   194→          <circle
+   195→            cx={center}
+   196→            cy={center}
+   197→            r={radius}
+   198→            fill="none"
+   199→            stroke="currentColor"
+   200→            strokeWidth={strokeWidth}
+   201→            className="text-muted/30"
+   202→          />
+   203→          {/* Progress arc */}
+   204→          <motion.circle
+   205→            cx={center}
+   206→            cy={center}
+   207→            r={radius}
+   208→            fill="none"
+   209→            stroke={zone.color}
+   210→            strokeWidth={strokeWidth}
+   211→            strokeLinecap="round"
+   212→            strokeDasharray={circumference}
+   213→            initial={{ strokeDashoffset: circumference }}
+   214→            animate={{ strokeDashoffset: circumference - progress }}
+   215→            transition={{ duration: 1.5, ease: 'easeOut' }}
+   216→          />
+   217→        </svg>
+   218→        <div className="absolute inset-0 flex flex-col items-center justify-center">
+   219→          <motion.span
+   220→            initial={{ opacity: 0, scale: 0.5 }}
+   221→            animate={{ opacity: 1, scale: 1 }}
+   222→            transition={{ delay: 0.5 }}
+   223→            className="text-4xl font-bold"
+   224→            style={{ color: zone.color }}
+   225→          >
+   226→            {value}
+   227→          </motion.span>
+   228→          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
+   229→            / 100
+   230→          </span>
+   231→        </div>
+   232→      </div>
+   233→      <Badge
+   234→        className="text-xs font-semibold px-3 py-1"
+   235→        style={{ backgroundColor: zone.color + '20', color: zone.color, borderColor: zone.color + '40' }}
+   236→        variant="outline"
+   237→      >
+   238→        {zone.label}
+   239→      </Badge>
+   240→    </div>
+   241→  )
+   242→}
+   243→
+   244→// ─── Progress Ring Component ────────────────────────────────────────────────
+   245→
+   246→function ProgressRing({ value, max, size = 80, color = '#ec4899' }: { value: number; max: number; size?: number; color?: string }) {
+   247→  const strokeWidth = 6
+   248→  const radius = (size - strokeWidth) / 2
+   249→  const circumference = 2 * Math.PI * radius
+   250→  const progress = (value / max) * circumference
+   251→  const center = size / 2
+   252→
+   253→  return (
+   254→    <div className="relative inline-flex items-center justify-center">
+   255→      <svg width={size} height={size} className="transform -rotate-90">
+   256→        <circle cx={center} cy={center} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-muted/30" />
+   257→        <motion.circle
+   258→          cx={center}
+   259→          cy={center}
+   260→          r={radius}
+   261→          fill="none"
+   262→          stroke={color}
+   263→          strokeWidth={strokeWidth}
+   264→          strokeLinecap="round"
+   265→          strokeDasharray={circumference}
+   266→          initial={{ strokeDashoffset: circumference }}
+   267→          animate={{ strokeDashoffset: circumference - progress }}
+   268→          transition={{ duration: 1, ease: 'easeOut' }}
+   269→        />
+   270→      </svg>
+   271→      <div className="absolute inset-0 flex items-center justify-center">
+   272→        <span className="text-sm font-bold" style={{ color }}>{value}</span>
+   273→      </div>
+   274→    </div>
+   275→  )
+   276→}
+   277→
+   278→// ─── Main Component ─────────────────────────────────────────────────────────
+   279→
+   280→export default function PCOSModule() {
+   281→  const [symptoms, setSymptoms] = useState<PCOSSymptom[]>(initialSymptoms)
+   282→  const [exerciseMinutes, setExerciseMinutes] = useState(95)
+   283→  const [dietScore, setDietScore] = useState(3)
+   284→  const weightData = useMemo(() => generateWeightData(), [])
+   285→
+   286→  // Calculate PCOS risk score based on checked symptoms
+   287→  const riskScore = useMemo(() => {
+   288→    const checked = symptoms.filter((s) => s.checked)
+   289→    const baseScore = checked.length * 11
+   290→    const severityBonus = checked.reduce((acc, s) => {
+   291→      if (!s.checked) return acc
+   292→      switch (s.severity) {
+   293→        case 'mild': return acc + 2
+   294→        case 'moderate': return acc + 5
+   295→        case 'severe': return acc + 8
+   296→        default: return acc
+   297→      }
+   298→    }, 0)
+   299→    return Math.min(Math.round(baseScore + severityBonus), 100)
+   300→  }, [symptoms])
+   301→
+   302→  const toggleSymptom = (id: string) => {
+   303→    setSymptoms((prev) =>
+   304→      prev.map((s) =>
+   305→        s.id === id
+   306→          ? { ...s, checked: !s.checked, severity: !s.checked ? 'mild' : 'none' }
+   307→          : s
+   308→      )
+   309→    )
+   310→  }
+   311→
+   312→  const setSeverity = (id: string, severity: 'none' | 'mild' | 'moderate' | 'severe') => {
+   313→    setSymptoms((prev) =>
+   314→      prev.map((s) => (s.id === id ? { ...s, severity } : s))
+   315→    )
+   316→  }
+   317→
+   318→  // Generate recommendations based on checked symptoms
+   319→  const recommendations: Recommendation[] = useMemo(() => {
+   320→    const recs: Recommendation[] = []
+   321→    const checkedIds = symptoms.filter((s) => s.checked).map((s) => s.id)
+   322→
+   323→    if (checkedIds.includes('weight-gain') || checkedIds.includes('irregular-periods')) {
+   324→      recs.push({
+   325→        category: 'Diet Tips',
+   326→        icon: <Apple className="h-4 w-4 text-amber-500" />,
+   327→        items: [
+   328→          'Focus on low-glycemic index foods like whole grains, beans, and lentils',
+   329→          'Increase fiber intake to 25-30g daily to improve insulin sensitivity',
+   330→          'Include anti-inflammatory foods: berries, fatty fish, leafy greens',
+   331→          'Limit processed foods and added sugars',
+   332→        ],
+   333→        priority: 'high',
+   334→      })
+   335→    }
+   336→
+   337→    if (checkedIds.includes('weight-gain') || checkedIds.includes('fatigue') || checkedIds.includes('mood-changes')) {
+   338→      recs.push({
+   339→        category: 'Exercise Plan',
+   340→        icon: <Dumbbell className="h-4 w-4 text-emerald-500" />,
+   341→        items: [
+   342→          'Aim for 150 min/week of moderate cardio (brisk walking, swimming)',
+   343→          'Add strength training 2-3 times per week to improve insulin sensitivity',
+   344→          'Try yoga or Pilates for stress reduction and hormone balance',
+   345→          'Even 10-minute walks after meals help regulate blood sugar',
+   346→        ],
+   347→        priority: 'high',
+   348→      })
+   349→    }
+   350→
+   351→    if (checkedIds.includes('mood-changes') || checkedIds.includes('sleep-issues') || checkedIds.includes('fatigue')) {
+   352→      recs.push({
+   353→        category: 'Lifestyle Changes',
+   354→        icon: <Moon className="h-4 w-4 text-indigo-500" />,
+   355→        items: [
+   356→          'Prioritize 7-9 hours of quality sleep each night',
+   357→          'Practice stress management: meditation, deep breathing, journaling',
+   358→          'Consider inositol supplements (consult your doctor first)',
+   359→          'Maintain a consistent daily routine for circadian rhythm support',
+   360→        ],
+   361→        priority: 'medium',
+   362→      })
+   363→    }
+   364→
+   365→    if (checkedIds.length >= 3) {
+   366→      recs.push({
+   367→        category: 'When to See a Doctor',
+   368→        icon: <Stethoscope className="h-4 w-4 text-red-500" />,
+   369→        items: [
+   370→          'Schedule an appointment with an endocrinologist for comprehensive evaluation',
+   371→          'Request hormone panel blood test (testosterone, insulin, LH/FSH ratio)',
+   372→          'Ask about metformin or other medication options if lifestyle changes aren\'t enough',
+   373→          'Consider working with a registered dietitian specializing in PCOS',
+   374→        ],
+   375→        priority: 'high',
+   376→      })
+   377→    }
+   378→
+   379→    if (checkedIds.includes('excess-hair') || checkedIds.includes('acne') || checkedIds.includes('hair-loss')) {
+   380→      recs.push({
+   381→        category: 'Skin & Hair Care',
+   382→        icon: <Sparkles className="h-4 w-4 text-pink-500" />,
+   383→        items: [
+   384→          'Use gentle, non-comedogenic skincare products',
+   385→          'Consider spearmint tea (2 cups/day) for anti-androgen effects',
+   386→          'Explore laser hair removal or prescription creams with your dermatologist',
+   387→          'Biotin and zinc supplements may support hair health',
+   388→        ],
+   389→        priority: 'medium',
+   390→      })
+   391→    }
+   392→
+   393→    if (recs.length === 0) {
+   394→      recs.push({
+   395→        category: 'General Wellness',
+   396→        icon: <Heart className="h-4 w-4 text-pink-500" />,
+   397→        items: [
+   398→          'Maintain a balanced diet rich in whole foods',
+   399→          'Stay active with at least 30 minutes of daily movement',
+   400→          'Track your symptoms regularly to catch patterns early',
+   401→          'Stay hydrated and prioritize sleep hygiene',
+   402→        ],
+   403→        priority: 'low',
+   404→      })
+   405→    }
+   406→
+   407→    return recs
+   408→  }, [symptoms])
+   409→
+   410→  const priorityColors: Record<string, string> = {
+   411→    high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+   412→    medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+   413→    low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+   414→  }
+   415→
+   416→  return (
+   417→    <div className="space-y-6">
+   418→      {/* Header */}
+   419→      <motion.div
+   420→        initial={{ opacity: 0, y: -10 }}
+   421→        animate={{ opacity: 1, y: 0 }}
+   422→        transition={{ duration: 0.4 }}
+   423→      >
+   424→        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+   425→          <span className="bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">
+   426→            PCOS Management
+   427→          </span>
+   428→        </h1>
+   429→        <p className="text-muted-foreground mt-1">Track symptoms, get insights, and manage your PCOS journey</p>
+   430→      </motion.div>
+   431→
+   432→      <Tabs defaultValue="overview" className="w-full">
+   433→        <TabsList className="flex-wrap h-auto gap-1 bg-amber-50/50 dark:bg-amber-950/20 p-1">
+   434→          <TabsTrigger value="overview" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-amber-700 dark:text-amber-300">
+   435→            <Flower2 className="h-3.5 w-3.5 mr-1.5" /> Overview
+   436→          </TabsTrigger>
+   437→          <TabsTrigger value="symptoms" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white text-pink-700 dark:text-pink-300">
+   438→            <Activity className="h-3.5 w-3.5 mr-1.5" /> Symptoms
+   439→          </TabsTrigger>
+   440→          <TabsTrigger value="tracking" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white text-amber-700 dark:text-amber-300">
+   441→            <TrendingUp className="h-3.5 w-3.5 mr-1.5" /> Tracking
+   442→          </TabsTrigger>
+   443→          <TabsTrigger value="recommendations" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-emerald-700 dark:text-emerald-300">
+   444→            <Sparkles className="h-3.5 w-3.5 mr-1.5" /> AI Tips
+   445→          </TabsTrigger>
+   446→          <TabsTrigger value="report" className="data-[state=active]:bg-violet-500 data-[state=active]:text-white text-violet-700 dark:text-violet-300">
+   447→            <FileBarChart className="h-3.5 w-3.5 mr-1.5" /> Report
+   448→          </TabsTrigger>
+   449→          <TabsTrigger value="resources" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white text-sky-700 dark:text-sky-300">
+   450→            <BookOpen className="h-3.5 w-3.5 mr-1.5" /> Resources
+   451→          </TabsTrigger>
+   452→        </TabsList>
+   453→
+   454→        {/* ─── Overview ──────────────────────────────────────────────── */}
+   455→        <TabsContent value="overview" className="mt-4 space-y-6">
+   456→          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   457→            {/* Risk Score */}
+   458→            <motion.div
+   459→              initial={{ opacity: 0, scale: 0.9 }}
+   460→              animate={{ opacity: 1, scale: 1 }}
+   461→              transition={{ delay: 0.1, type: 'spring' }}
+   462→              className="lg:col-span-1"
+   463→            >
+   464→              <Card className="border-amber-200/50 dark:border-amber-800/30 h-full">
+   465→                <CardHeader className="text-center">
+   466→                  <CardTitle className="flex items-center justify-center gap-2">
+   467→                    <ShieldCheck className="h-5 w-5 text-amber-500" /> PCOS Risk Score
+   468→                  </CardTitle>
+   469→                  <CardDescription>Based on your reported symptoms</CardDescription>
+   470→                </CardHeader>
+   471→                <CardContent className="flex flex-col items-center">
+   472→                  <CircularGauge value={riskScore} />
+   473→                  <p className="text-xs text-muted-foreground text-center mt-3 max-w-[200px]">
+   474→                    {symptoms.filter((s) => s.checked).length} symptom{symptoms.filter((s) => s.checked).length !== 1 ? 's' : ''} reported
+   475→                  </p>
+   476→                </CardContent>
+   477→              </Card>
+   478→            </motion.div>
+   479→
+   480→            {/* Quick Stats */}
+   481→            <motion.div
+   482→              initial={{ opacity: 0, y: 15 }}
+   483→              animate={{ opacity: 1, y: 0 }}
+   484→              transition={{ delay: 0.2 }}
+   485→              className="lg:col-span-2 grid grid-cols-2 gap-4"
+   486→            >
+   487→              {/* Weight Trend Mini */}
+   488→              <Card className="border-amber-200/50 dark:border-amber-800/30 col-span-2">
+   489→                <CardHeader className="pb-2">
+   490→                  <CardTitle className="text-base flex items-center gap-2">
+   491→                    <TrendingDown className="h-4 w-4 text-amber-500" /> Weight Trend
+   492→                  </CardTitle>
+   493→                </CardHeader>
+   494→                <CardContent>
+   495→                  <div className="h-[120px] w-full">
+   496→                    <ResponsiveContainer width="100%" height="100%">
+   497→                      <LineChart data={weightData}>
+   498→                        <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+   499→                        <XAxis dataKey="month" tick={{ fontSize: 9 }} stroke="#9ca3af" />
+   500→                        <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fontSize: 9 }} stroke="#9ca3af" />
+   501→                        <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '11px' }} />
+   502→                        <Line
+   503→                          type="monotone"
+   504→                          dataKey="weight"
+   505→                          stroke="#f59e0b"
+   506→                          strokeWidth={2}
+   507→                          dot={{ r: 3, fill: '#f59e0b' }}
+   508→                        />
+   509→                      </LineChart>
+   510→                    </ResponsiveContainer>
+   511→                  </div>
+   512→                </CardContent>
+   513→              </Card>
+   514→
+   515→              {/* Exercise Progress */}
+   516→              <Card className="border-emerald-200/50 dark:border-emerald-800/30">
+   517→                <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2">
+   518→                  <ProgressRing value={exerciseMinutes} max={150} color="#10b981" />
+   519→                  <span className="text-xs font-medium text-muted-foreground">Exercise this week</span>
+   520→                  <span className="text-[10px] text-muted-foreground">{exerciseMinutes} / 150 min</span>
+   521→                  <div className="w-full">
+   522→                    <Progress value={(exerciseMinutes / 150) * 100} className="h-1.5 [&>[data-slot=progress-indicator]]:bg-emerald-400" />
+   523→                  </div>
+   524→                </CardContent>
+   525→              </Card>
+   526→
+   527→              {/* Diet Quality */}
+   528→              <Card className="border-amber-200/50 dark:border-amber-800/30">
+   529→                <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2">
+   530→                  <div className="flex gap-1">
+   531→                    {[1, 2, 3, 4, 5].map((star) => (
+   532→                      <motion.button
+   533→                        key={star}
+   534→                        whileHover={{ scale: 1.2 }}
+   535→                        whileTap={{ scale: 0.9 }}
+   536→                        onClick={() => setDietScore(star)}
+   537→                        className="cursor-pointer"
+   538→                      >
+   539→                        <Star
+   540→                          className={`h-6 w-6 transition-colors ${
+   541→                            star <= dietScore
+   542→                              ? 'text-amber-400 fill-amber-400'
+   543→                              : 'text-gray-200 dark:text-gray-700'
+   544→                          }`}
+   545→                        />
+   546→                      </motion.button>
+   547→                    ))}
+   548→                  </div>
+   549→                  <span className="text-xs font-medium text-muted-foreground">Diet Quality</span>
+   550→                  <span className="text-[10px] text-muted-foreground">{dietScore} / 5 stars today</span>
+   551→                </CardContent>
+   552→              </Card>
+   553→            </motion.div>
+   554→          </div>
+   555→        </TabsContent>
+   556→
+   557→        {/* ─── Symptoms Checklist ────────────────────────────────────── */}
+   558→        <TabsContent value="symptoms" className="mt-4 space-y-6">
+   559→          <motion.div
+   560→            initial={{ opacity: 0, y: 15 }}
+   561→            animate={{ opacity: 1, y: 0 }}
+   562→            transition={{ duration: 0.4 }}
+   563→          >
+   564→            <Card className="border-pink-200/50 dark:border-pink-800/30">
+   565→              <CardHeader>
+   566→                <CardTitle className="flex items-center gap-2">
+   567→                  <Activity className="h-5 w-5 text-pink-500" /> Symptom Checklist
+   568→                </CardTitle>
+   569→                <CardDescription>
+   570→                  Toggle the symptoms you&apos;re experiencing and rate their severity
+   571→                </CardDescription>
+   572→              </CardHeader>
+   573→              <CardContent>
+   574→                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+   575→                  {symptoms.map((symptom, index) => (
+   576→                    <motion.div
+   577→                      key={symptom.id}
+   578→                      initial={{ opacity: 0, y: 10 }}
+   579→                      animate={{ opacity: 1, y: 0 }}
+   580→                      transition={{ delay: index * 0.05 }}
+   581→                      className={`rounded-xl border p-4 transition-all ${
+   582→                        symptom.checked
+   583→                          ? 'border-pink-300 bg-pink-50/60 dark:bg-pink-950/20 dark:border-pink-800/50'
+   584→                          : 'border-border hover:border-pink-200'
+   585→                      }`}
+   586→                    >
+   587→                      <div className="flex items-center justify-between gap-4">
+   588→                        <div className="flex items-center gap-3">
+   589→                          <Switch
+   590→                            checked={symptom.checked}
+   591→                            onCheckedChange={() => toggleSymptom(symptom.id)}
+   592→                            className="data-[state=checked]:bg-pink-500"
+   593→                          />
+   594→                          <span className={`font-medium text-sm ${symptom.checked ? 'text-pink-700 dark:text-pink-300' : ''}`}>
+   595→                            {symptom.label}
+   596→                          </span>
+   597→                        </div>
+   598→                        {symptom.checked && (
+   599→                          <motion.div
+   600→                            initial={{ opacity: 0, width: 0 }}
+   601→                            animate={{ opacity: 1, width: 'auto' }}
+   602→                            className="flex gap-1.5"
+   603→                          >
+   604→                            {(['mild', 'moderate', 'severe'] as const).map((sev) => {
+   605→                              const colors: Record<string, string> = {
+   606→                                mild: 'bg-green-400',
+   607→                                moderate: 'bg-amber-400',
+   608→                                severe: 'bg-red-400',
+   609→                              }
+   610→                              return (
+   611→                                <button
+   612→                                  key={sev}
+   613→                                  onClick={() => setSeverity(symptom.id, sev)}
+   614→                                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all ${
+   615→                                    symptom.severity === sev
+   616→                                      ? `${colors[sev]} text-white border-transparent`
+   617→                                      : 'border-border text-muted-foreground hover:border-pink-300'
+   618→                                  }`}
+   619→                                >
+   620→                                  {sev.charAt(0).toUpperCase() + sev.slice(1)}
+   621→                                </button>
+   622→                              )
+   623→                            })}
+   624→                          </motion.div>
+   625→                        )}
+   626→                      </div>
+   627→                    </motion.div>
+   628→                  ))}
+   629→                </div>
+   630→              </CardContent>
+   631→            </Card>
+   632→          </motion.div>
+   633→
+   634→          {/* Summary */}
+   635→          <motion.div
+   636→            initial={{ opacity: 0, y: 15 }}
+   637→            animate={{ opacity: 1, y: 0 }}
+   638→            transition={{ delay: 0.3 }}
+   639→          >
+   640→            <Card className="border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-r from-amber-50/50 to-pink-50/50 dark:from-amber-950/10 dark:to-pink-950/10">
+   641→              <CardContent className="p-5">
+   642→                <div className="flex items-center gap-3">
+   643→                  <AlertTriangle className={`h-5 w-5 ${
+   644→                    symptoms.filter((s) => s.checked).length >= 4
+   645→                      ? 'text-red-500'
+   646→                      : symptoms.filter((s) => s.checked).length >= 2
+   647→                        ? 'text-amber-500'
+   648→                        : 'text-green-500'
+   649→                  }`} />
+   650→                  <div>
+   651→                    <p className="font-semibold text-sm">
+   652→                      {symptoms.filter((s) => s.checked).length === 0
+   653→                        ? 'No symptoms reported'
+   654→                        : `${symptoms.filter((s) => s.checked).length} symptom${symptoms.filter((s) => s.checked).length > 1 ? 's' : ''} reported`}
+   655→                    </p>
+   656→                    <p className="text-xs text-muted-foreground mt-0.5">
+   657→                      {symptoms.filter((s) => s.checked).length >= 4
+   658→                        ? 'Consider scheduling a consultation with your healthcare provider for a comprehensive evaluation.'
+   659→                        : symptoms.filter((s) => s.checked).length >= 2
+   660→                          ? 'Keep tracking your symptoms to identify patterns and discuss with your doctor.'
+   661→                          : 'Great! Continue monitoring and logging any changes.'}
+   662→                    </p>
+   663→                  </div>
+   664→                </div>
+   665→              </CardContent>
+   666→            </Card>
+   667→          </motion.div>
+   668→        </TabsContent>
+   669→
+   670→        {/* ─── Tracking Dashboard ────────────────────────────────────── */}
+   671→        <TabsContent value="tracking" className="mt-4 space-y-6">
+   672→          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+   673→            {/* Weight Trend */}
+   674→            <motion.div
+   675→              initial={{ opacity: 0, x: -15 }}
+   676→              animate={{ opacity: 1, x: 0 }}
+   677→              transition={{ delay: 0.1 }}
+   678→            >
+   679→              <Card className="border-amber-200/50 dark:border-amber-800/30">
+   680→                <CardHeader>
+   681→                  <CardTitle className="text-base flex items-center gap-2">
+   682→                    <TrendingDown className="h-4 w-4 text-amber-500" /> Weight Trend
+   683→                  </CardTitle>
+   684→                  <CardDescription>Last 12 months</CardDescription>
+   685→                </CardHeader>
+   686→                <CardContent>
+   687→                  <div className="h-[220px] w-full">
+   688→                    <ResponsiveContainer width="100%" height="100%">
+   689→                      <LineChart data={weightData}>
+   690→                        <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+   691→                        <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="#9ca3af" />
+   692→                        <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fontSize: 10 }} stroke="#9ca3af" />
+   693→                        <Tooltip
+   694→                          contentStyle={{ borderRadius: '12px', border: '1px solid #fcd34d' }}
+   695→                          formatter={(value: number) => [`${value} kg`, 'Weight']}
+   696→                        />
+   697→                        <Line
+   698→                          type="monotone"
+   699→                          dataKey="weight"
+   700→                          stroke="#f59e0b"
+   701→                          strokeWidth={2.5}
+   702→                          dot={{ r: 4, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
+   703→                          activeDot={{ r: 6 }}
+   704→                        />
+   705→                      </LineChart>
+   706→                    </ResponsiveContainer>
+   707→                  </div>
+   708→                </CardContent>
+   709→              </Card>
+   710→            </motion.div>
+   711→
+   712→            {/* Exercise */}
+   713→            <motion.div
+   714→              initial={{ opacity: 0, x: 15 }}
+   715→              animate={{ opacity: 1, x: 0 }}
+   716→              transition={{ delay: 0.1 }}
+   717→            >
+   718→              <Card className="border-emerald-200/50 dark:border-emerald-800/30">
+   719→                <CardHeader>
+   720→                  <CardTitle className="text-base flex items-center gap-2">
+   721→                    <Dumbbell className="h-4 w-4 text-emerald-500" /> Exercise This Week
+   722→                  </CardTitle>
+   723→                  <CardDescription>Goal: 150 minutes</CardDescription>
+   724→                </CardHeader>
+   725→                <CardContent>
+   726→                  <div className="flex flex-col items-center gap-4 py-4">
+   727→                    <ProgressRing value={exerciseMinutes} max={150} size={140} color="#10b981" />
+   728→                    <div className="text-center">
+   729→                      <p className="text-2xl font-bold text-emerald-600">{exerciseMinutes}</p>
+   730→                      <p className="text-xs text-muted-foreground">of 150 minutes</p>
+   731→                    </div>
+   732→                    <div className="w-full">
+   733→                      <Progress value={(exerciseMinutes / 150) * 100} className="h-2.5 [&>[data-slot=progress-indicator]]:bg-emerald-400" />
+   734→                    </div>
+   735→                    <div className="flex gap-2 w-full">
+   736→                      <Button
+   737→                        variant="outline"
+   738→                        size="sm"
+   739→                        className="flex-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+   740→                        onClick={() => setExerciseMinutes(Math.max(0, exerciseMinutes - 15))}
+   741→                      >
+   742→                        −15 min
+   743→                      </Button>
+   744→                      <Button
+   745→                        size="sm"
+   746→                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+   747→                        onClick={() => setExerciseMinutes(Math.min(300, exerciseMinutes + 15))}
+   748→                      >
+   749→                        +15 min
+   750→                      </Button>
+   751→                    </div>
+   752→                  </div>
+   753→                </CardContent>
+   754→              </Card>
+   755→            </motion.div>
+   756→
+   757→            {/* Diet Quality */}
+   758→            <motion.div
+   759→              initial={{ opacity: 0, x: -15 }}
+   760→              animate={{ opacity: 1, x: 0 }}
+   761→              transition={{ delay: 0.2 }}
+   762→            >
+   763→              <Card className="border-amber-200/50 dark:border-amber-800/30">
+   764→                <CardHeader>
+   765→                  <CardTitle className="text-base flex items-center gap-2">
+   766→                    <Apple className="h-4 w-4 text-amber-500" /> Diet Quality Score
+   767→                  </CardTitle>
+   768→                  <CardDescription>Rate your daily nutrition</CardDescription>
+   769→                </CardHeader>
+   770→                <CardContent>
+   771→                  <div className="flex flex-col items-center gap-4 py-4">
+   772→                    <div className="flex gap-2">
+   773→                      {[1, 2, 3, 4, 5].map((star) => (
+   774→                        <motion.button
+   775→                          key={star}
+   776→                          whileHover={{ scale: 1.2 }}
+   777→                          whileTap={{ scale: 0.85 }}
+   778→                          onClick={() => setDietScore(star)}
+   779→                          className="cursor-pointer"
+   780→                        >
+   781→                          <Star
+   782→                            className={`h-10 w-10 transition-all duration-200 ${
+   783→                              star <= dietScore
+   784→                                ? 'text-amber-400 fill-amber-400 drop-shadow-sm'
+   785→                                : 'text-gray-200 dark:text-gray-700'
+   786→                            }`}
+   787→                          />
+   788→                        </motion.button>
+   789→                      ))}
+   790→                    </div>
+   791→                    <div className="text-center">
+   792→                      <p className="text-lg font-bold text-amber-600">
+   793→                        {dietScore <= 2 ? 'Needs Improvement' : dietScore <= 3 ? 'Fair' : dietScore <= 4 ? 'Good' : 'Excellent'}
+   794→                      </p>
+   795→                      <p className="text-xs text-muted-foreground">{dietScore} / 5 stars today</p>
+   796→                    </div>
+   797→                    <div className="w-full grid grid-cols-5 gap-1">
+   798→                      {[1, 2, 3, 4, 5].map((level) => (
+   799→                        <div
+   800→                          key={level}
+   801→                          className={`h-2 rounded-full transition-colors ${
+   802→                            level <= dietScore ? 'bg-amber-400' : 'bg-amber-100 dark:bg-amber-900/20'
+   803→                          }`}
+   804→                        />
+   805→                      ))}
+   806→                    </div>
+   807→                  </div>
+   808→                </CardContent>
+   809→              </Card>
+   810→            </motion.div>
+   811→
+   812→            {/* Sleep Quality Trend */}
+   813→            <motion.div
+   814→              initial={{ opacity: 0, x: 15 }}
+   815→              animate={{ opacity: 1, x: 0 }}
+   816→              transition={{ delay: 0.2 }}
+   817→            >
+   818→              <Card className="border-indigo-200/50 dark:border-indigo-800/30">
+   819→                <CardHeader>
+   820→                  <CardTitle className="text-base flex items-center gap-2">
+   821→                    <Moon className="h-4 w-4 text-indigo-500" /> Sleep Quality Trend
+   822→                  </CardTitle>
+   823→                  <CardDescription>Monthly average (1-5 scale)</CardDescription>
+   824→                </CardHeader>
+   825→                <CardContent>
+   826→                  <div className="h-[180px] w-full">
+   827→                    <ResponsiveContainer width="100%" height="100%">
+   828→                      <LineChart data={sleepQualityData}>
+   829→                        <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+   830→                        <XAxis dataKey="month" tick={{ fontSize: 9 }} stroke="#9ca3af" />
+   831→                        <YAxis domain={[0, 5]} tick={{ fontSize: 9 }} stroke="#9ca3af" />
+   832→                        <Tooltip
+   833→                          contentStyle={{ borderRadius: '12px', border: '1px solid #a5b4fc' }}
+   834→                          formatter={(value: number) => [`${value}/5`, 'Quality']}
+   835→                        />
+   836→                        <Line
+   837→                          type="monotone"
+   838→                          dataKey="quality"
+   839→                          stroke="#818cf8"
+   840→                          strokeWidth={2.5}
+   841→                          dot={{ r: 3, fill: '#818cf8', stroke: '#fff', strokeWidth: 2 }}
+   842→                        />
+   843→                      </LineChart>
+   844→                    </ResponsiveContainer>
+   845→                  </div>
+   846→                </CardContent>
+   847→              </Card>
+   848→            </motion.div>
+   849→          </div>
+   850→        </TabsContent>
+   851→
+   852→        {/* ─── AI Recommendations ─────────────────────────────────────── */}
+   853→        <TabsContent value="recommendations" className="mt-4 space-y-4">
+   854→          <motion.div
+   855→            initial={{ opacity: 0, y: 15 }}
+   856→            animate={{ opacity: 1, y: 0 }}
+   857→            transition={{ duration: 0.4 }}
+   858→          >
+   859→            <Card className="border-emerald-200/50 dark:border-emerald-800/30 bg-gradient-to-br from-emerald-50/30 to-amber-50/30 dark:from-emerald-950/10 dark:to-amber-950/10">
+   860→              <CardHeader>
+   861→                <CardTitle className="flex items-center gap-2">
+   862→                  <Sparkles className="h-5 w-5 text-emerald-500" /> AI Recommendations
+   863→                </CardTitle>
+   864→                <CardDescription>
+   865→                  Personalized tips based on your reported symptoms
+   866→                </CardDescription>
+   867→              </CardHeader>
+   868→              <CardContent className="space-y-5">
+   869→                {recommendations.map((rec, index) => (
+   870→                  <motion.div
+   871→                    key={rec.category}
+   872→                    initial={{ opacity: 0, x: -20 }}
+   873→                    animate={{ opacity: 1, x: 0 }}
+   874→                    transition={{ delay: index * 0.15 }}
+   875→                    className="rounded-xl bg-white/70 dark:bg-card/50 border border-emerald-100 dark:border-emerald-900/30 overflow-hidden"
+   876→                  >
+   877→                    <div className="flex items-center justify-between p-4 pb-3">
+   878→                      <div className="flex items-center gap-2.5">
+   879→                        {rec.icon}
+   880→                        <h4 className="font-semibold text-sm">{rec.category}</h4>
+   881→                      </div>
+   882→                      <Badge className={`text-[9px] px-2 py-0.5 ${priorityColors[rec.priority]}`} variant="secondary">
+   883→                        {rec.priority.toUpperCase()}
+   884→                      </Badge>
+   885→                    </div>
+   886→                    <Separator />
+   887→                    <ul className="p-4 space-y-2.5">
+   888→                      {rec.items.map((item, i) => (
+   889→                        <motion.li
+   890→                          key={i}
+   891→                          initial={{ opacity: 0, x: -10 }}
+   892→                          animate={{ opacity: 1, x: 0 }}
+   893→                          transition={{ delay: index * 0.15 + i * 0.08 }}
+   894→                          className="flex items-start gap-2.5 text-sm text-muted-foreground"
+   895→                        >
+   896→                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+   897→                          <span>{item}</span>
+   898→                        </motion.li>
+   899→                      ))}
+   900→                    </ul>
+   901→                  </motion.div>
+   902→                ))}
+   903→              </CardContent>
+   904→            </Card>
+   905→          </motion.div>
+   906→        </TabsContent>
+   907→
+   908→        {/* ─── PCOS Report Card ────────────────────────────────────────── */}
+   909→        <TabsContent value="report" className="mt-4 space-y-6">
+   910→          <motion.div
+   911→            initial={{ opacity: 0, y: 15 }}
+   912→            animate={{ opacity: 1, y: 0 }}
+   913→            transition={{ duration: 0.4 }}
+   914→          >
+   915→            <Card className="border-violet-200/50 dark:border-violet-800/30">
+   916→              <CardHeader>
+   917→                <CardTitle className="flex items-center gap-2">
+   918→                  <FileBarChart className="h-5 w-5 text-violet-500" /> Monthly Report Card
+   919→                </CardTitle>
+   920→                <CardDescription>Your PCOS management scores for this month</CardDescription>
+   921→              </CardHeader>
+   922→              <CardContent>
+   923→                <div className="h-[350px] w-full">
+   924→                  <ResponsiveContainer width="100%" height="100%">
+   925→                    <RadarChart data={reportCardData} cx="50%" cy="50%" outerRadius="70%">
+   926→                      <PolarGrid stroke="#e5e7eb" />
+   927→                      <PolarAngleAxis dataKey="category" tick={{ fontSize: 11, fill: '#6b7280' }} />
+   928→                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: '#9ca3af' }} />
+   929→                      <Radar
+   930→                        name="This Month"
+   931→                        dataKey="score"
+   932→                        stroke="#ec4899"
+   933→                        fill="#ec4899"
+   934→                        fillOpacity={0.2}
+   935→                        strokeWidth={2}
+   936→                      />
+   937→                    </RadarChart>
+   938→                  </ResponsiveContainer>
+   939→                </div>
+   940→              </CardContent>
+   941→            </Card>
+   942→          </motion.div>
+   943→
+   944→          {/* Individual scores */}
+   945→          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   946→            {reportCardData.map((item, index) => (
+   947→              <motion.div
+   948→                key={item.category}
+   949→                initial={{ opacity: 0, y: 10 }}
+   950→                animate={{ opacity: 1, y: 0 }}
+   951→                transition={{ delay: index * 0.08 }}
+   952→                whileHover={{ y: -2 }}
+   953→              >
+   954→                <Card className="overflow-hidden">
+   955→                  <div
+   956→                    className="h-1.5"
+   957→                    style={{
+   958→                      backgroundColor:
+   959→                        item.score >= 80 ? '#22c55e' : item.score >= 60 ? '#f59e0b' : '#ef4444',
+   960→                    }}
+   961→                  />
+   962→                  <CardContent className="p-4">
+   963→                    <div className="flex items-center justify-between mb-2">
+   964→                      <span className="text-sm font-medium">{item.category}</span>
+   965→                      <span
+   966→                        className="text-lg font-bold"
+   967→                        style={{
+   968→                          color:
+   969→                            item.score >= 80 ? '#22c55e' : item.score >= 60 ? '#f59e0b' : '#ef4444',
+   970→                        }}
+   971→                      >
+   972→                        {item.score}
+   973→                      </span>
+   974→                    </div>
+   975→                    <Progress
+   976→                      value={item.score}
+   977→                      className="h-2"
+   978→                    />
+   979→                    <p className="text-[10px] text-muted-foreground mt-1.5">
+   980→                      {item.score >= 80
+   981→                        ? 'Excellent! Keep it up!'
+   982→                        : item.score >= 60
+   983→                          ? 'Good progress, room for improvement'
+   984→                          : 'Needs attention'}
+   985→                    </p>
+   986→                  </CardContent>
+   987→                </Card>
+   988→              </motion.div>
+   989→            ))}
+   990→          </div>
+   991→        </TabsContent>
+   992→
+   993→        {/* ─── Resource Library ────────────────────────────────────────── */}
+   994→        <TabsContent value="resources" className="mt-4">
+   995→          <motion.div
+   996→            initial={{ opacity: 0, y: 15 }}
+   997→            animate={{ opacity: 1, y: 0 }}
+   998→            transition={{ duration: 0.4 }}
+   999→          >
+  1000→            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  1001→              {resourceLibrary.map((resource, index) => (
+  1002→                <motion.div
+  1003→                  key={resource.title}
+  1004→                  initial={{ opacity: 0, y: 15 }}
+  1005→                  animate={{ opacity: 1, y: 0 }}
+  1006→                  transition={{ delay: index * 0.1 }}
+  1007→                  whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(0,0,0,0.08)' }}
+  1008→                  className="cursor-pointer group"
+  1009→                >
+  1010→                  <Card className="overflow-hidden h-full">
+  1011→                    <div className={`h-24 bg-gradient-to-r ${resource.color} flex items-center justify-center relative`}>
+  1012→                      <BookOpen className="h-10 w-10 text-white/70" />
+  1013→                      <div className="absolute top-2 right-2">
+  1014→                        <Badge className="bg-white/20 text-white border-0 text-[9px]">
+  1015→                          {resource.category}
+  1016→                        </Badge>
+  1017→                      </div>
+  1018→                    </div>
+  1019→                    <CardContent className="p-4">
+  1020→                      <h4 className="font-semibold text-sm mb-1 group-hover:text-pink-600 transition-colors flex items-center gap-1">
+  1021→                        {resource.title}
+  1022→                        <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+  1023→                      </h4>
+  1024→                      <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+  1025→                        {resource.description}
+  1026→                      </p>
+  1027→                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+  1028→                        <Clock className="h-3 w-3" />
+  1029→                        <span>{resource.readTime} read</span>
+  1030→                      </div>
+  1031→                    </CardContent>
+  1032→                  </Card>
+  1033→                </motion.div>
+  1034→              ))}
+  1035→            </div>
+  1036→          </motion.div>
+  1037→        </TabsContent>
+  1038→      </Tabs>
+  1039→    </div>
+  1040→  )
+  1041→}
+  1042→

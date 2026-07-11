@@ -1,0 +1,1030 @@
+- main
+  - sectionheader
+    - button [ref=e6]
+    - StaticText "PCOS Care"
+    - textbox "Search..." [ref=e59]
+    - StaticText "05:19 AM"
+    - button [ref=e7]
+    - StaticText "U"
+  - heading "PCOS Management" [level=1, ref=e3]
+  - paragraph
+    - StaticText "Track symptoms, get insights, and manage your PCOS journey"
+  - tablist [ref=e4] focusable [tabindex]
+    - tab "Overview" [ref=e8]
+      - StaticText "Overview"
+    - tab "Symptoms" [ref=e9]
+      - StaticText "Symptoms"
+    - tab "Tracking" [ref=e10]
+      - StaticText "Tracking"
+    - tab "AI Tips" [ref=e11]
+      - StaticText "AI Tips"
+    - tab "Report" [ref=e12]
+      - StaticText "Report"
+    - tab "Research" [selected, ref=e13]
+      - StaticText "Research"
+    - tab "Resources" [ref=e14]
+      - StaticText "Resources"
+  - tabpanel "Research" [ref=e5] focusable [tabindex]
+    - heading "Research & Learn Education Hub" [level=3, ref=e15]
+      - StaticText "Research & Learn"
+      - StaticText "Education Hub"
+    - paragraph
+      - StaticText "Evidence-based information to help you understand PCOS — from underlying causes and symptom patterns to diagnosis, treatment, and long-term health. Always discuss what you learn with your healthcare provider."
+    - StaticText "What is PCOS?"
+    - StaticText "A comprehensive overview of Polycystic Ovary Syndrome"
+    - heading "Definition & Overview" [level=3, ref=e16]
+      - button "Definition & Overview" [expanded=false, ref=e60]
+        - StaticText "Definition & Overview"
+    - heading "Prevalence & Who It Affects" [level=3, ref=e17]
+      - button "Prevalence & Who It Affects" [expanded=false, ref=e61]
+        - StaticText "Prevalence & Who It Affects"
+    - heading "Key Characteristics" [level=3, ref=e18]
+      - button "Key Characteristics" [expanded=false, ref=e62]
+        - StaticText "Key Characteristics"
+    - StaticText "Causes & Risk Factors"
+    - StaticText "The four main drivers behind PCOS"
+    - heading "Insulin Resistance" [level=4, ref=e19]
+    - paragraph
+      - StaticText "Up to 70% of women with PCOS have insulin resistance. Cells respond poorly to insulin, so the pancreas produces more — which in turn stimulates the ovaries to make extra androgens."
+    - heading "Hormonal Imbalance (High Androgens)" [level=4, ref=e20]
+    - paragraph
+      - StaticText "Elevated testosterone and other male hormones disrupt ovulation and drive symptoms like acne, excess facial/body hair, and thinning scalp hair. LH-to-FSH ratio is often skewed (≥2:1)."
+    - heading "Genetics & Family History" [level=4, ref=e21]
+    - paragraph
+      - StaticText "PCOS runs in families. Having a mother or sister with PCOS significantly raises your risk. Multiple genes are believed to be involved, interacting with environmental factors."
+    - heading "Low-Grade Inflammation" [level=4, ref=e22]
+    - paragraph
+      - StaticText "Women with PCOS often have chronic low-grade inflammation. This stimulates polycystic ovaries to produce androgens, fueling a self-reinforcing cycle of hormonal imbalance."
+    - StaticText "Symptoms to Watch"
+    - StaticText "Common signs of PCOS with severity indicators"
+    - StaticText "Very Common"
+    - heading "Irregular Periods" [level=4, ref=e23]
+    - paragraph
+      - StaticText "Cycles shorter than 21 days or longer than 35 days, skipped periods, or very heavy bleeding. Caused by lack of ovulation."
+    - StaticText "Common"
+    - heading "Excess Androgen (Hirsutism, Acne)" [level=4, ref=e24]
+    - paragraph
+      - StaticText "Dark facial/body hair (chin, chest, abdomen), persistent adult acne, and oily skin due to elevated testosterone levels."
+    - StaticText "Common"
+    - heading "Polycystic Ovaries" [level=4, ref=e25]
+    - paragraph
+      - StaticText "Enlarged ovaries containing 12 or more small follicles (cysts) visible on ultrasound. Note: cysts alone do NOT confirm PCOS."
+    - StaticText "Common"
+    - heading "Weight Gain" [level=4, ref=e26]
+    - paragraph
+      - StaticText "Difficulty losing weight, especially around the abdomen. Insulin resistance makes weight management more challenging."
+    - StaticText "Less Common"
+    - heading "Hair Thinning" [level=4, ref=e27]
+    - paragraph
+      - StaticText "Male-pattern baldness, thinning at the crown, or widening part line. Caused by high androgens affecting hair follicles."
+    - StaticText "Less Common"
+    - heading "Skin Tags & Darkening" [level=4, ref=e28]
+    - paragraph
+      - StaticText "Small soft skin growths and dark, velvety patches (acanthosis nigricans) in skin folds — signs of insulin resistance."
+    - StaticText "PCOS Types"
+    - StaticText "Not all PCOS is the same — identifying your type guides treatment"
+    - StaticText "~70%"
+    - heading "Insulin-Resistant PCOS" [level=4, ref=e29]
+    - StaticText "Markers:"
+    - StaticText "High insulin, high testosterone, weight gain"
+    - StaticText "Root cause:"
+    - StaticText "Insulin resistance driving ovarian androgen production"
+    - StaticText "Approach:"
+    - StaticText "Low-GI diet, strength training, Metformin, Inositol"
+    - StaticText "~10%"
+    - heading "Adrenal PCOS" [level=4, ref=e30]
+    - StaticText "Markers:"
+    - StaticText "High DHEA-S, normal insulin & testosterone"
+    - StaticText "Root cause:"
+    - StaticText "Chronic stress driving adrenal androgen output"
+    - StaticText "Approach:"
+    - StaticText "Stress management, adaptogens, sleep, gentle exercise"
+    - StaticText "~15%"
+    - heading "Post-Pill PCOS" [level=4, ref=e31]
+    - StaticText "Markers:"
+    - StaticText "Symptoms appear within months of stopping birth control"
+    - StaticText "Root cause:"
+    - StaticText "Temporary androgen surge after contraceptive withdrawal"
+    - StaticText "Approach:"
+    - StaticText "Patience (6–12 months), liver support, blood sugar balance"
+    - StaticText "~5–10%"
+    - heading "Inflammatory PCOS" [level=4, ref=e32]
+    - StaticText "Markers:"
+    - StaticText "Elevated CRP, food sensitivities, IBS, joint pain"
+    - StaticText "Root cause:"
+    - StaticText "Chronic inflammation from diet, gut, or environment"
+    - StaticText "Approach:"
+    - StaticText "Anti-inflammatory diet, gut healing, key supplements"
+    - StaticText "Long-term Health Impact"
+    - StaticText "Risks associated with unmanaged PCOS — and how to reduce them"
+    - StaticText "50%"
+    - StaticText "risk by age 40"
+    - heading "Type 2 Diabetes" [level=4, ref=e33]
+    - paragraph
+      - StaticText "More than half of women with PCOS develop type 2 diabetes by age 40 due to insulin resistance."
+    - paragraph
+      - StaticText "Prevention: Annual glucose screening, low-sugar diet, regular exercise, Metformin if prescribed."
+    - StaticText "2×"
+    - StaticText "higher risk"
+    - heading "Cardiovascular Disease" [level=4, ref=e34]
+    - paragraph
+      - StaticText "PCOS raises the risk of high blood pressure, cholesterol issues, and heart disease."
+    - paragraph
+      - StaticText "Prevention: Manage weight, control lipids, avoid smoking, eat heart-healthy fats & fiber."
+    - StaticText "2.7×"
+    - StaticText "higher risk"
+    - heading "Endometrial Cancer" [level=4, ref=e35]
+    - paragraph
+      - StaticText "Infrequent periods cause endometrial buildup, increasing cancer risk over time."
+    - paragraph
+      - StaticText "Prevention: Induce a period at least every 3 months (progestin therapy) to shed the lining."
+    - StaticText "70–80%"
+    - StaticText "with ovulation issues"
+    - heading "Infertility" [level=4, ref=e36]
+    - paragraph
+      - StaticText "PCOS is the leading cause of anovulatory infertility, but most women can conceive with treatment."
+    - paragraph
+      - StaticText "Prevention: Ovulation induction (Clomid/Letrozole), lifestyle changes, IVF if needed."
+    - StaticText "5×"
+    - StaticText "higher risk"
+    - heading "Sleep Apnea" [level=4, ref=e37]
+    - paragraph
+      - StaticText "Sleep apnea is significantly more common in women with PCOS — independent of body weight."
+    - paragraph
+      - StaticText "Prevention: Sleep study if snoring or fatigue, weight management, side-sleeping, avoid alcohol."
+    - StaticText "3×"
+    - StaticText "higher risk"
+    - heading "Depression & Anxiety" [level=4, ref=e38]
+    - paragraph
+      - StaticText "Hormonal shifts, inflammation, and the emotional toll of chronic symptoms take a real toll."
+    - paragraph
+      - StaticText "Prevention: Therapy, social support, regular movement, mindfulness, treat underlying hormones."
+    - StaticText "Diagnosis & Testing"
+    - StaticText "How PCOS is identified and confirmed"
+    - heading "Rotterdam Criteria" [level=4, ref=e39]
+    - paragraph
+      - StaticText "Diagnosis requires "
+      - strong
+        - StaticText "at least 2 of the 3"
+      - StaticText " criteria below (after excluding other conditions):"
+    - StaticText "1"
+    - StaticText "Irregular or absent ovulation"
+    - paragraph
+      - StaticText "Cycles under 21 or over 35 days"
+    - StaticText "2"
+    - StaticText "High androgen levels"
+    - paragraph
+      - StaticText "Blood test or physical signs"
+    - StaticText "3"
+    - StaticText "Polycystic ovaries"
+    - paragraph
+      - StaticText "12+ follicles on ultrasound"
+    - heading "Key Blood Tests" [level=4, ref=e40]
+    - list
+      - listitem [level=1]
+        - StaticText "Total & free testosterone"
+      - listitem [level=1]
+        - StaticText "LH / FSH ratio (often ≥ 2:1 in PCOS)"
+      - listitem [level=1]
+        - StaticText "Fasting glucose & insulin (HOMA-IR)"
+      - listitem [level=1]
+        - StaticText "DHEA-S (adrenal androgen)"
+      - listitem [level=1]
+        - StaticText "Lipid panel (cholesterol, triglycerides)"
+      - listitem [level=1]
+        - StaticText "Thyroid panel (to rule out thyroid causes)"
+      - listitem [level=1]
+        - StaticText "Prolactin (to exclude other conditions)"
+      - listitem [level=1]
+        - StaticText "Sex hormone binding globulin (SHBG)"
+      - listitem [level=1]
+        - StaticText "Hemoglobin A1C (3-month blood sugar)"
+      - listitem [level=1]
+        - StaticText "Anti-Müllerian Hormone (AMH)"
+    - heading "Pelvic Ultrasound" [level=4, ref=e41]
+    - paragraph
+      - StaticText "A transvaginal or abdominal ultrasound checks for "
+      - strong
+        - StaticText "12 or more follicles (2–9mm)"
+      - StaticText " or enlarged ovarian volume. However, ultrasound is "
+      - strong
+        - StaticText "not required"
+      - StaticText " for diagnosis if the other two Rotterdam criteria are met."
+    - heading "When to Get Tested" [level=4, ref=e42]
+    - paragraph
+      - StaticText "Consider evaluation if you have "
+      - strong
+        - StaticText "irregular periods, excess hair growth, persistent acne, or unexplained weight gain"
+      - StaticText " — especially if symptoms persist for 2+ cycles. Early testing shortens the typical 2–3 year diagnostic delay."
+    - StaticText "Treatment Approaches"
+    - StaticText "Expand each category to learn more"
+    - heading "Lifestyle Modifications The first-line treatment for all PCOS types — and the foundation every other approach builds upon." [level=3, ref=e43]
+      - button "Lifestyle Modifications The first-line treatment for all PCOS types — and the foundation every other approach builds upon." [expanded=false, ref=e63]
+        - StaticText "Lifestyle Modifications"
+        - StaticText "The first-line treatment for all PCOS types — and the foundation every other approach builds upon."
+    - heading "Medications Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)." [level=3, ref=e44]
+      - button "Medications Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)." [expanded=false, ref=e64]
+        - StaticText "Medications"
+        - StaticText "Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)."
+    - heading "Natural Supplements May complement lifestyle and medication. Always consult your provider before starting — doses matter." [level=3, ref=e45]
+      - button "Natural Supplements May complement lifestyle and medication. Always consult your provider before starting — doses matter." [expanded=false, ref=e65]
+        - StaticText "Natural Supplements"
+        - StaticText "May complement lifestyle and medication. Always consult your provider before starting — doses matter."
+    - StaticText "Latest Research & Statistics"
+    - StaticText "Key data points from global PCOS research"
+    - StaticText "8–13%"
+    - StaticText "Global Prevalence"
+    - StaticText "of reproductive-age women"
+    - StaticText "2–3 yrs"
+    - StaticText "Time to Diagnosis"
+    - StaticText "average delay worldwide"
+    - StaticText "60–80%"
+    - StaticText "Lifestyle Success"
+    - StaticText "symptom improvement with changes"
+    - StaticText "70–80%"
+    - StaticText "Pregnancy Success"
+    - StaticText "with ovulation induction"
+    - paragraph
+      - StaticText "Sources: WHO, NIH, Monash University PCOS Guidelines, and peer-reviewed studies."
+    - StaticText "Myths vs Facts"
+    - StaticText "Clearing up common misconceptions about PCOS"
+    - StaticText "MYTH"
+    - paragraph
+      - StaticText "PCOS means you have cysts on your ovaries."
+    - StaticText "FACT"
+    - paragraph
+      - StaticText "Not always — many women with PCOS do not have cysts, and many women with cysts do not have PCOS. Diagnosis requires 2 of 3 Rotterdam criteria."
+    - StaticText "MYTH"
+    - paragraph
+      - StaticText "You can't get pregnant with PCOS."
+    - StaticText "FACT"
+    - paragraph
+      - StaticText "Many women with PCOS conceive naturally or with treatment. Up to 80% success rate with ovulation induction (Clomid/Letrozole)."
+    - StaticText "MYTH"
+    - paragraph
+      - StaticText "PCOS only affects overweight women."
+    - StaticText "FACT"
+    - paragraph
+      - StaticText "PCOS affects women of all sizes. Lean PCOS is real and often under-diagnosed because weight is mistakenly used as a gatekeeper symptom."
+    - StaticText "MYTH"
+    - paragraph
+      - StaticText "PCOS goes away after menopause."
+    - StaticText "FACT"
+    - paragraph
+      - StaticText "Symptoms may change, but the underlying metabolic issues (insulin resistance, diabetes risk) persist and require lifelong management."
+    - StaticText "MYTH"
+    - paragraph
+      - StaticText "Birth control cures PCOS."
+    - StaticText "FACT"
+    - paragraph
+      - StaticText "Birth control manages symptoms (cycles, acne, hair) but does not treat the root cause. Symptoms often return when stopped."
+    - StaticText "Frequently Asked Questions"
+    - StaticText "Answers to the questions women ask most about PCOS"
+    - heading "Is PCOS curable?" [level=3, ref=e46]
+      - button "Is PCOS curable?" [expanded=false, ref=e66]
+        - StaticText "Is PCOS curable?"
+    - heading "Can I get pregnant with PCOS?" [level=3, ref=e47]
+      - button "Can I get pregnant with PCOS?" [expanded=false, ref=e67]
+        - StaticText "Can I get pregnant with PCOS?"
+    - heading "Does PCOS cause weight gain?" [level=3, ref=e48]
+      - button "Does PCOS cause weight gain?" [expanded=false, ref=e68]
+        - StaticText "Does PCOS cause weight gain?"
+    - heading "Is PCOS genetic?" [level=3, ref=e49]
+      - button "Is PCOS genetic?" [expanded=false, ref=e69]
+        - StaticText "Is PCOS genetic?"
+    - heading "Can diet really help PCOS?" [level=3, ref=e50]
+      - button "Can diet really help PCOS?" [expanded=false, ref=e70]
+        - StaticText "Can diet really help PCOS?"
+    - heading "What foods should I avoid with PCOS?" [level=3, ref=e51]
+      - button "What foods should I avoid with PCOS?" [expanded=false, ref=e71]
+        - StaticText "What foods should I avoid with PCOS?"
+    - heading "How long does it take to see results from lifestyle changes?" [level=3, ref=e52]
+      - button "How long does it take to see results from lifestyle changes?" [expanded=false, ref=e72]
+        - StaticText "How long does it take to see results from lifestyle changes?"
+    - heading "When should I see a specialist?" [level=3, ref=e53]
+      - button "When should I see a specialist?" [expanded=false, ref=e73]
+        - StaticText "When should I see a specialist?"
+    - StaticText "Recommended Reading"
+    - StaticText "Trusted sources for further research"
+    - link "PCOS Awareness Association Education, advocacy, and community support for women with PCOS. https://pcosawarenessassociation.org" [ref=e54]
+      - heading "PCOS Awareness Association" [level=4, ref=e74]
+      - paragraph
+        - StaticText "Education, advocacy, and community support for women with PCOS."
+      - paragraph
+        - StaticText "https://pcosawarenessassociation.org"
+    - link "CDC — PCOS Information U.S. government resource on PCOS and its link to diabetes. https://www.cdc.gov/diabetes/about/pcos.html" [ref=e55]
+      - heading "CDC — PCOS Information" [level=4, ref=e75]
+      - paragraph
+        - StaticText "U.S. government resource on PCOS and its link to diabetes."
+      - paragraph
+        - StaticText "https://www.cdc.gov/diabetes/about/pcos.html"
+    - link "Mayo Clinic — PCOS Comprehensive medical overview of causes, symptoms, and treatment. https://www.mayoclinic.org/diseases-conditions/pcos" [ref=e56]
+      - heading "Mayo Clinic — PCOS" [level=4, ref=e76]
+      - paragraph
+        - StaticText "Comprehensive medical overview of causes, symptoms, and treatment."
+      - paragraph
+        - StaticText "https://www.mayoclinic.org/diseases-conditions/pcos"
+    - link "NIH — PCOS Research Latest research, clinical trials, and evidence-based information. https://www.nichd.nih.gov/health/topics/pcos" [ref=e57]
+      - heading "NIH — PCOS Research" [level=4, ref=e77]
+      - paragraph
+        - StaticText "Latest research, clinical trials, and evidence-based information."
+      - paragraph
+        - StaticText "https://www.nichd.nih.gov/health/topics/pcos"
+    - link "Office on Women's Health Trusted government resource covering all aspects of PCOS care. https://www.womenshealth.gov/pcos" [ref=e58]
+      - heading "Office on Women's Health" [level=4, ref=e78]
+      - paragraph
+        - StaticText "Trusted government resource covering all aspects of PCOS care."
+      - paragraph
+        - StaticText "https://www.womenshealth.gov/pcos"
+    - paragraph
+      - strong
+        - StaticText "Medical disclaimer:"
+      - StaticText " This educational content is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your healthcare provider before making decisions about your PCOS care."
+- heading "PCOS Management" [level=1, ref=e3]
+- paragraph
+  - StaticText "Track symptoms, get insights, and manage your PCOS journey"
+- tablist [ref=e4] focusable [tabindex]
+  - tab "Overview" [ref=e8]
+    - StaticText "Overview"
+  - tab "Symptoms" [ref=e9]
+    - StaticText "Symptoms"
+  - tab "Tracking" [ref=e10]
+    - StaticText "Tracking"
+  - tab "AI Tips" [ref=e11]
+    - StaticText "AI Tips"
+  - tab "Report" [ref=e12]
+    - StaticText "Report"
+  - tab "Research" [selected, ref=e13]
+    - StaticText "Research"
+  - tab "Resources" [ref=e14]
+    - StaticText "Resources"
+- tabpanel "Research" [ref=e5] focusable [tabindex]
+  - heading "Research & Learn Education Hub" [level=3, ref=e15]
+    - StaticText "Research & Learn"
+    - StaticText "Education Hub"
+  - paragraph
+    - StaticText "Evidence-based information to help you understand PCOS — from underlying causes and symptom patterns to diagnosis, treatment, and long-term health. Always discuss what you learn with your healthcare provider."
+  - StaticText "What is PCOS?"
+  - StaticText "A comprehensive overview of Polycystic Ovary Syndrome"
+  - heading "Definition & Overview" [level=3, ref=e16]
+    - button "Definition & Overview" [expanded=false, ref=e60]
+      - StaticText "Definition & Overview"
+  - heading "Prevalence & Who It Affects" [level=3, ref=e17]
+    - button "Prevalence & Who It Affects" [expanded=false, ref=e61]
+      - StaticText "Prevalence & Who It Affects"
+  - heading "Key Characteristics" [level=3, ref=e18]
+    - button "Key Characteristics" [expanded=false, ref=e62]
+      - StaticText "Key Characteristics"
+  - StaticText "Causes & Risk Factors"
+  - StaticText "The four main drivers behind PCOS"
+  - heading "Insulin Resistance" [level=4, ref=e19]
+  - paragraph
+    - StaticText "Up to 70% of women with PCOS have insulin resistance. Cells respond poorly to insulin, so the pancreas produces more — which in turn stimulates the ovaries to make extra androgens."
+  - heading "Hormonal Imbalance (High Androgens)" [level=4, ref=e20]
+  - paragraph
+    - StaticText "Elevated testosterone and other male hormones disrupt ovulation and drive symptoms like acne, excess facial/body hair, and thinning scalp hair. LH-to-FSH ratio is often skewed (≥2:1)."
+  - heading "Genetics & Family History" [level=4, ref=e21]
+  - paragraph
+    - StaticText "PCOS runs in families. Having a mother or sister with PCOS significantly raises your risk. Multiple genes are believed to be involved, interacting with environmental factors."
+  - heading "Low-Grade Inflammation" [level=4, ref=e22]
+  - paragraph
+    - StaticText "Women with PCOS often have chronic low-grade inflammation. This stimulates polycystic ovaries to produce androgens, fueling a self-reinforcing cycle of hormonal imbalance."
+  - StaticText "Symptoms to Watch"
+  - StaticText "Common signs of PCOS with severity indicators"
+  - StaticText "Very Common"
+  - heading "Irregular Periods" [level=4, ref=e23]
+  - paragraph
+    - StaticText "Cycles shorter than 21 days or longer than 35 days, skipped periods, or very heavy bleeding. Caused by lack of ovulation."
+  - StaticText "Common"
+  - heading "Excess Androgen (Hirsutism, Acne)" [level=4, ref=e24]
+  - paragraph
+    - StaticText "Dark facial/body hair (chin, chest, abdomen), persistent adult acne, and oily skin due to elevated testosterone levels."
+  - StaticText "Common"
+  - heading "Polycystic Ovaries" [level=4, ref=e25]
+  - paragraph
+    - StaticText "Enlarged ovaries containing 12 or more small follicles (cysts) visible on ultrasound. Note: cysts alone do NOT confirm PCOS."
+  - StaticText "Common"
+  - heading "Weight Gain" [level=4, ref=e26]
+  - paragraph
+    - StaticText "Difficulty losing weight, especially around the abdomen. Insulin resistance makes weight management more challenging."
+  - StaticText "Less Common"
+  - heading "Hair Thinning" [level=4, ref=e27]
+  - paragraph
+    - StaticText "Male-pattern baldness, thinning at the crown, or widening part line. Caused by high androgens affecting hair follicles."
+  - StaticText "Less Common"
+  - heading "Skin Tags & Darkening" [level=4, ref=e28]
+  - paragraph
+    - StaticText "Small soft skin growths and dark, velvety patches (acanthosis nigricans) in skin folds — signs of insulin resistance."
+  - StaticText "PCOS Types"
+  - StaticText "Not all PCOS is the same — identifying your type guides treatment"
+  - StaticText "~70%"
+  - heading "Insulin-Resistant PCOS" [level=4, ref=e29]
+  - StaticText "Markers:"
+  - StaticText "High insulin, high testosterone, weight gain"
+  - StaticText "Root cause:"
+  - StaticText "Insulin resistance driving ovarian androgen production"
+  - StaticText "Approach:"
+  - StaticText "Low-GI diet, strength training, Metformin, Inositol"
+  - StaticText "~10%"
+  - heading "Adrenal PCOS" [level=4, ref=e30]
+  - StaticText "Markers:"
+  - StaticText "High DHEA-S, normal insulin & testosterone"
+  - StaticText "Root cause:"
+  - StaticText "Chronic stress driving adrenal androgen output"
+  - StaticText "Approach:"
+  - StaticText "Stress management, adaptogens, sleep, gentle exercise"
+  - StaticText "~15%"
+  - heading "Post-Pill PCOS" [level=4, ref=e31]
+  - StaticText "Markers:"
+  - StaticText "Symptoms appear within months of stopping birth control"
+  - StaticText "Root cause:"
+  - StaticText "Temporary androgen surge after contraceptive withdrawal"
+  - StaticText "Approach:"
+  - StaticText "Patience (6–12 months), liver support, blood sugar balance"
+  - StaticText "~5–10%"
+  - heading "Inflammatory PCOS" [level=4, ref=e32]
+  - StaticText "Markers:"
+  - StaticText "Elevated CRP, food sensitivities, IBS, joint pain"
+  - StaticText "Root cause:"
+  - StaticText "Chronic inflammation from diet, gut, or environment"
+  - StaticText "Approach:"
+  - StaticText "Anti-inflammatory diet, gut healing, key supplements"
+  - StaticText "Long-term Health Impact"
+  - StaticText "Risks associated with unmanaged PCOS — and how to reduce them"
+  - StaticText "50%"
+  - StaticText "risk by age 40"
+  - heading "Type 2 Diabetes" [level=4, ref=e33]
+  - paragraph
+    - StaticText "More than half of women with PCOS develop type 2 diabetes by age 40 due to insulin resistance."
+  - paragraph
+    - StaticText "Prevention: Annual glucose screening, low-sugar diet, regular exercise, Metformin if prescribed."
+  - StaticText "2×"
+  - StaticText "higher risk"
+  - heading "Cardiovascular Disease" [level=4, ref=e34]
+  - paragraph
+    - StaticText "PCOS raises the risk of high blood pressure, cholesterol issues, and heart disease."
+  - paragraph
+    - StaticText "Prevention: Manage weight, control lipids, avoid smoking, eat heart-healthy fats & fiber."
+  - StaticText "2.7×"
+  - StaticText "higher risk"
+  - heading "Endometrial Cancer" [level=4, ref=e35]
+  - paragraph
+    - StaticText "Infrequent periods cause endometrial buildup, increasing cancer risk over time."
+  - paragraph
+    - StaticText "Prevention: Induce a period at least every 3 months (progestin therapy) to shed the lining."
+  - StaticText "70–80%"
+  - StaticText "with ovulation issues"
+  - heading "Infertility" [level=4, ref=e36]
+  - paragraph
+    - StaticText "PCOS is the leading cause of anovulatory infertility, but most women can conceive with treatment."
+  - paragraph
+    - StaticText "Prevention: Ovulation induction (Clomid/Letrozole), lifestyle changes, IVF if needed."
+  - StaticText "5×"
+  - StaticText "higher risk"
+  - heading "Sleep Apnea" [level=4, ref=e37]
+  - paragraph
+    - StaticText "Sleep apnea is significantly more common in women with PCOS — independent of body weight."
+  - paragraph
+    - StaticText "Prevention: Sleep study if snoring or fatigue, weight management, side-sleeping, avoid alcohol."
+  - StaticText "3×"
+  - StaticText "higher risk"
+  - heading "Depression & Anxiety" [level=4, ref=e38]
+  - paragraph
+    - StaticText "Hormonal shifts, inflammation, and the emotional toll of chronic symptoms take a real toll."
+  - paragraph
+    - StaticText "Prevention: Therapy, social support, regular movement, mindfulness, treat underlying hormones."
+  - StaticText "Diagnosis & Testing"
+  - StaticText "How PCOS is identified and confirmed"
+  - heading "Rotterdam Criteria" [level=4, ref=e39]
+  - paragraph
+    - StaticText "Diagnosis requires "
+    - strong
+      - StaticText "at least 2 of the 3"
+    - StaticText " criteria below (after excluding other conditions):"
+  - StaticText "1"
+  - StaticText "Irregular or absent ovulation"
+  - paragraph
+    - StaticText "Cycles under 21 or over 35 days"
+  - StaticText "2"
+  - StaticText "High androgen levels"
+  - paragraph
+    - StaticText "Blood test or physical signs"
+  - StaticText "3"
+  - StaticText "Polycystic ovaries"
+  - paragraph
+    - StaticText "12+ follicles on ultrasound"
+  - heading "Key Blood Tests" [level=4, ref=e40]
+  - list
+    - listitem [level=1]
+      - StaticText "Total & free testosterone"
+    - listitem [level=1]
+      - StaticText "LH / FSH ratio (often ≥ 2:1 in PCOS)"
+    - listitem [level=1]
+      - StaticText "Fasting glucose & insulin (HOMA-IR)"
+    - listitem [level=1]
+      - StaticText "DHEA-S (adrenal androgen)"
+    - listitem [level=1]
+      - StaticText "Lipid panel (cholesterol, triglycerides)"
+    - listitem [level=1]
+      - StaticText "Thyroid panel (to rule out thyroid causes)"
+    - listitem [level=1]
+      - StaticText "Prolactin (to exclude other conditions)"
+    - listitem [level=1]
+      - StaticText "Sex hormone binding globulin (SHBG)"
+    - listitem [level=1]
+      - StaticText "Hemoglobin A1C (3-month blood sugar)"
+    - listitem [level=1]
+      - StaticText "Anti-Müllerian Hormone (AMH)"
+  - heading "Pelvic Ultrasound" [level=4, ref=e41]
+  - paragraph
+    - StaticText "A transvaginal or abdominal ultrasound checks for "
+    - strong
+      - StaticText "12 or more follicles (2–9mm)"
+    - StaticText " or enlarged ovarian volume. However, ultrasound is "
+    - strong
+      - StaticText "not required"
+    - StaticText " for diagnosis if the other two Rotterdam criteria are met."
+  - heading "When to Get Tested" [level=4, ref=e42]
+  - paragraph
+    - StaticText "Consider evaluation if you have "
+    - strong
+      - StaticText "irregular periods, excess hair growth, persistent acne, or unexplained weight gain"
+    - StaticText " — especially if symptoms persist for 2+ cycles. Early testing shortens the typical 2–3 year diagnostic delay."
+  - StaticText "Treatment Approaches"
+  - StaticText "Expand each category to learn more"
+  - heading "Lifestyle Modifications The first-line treatment for all PCOS types — and the foundation every other approach builds upon." [level=3, ref=e43]
+    - button "Lifestyle Modifications The first-line treatment for all PCOS types — and the foundation every other approach builds upon." [expanded=false, ref=e63]
+      - StaticText "Lifestyle Modifications"
+      - StaticText "The first-line treatment for all PCOS types — and the foundation every other approach builds upon."
+  - heading "Medications Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)." [level=3, ref=e44]
+    - button "Medications Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)." [expanded=false, ref=e64]
+      - StaticText "Medications"
+      - StaticText "Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)."
+  - heading "Natural Supplements May complement lifestyle and medication. Always consult your provider before starting — doses matter." [level=3, ref=e45]
+    - button "Natural Supplements May complement lifestyle and medication. Always consult your provider before starting — doses matter." [expanded=false, ref=e65]
+      - StaticText "Natural Supplements"
+      - StaticText "May complement lifestyle and medication. Always consult your provider before starting — doses matter."
+  - StaticText "Latest Research & Statistics"
+  - StaticText "Key data points from global PCOS research"
+  - StaticText "8–13%"
+  - StaticText "Global Prevalence"
+  - StaticText "of reproductive-age women"
+  - StaticText "2–3 yrs"
+  - StaticText "Time to Diagnosis"
+  - StaticText "average delay worldwide"
+  - StaticText "60–80%"
+  - StaticText "Lifestyle Success"
+  - StaticText "symptom improvement with changes"
+  - StaticText "70–80%"
+  - StaticText "Pregnancy Success"
+  - StaticText "with ovulation induction"
+  - paragraph
+    - StaticText "Sources: WHO, NIH, Monash University PCOS Guidelines, and peer-reviewed studies."
+  - StaticText "Myths vs Facts"
+  - StaticText "Clearing up common misconceptions about PCOS"
+  - StaticText "MYTH"
+  - paragraph
+    - StaticText "PCOS means you have cysts on your ovaries."
+  - StaticText "FACT"
+  - paragraph
+    - StaticText "Not always — many women with PCOS do not have cysts, and many women with cysts do not have PCOS. Diagnosis requires 2 of 3 Rotterdam criteria."
+  - StaticText "MYTH"
+  - paragraph
+    - StaticText "You can't get pregnant with PCOS."
+  - StaticText "FACT"
+  - paragraph
+    - StaticText "Many women with PCOS conceive naturally or with treatment. Up to 80% success rate with ovulation induction (Clomid/Letrozole)."
+  - StaticText "MYTH"
+  - paragraph
+    - StaticText "PCOS only affects overweight women."
+  - StaticText "FACT"
+  - paragraph
+    - StaticText "PCOS affects women of all sizes. Lean PCOS is real and often under-diagnosed because weight is mistakenly used as a gatekeeper symptom."
+  - StaticText "MYTH"
+  - paragraph
+    - StaticText "PCOS goes away after menopause."
+  - StaticText "FACT"
+  - paragraph
+    - StaticText "Symptoms may change, but the underlying metabolic issues (insulin resistance, diabetes risk) persist and require lifelong management."
+  - StaticText "MYTH"
+  - paragraph
+    - StaticText "Birth control cures PCOS."
+  - StaticText "FACT"
+  - paragraph
+    - StaticText "Birth control manages symptoms (cycles, acne, hair) but does not treat the root cause. Symptoms often return when stopped."
+  - StaticText "Frequently Asked Questions"
+  - StaticText "Answers to the questions women ask most about PCOS"
+  - heading "Is PCOS curable?" [level=3, ref=e46]
+    - button "Is PCOS curable?" [expanded=false, ref=e66]
+      - StaticText "Is PCOS curable?"
+  - heading "Can I get pregnant with PCOS?" [level=3, ref=e47]
+    - button "Can I get pregnant with PCOS?" [expanded=false, ref=e67]
+      - StaticText "Can I get pregnant with PCOS?"
+  - heading "Does PCOS cause weight gain?" [level=3, ref=e48]
+    - button "Does PCOS cause weight gain?" [expanded=false, ref=e68]
+      - StaticText "Does PCOS cause weight gain?"
+  - heading "Is PCOS genetic?" [level=3, ref=e49]
+    - button "Is PCOS genetic?" [expanded=false, ref=e69]
+      - StaticText "Is PCOS genetic?"
+  - heading "Can diet really help PCOS?" [level=3, ref=e50]
+    - button "Can diet really help PCOS?" [expanded=false, ref=e70]
+      - StaticText "Can diet really help PCOS?"
+  - heading "What foods should I avoid with PCOS?" [level=3, ref=e51]
+    - button "What foods should I avoid with PCOS?" [expanded=false, ref=e71]
+      - StaticText "What foods should I avoid with PCOS?"
+  - heading "How long does it take to see results from lifestyle changes?" [level=3, ref=e52]
+    - button "How long does it take to see results from lifestyle changes?" [expanded=false, ref=e72]
+      - StaticText "How long does it take to see results from lifestyle changes?"
+  - heading "When should I see a specialist?" [level=3, ref=e53]
+    - button "When should I see a specialist?" [expanded=false, ref=e73]
+      - StaticText "When should I see a specialist?"
+  - StaticText "Recommended Reading"
+  - StaticText "Trusted sources for further research"
+  - link "PCOS Awareness Association Education, advocacy, and community support for women with PCOS. https://pcosawarenessassociation.org" [ref=e54]
+    - heading "PCOS Awareness Association" [level=4, ref=e74]
+    - paragraph
+      - StaticText "Education, advocacy, and community support for women with PCOS."
+    - paragraph
+      - StaticText "https://pcosawarenessassociation.org"
+  - link "CDC — PCOS Information U.S. government resource on PCOS and its link to diabetes. https://www.cdc.gov/diabetes/about/pcos.html" [ref=e55]
+    - heading "CDC — PCOS Information" [level=4, ref=e75]
+    - paragraph
+      - StaticText "U.S. government resource on PCOS and its link to diabetes."
+    - paragraph
+      - StaticText "https://www.cdc.gov/diabetes/about/pcos.html"
+  - link "Mayo Clinic — PCOS Comprehensive medical overview of causes, symptoms, and treatment. https://www.mayoclinic.org/diseases-conditions/pcos" [ref=e56]
+    - heading "Mayo Clinic — PCOS" [level=4, ref=e76]
+    - paragraph
+      - StaticText "Comprehensive medical overview of causes, symptoms, and treatment."
+    - paragraph
+      - StaticText "https://www.mayoclinic.org/diseases-conditions/pcos"
+  - link "NIH — PCOS Research Latest research, clinical trials, and evidence-based information. https://www.nichd.nih.gov/health/topics/pcos" [ref=e57]
+    - heading "NIH — PCOS Research" [level=4, ref=e77]
+    - paragraph
+      - StaticText "Latest research, clinical trials, and evidence-based information."
+    - paragraph
+      - StaticText "https://www.nichd.nih.gov/health/topics/pcos"
+  - link "Office on Women's Health Trusted government resource covering all aspects of PCOS care. https://www.womenshealth.gov/pcos" [ref=e58]
+    - heading "Office on Women's Health" [level=4, ref=e78]
+    - paragraph
+      - StaticText "Trusted government resource covering all aspects of PCOS care."
+    - paragraph
+      - StaticText "https://www.womenshealth.gov/pcos"
+  - paragraph
+    - strong
+      - StaticText "Medical disclaimer:"
+    - StaticText " This educational content is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your healthcare provider before making decisions about your PCOS care."
+- button [ref=e6]
+- StaticText "PCOS Care"
+- textbox "Search..." [ref=e59]
+- StaticText "05:19 AM"
+- button [ref=e7]
+- StaticText "U"
+- heading "Research & Learn Education Hub" [level=3, ref=e15]
+  - StaticText "Research & Learn"
+  - StaticText "Education Hub"
+- paragraph
+  - StaticText "Evidence-based information to help you understand PCOS — from underlying causes and symptom patterns to diagnosis, treatment, and long-term health. Always discuss what you learn with your healthcare provider."
+- StaticText "What is PCOS?"
+- StaticText "A comprehensive overview of Polycystic Ovary Syndrome"
+- heading "Definition & Overview" [level=3, ref=e16]
+  - button "Definition & Overview" [expanded=false, ref=e60]
+    - StaticText "Definition & Overview"
+- heading "Prevalence & Who It Affects" [level=3, ref=e17]
+  - button "Prevalence & Who It Affects" [expanded=false, ref=e61]
+    - StaticText "Prevalence & Who It Affects"
+- heading "Key Characteristics" [level=3, ref=e18]
+  - button "Key Characteristics" [expanded=false, ref=e62]
+    - StaticText "Key Characteristics"
+- StaticText "Causes & Risk Factors"
+- StaticText "The four main drivers behind PCOS"
+- heading "Insulin Resistance" [level=4, ref=e19]
+- paragraph
+  - StaticText "Up to 70% of women with PCOS have insulin resistance. Cells respond poorly to insulin, so the pancreas produces more — which in turn stimulates the ovaries to make extra androgens."
+- heading "Hormonal Imbalance (High Androgens)" [level=4, ref=e20]
+- paragraph
+  - StaticText "Elevated testosterone and other male hormones disrupt ovulation and drive symptoms like acne, excess facial/body hair, and thinning scalp hair. LH-to-FSH ratio is often skewed (≥2:1)."
+- heading "Genetics & Family History" [level=4, ref=e21]
+- paragraph
+  - StaticText "PCOS runs in families. Having a mother or sister with PCOS significantly raises your risk. Multiple genes are believed to be involved, interacting with environmental factors."
+- heading "Low-Grade Inflammation" [level=4, ref=e22]
+- paragraph
+  - StaticText "Women with PCOS often have chronic low-grade inflammation. This stimulates polycystic ovaries to produce androgens, fueling a self-reinforcing cycle of hormonal imbalance."
+- StaticText "Symptoms to Watch"
+- StaticText "Common signs of PCOS with severity indicators"
+- StaticText "Very Common"
+- heading "Irregular Periods" [level=4, ref=e23]
+- paragraph
+  - StaticText "Cycles shorter than 21 days or longer than 35 days, skipped periods, or very heavy bleeding. Caused by lack of ovulation."
+- StaticText "Common"
+- heading "Excess Androgen (Hirsutism, Acne)" [level=4, ref=e24]
+- paragraph
+  - StaticText "Dark facial/body hair (chin, chest, abdomen), persistent adult acne, and oily skin due to elevated testosterone levels."
+- StaticText "Common"
+- heading "Polycystic Ovaries" [level=4, ref=e25]
+- paragraph
+  - StaticText "Enlarged ovaries containing 12 or more small follicles (cysts) visible on ultrasound. Note: cysts alone do NOT confirm PCOS."
+- StaticText "Common"
+- heading "Weight Gain" [level=4, ref=e26]
+- paragraph
+  - StaticText "Difficulty losing weight, especially around the abdomen. Insulin resistance makes weight management more challenging."
+- StaticText "Less Common"
+- heading "Hair Thinning" [level=4, ref=e27]
+- paragraph
+  - StaticText "Male-pattern baldness, thinning at the crown, or widening part line. Caused by high androgens affecting hair follicles."
+- StaticText "Less Common"
+- heading "Skin Tags & Darkening" [level=4, ref=e28]
+- paragraph
+  - StaticText "Small soft skin growths and dark, velvety patches (acanthosis nigricans) in skin folds — signs of insulin resistance."
+- StaticText "PCOS Types"
+- StaticText "Not all PCOS is the same — identifying your type guides treatment"
+- StaticText "~70%"
+- heading "Insulin-Resistant PCOS" [level=4, ref=e29]
+- StaticText "Markers:"
+- StaticText "High insulin, high testosterone, weight gain"
+- StaticText "Root cause:"
+- StaticText "Insulin resistance driving ovarian androgen production"
+- StaticText "Approach:"
+- StaticText "Low-GI diet, strength training, Metformin, Inositol"
+- StaticText "~10%"
+- heading "Adrenal PCOS" [level=4, ref=e30]
+- StaticText "Markers:"
+- StaticText "High DHEA-S, normal insulin & testosterone"
+- StaticText "Root cause:"
+- StaticText "Chronic stress driving adrenal androgen output"
+- StaticText "Approach:"
+- StaticText "Stress management, adaptogens, sleep, gentle exercise"
+- StaticText "~15%"
+- heading "Post-Pill PCOS" [level=4, ref=e31]
+- StaticText "Markers:"
+- StaticText "Symptoms appear within months of stopping birth control"
+- StaticText "Root cause:"
+- StaticText "Temporary androgen surge after contraceptive withdrawal"
+- StaticText "Approach:"
+- StaticText "Patience (6–12 months), liver support, blood sugar balance"
+- StaticText "~5–10%"
+- heading "Inflammatory PCOS" [level=4, ref=e32]
+- StaticText "Markers:"
+- StaticText "Elevated CRP, food sensitivities, IBS, joint pain"
+- StaticText "Root cause:"
+- StaticText "Chronic inflammation from diet, gut, or environment"
+- StaticText "Approach:"
+- StaticText "Anti-inflammatory diet, gut healing, key supplements"
+- StaticText "Long-term Health Impact"
+- StaticText "Risks associated with unmanaged PCOS — and how to reduce them"
+- StaticText "50%"
+- StaticText "risk by age 40"
+- heading "Type 2 Diabetes" [level=4, ref=e33]
+- paragraph
+  - StaticText "More than half of women with PCOS develop type 2 diabetes by age 40 due to insulin resistance."
+- paragraph
+  - StaticText "Prevention: Annual glucose screening, low-sugar diet, regular exercise, Metformin if prescribed."
+- StaticText "2×"
+- StaticText "higher risk"
+- heading "Cardiovascular Disease" [level=4, ref=e34]
+- paragraph
+  - StaticText "PCOS raises the risk of high blood pressure, cholesterol issues, and heart disease."
+- paragraph
+  - StaticText "Prevention: Manage weight, control lipids, avoid smoking, eat heart-healthy fats & fiber."
+- StaticText "2.7×"
+- StaticText "higher risk"
+- heading "Endometrial Cancer" [level=4, ref=e35]
+- paragraph
+  - StaticText "Infrequent periods cause endometrial buildup, increasing cancer risk over time."
+- paragraph
+  - StaticText "Prevention: Induce a period at least every 3 months (progestin therapy) to shed the lining."
+- StaticText "70–80%"
+- StaticText "with ovulation issues"
+- heading "Infertility" [level=4, ref=e36]
+- paragraph
+  - StaticText "PCOS is the leading cause of anovulatory infertility, but most women can conceive with treatment."
+- paragraph
+  - StaticText "Prevention: Ovulation induction (Clomid/Letrozole), lifestyle changes, IVF if needed."
+- StaticText "5×"
+- StaticText "higher risk"
+- heading "Sleep Apnea" [level=4, ref=e37]
+- paragraph
+  - StaticText "Sleep apnea is significantly more common in women with PCOS — independent of body weight."
+- paragraph
+  - StaticText "Prevention: Sleep study if snoring or fatigue, weight management, side-sleeping, avoid alcohol."
+- StaticText "3×"
+- StaticText "higher risk"
+- heading "Depression & Anxiety" [level=4, ref=e38]
+- paragraph
+  - StaticText "Hormonal shifts, inflammation, and the emotional toll of chronic symptoms take a real toll."
+- paragraph
+  - StaticText "Prevention: Therapy, social support, regular movement, mindfulness, treat underlying hormones."
+- StaticText "Diagnosis & Testing"
+- StaticText "How PCOS is identified and confirmed"
+- heading "Rotterdam Criteria" [level=4, ref=e39]
+- paragraph
+  - StaticText "Diagnosis requires "
+  - strong
+    - StaticText "at least 2 of the 3"
+  - StaticText " criteria below (after excluding other conditions):"
+- StaticText "1"
+- StaticText "Irregular or absent ovulation"
+- paragraph
+  - StaticText "Cycles under 21 or over 35 days"
+- StaticText "2"
+- StaticText "High androgen levels"
+- paragraph
+  - StaticText "Blood test or physical signs"
+- StaticText "3"
+- StaticText "Polycystic ovaries"
+- paragraph
+  - StaticText "12+ follicles on ultrasound"
+- heading "Key Blood Tests" [level=4, ref=e40]
+- list
+  - listitem [level=1]
+    - StaticText "Total & free testosterone"
+  - listitem [level=1]
+    - StaticText "LH / FSH ratio (often ≥ 2:1 in PCOS)"
+  - listitem [level=1]
+    - StaticText "Fasting glucose & insulin (HOMA-IR)"
+  - listitem [level=1]
+    - StaticText "DHEA-S (adrenal androgen)"
+  - listitem [level=1]
+    - StaticText "Lipid panel (cholesterol, triglycerides)"
+  - listitem [level=1]
+    - StaticText "Thyroid panel (to rule out thyroid causes)"
+  - listitem [level=1]
+    - StaticText "Prolactin (to exclude other conditions)"
+  - listitem [level=1]
+    - StaticText "Sex hormone binding globulin (SHBG)"
+  - listitem [level=1]
+    - StaticText "Hemoglobin A1C (3-month blood sugar)"
+  - listitem [level=1]
+    - StaticText "Anti-Müllerian Hormone (AMH)"
+- heading "Pelvic Ultrasound" [level=4, ref=e41]
+- paragraph
+  - StaticText "A transvaginal or abdominal ultrasound checks for "
+  - strong
+    - StaticText "12 or more follicles (2–9mm)"
+  - StaticText " or enlarged ovarian volume. However, ultrasound is "
+  - strong
+    - StaticText "not required"
+  - StaticText " for diagnosis if the other two Rotterdam criteria are met."
+- heading "When to Get Tested" [level=4, ref=e42]
+- paragraph
+  - StaticText "Consider evaluation if you have "
+  - strong
+    - StaticText "irregular periods, excess hair growth, persistent acne, or unexplained weight gain"
+  - StaticText " — especially if symptoms persist for 2+ cycles. Early testing shortens the typical 2–3 year diagnostic delay."
+- StaticText "Treatment Approaches"
+- StaticText "Expand each category to learn more"
+- heading "Lifestyle Modifications The first-line treatment for all PCOS types — and the foundation every other approach builds upon." [level=3, ref=e43]
+  - button "Lifestyle Modifications The first-line treatment for all PCOS types — and the foundation every other approach builds upon." [expanded=false, ref=e63]
+    - StaticText "Lifestyle Modifications"
+    - StaticText "The first-line treatment for all PCOS types — and the foundation every other approach builds upon."
+- heading "Medications Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)." [level=3, ref=e44]
+  - button "Medications Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)." [expanded=false, ref=e64]
+    - StaticText "Medications"
+    - StaticText "Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)."
+- heading "Natural Supplements May complement lifestyle and medication. Always consult your provider before starting — doses matter." [level=3, ref=e45]
+  - button "Natural Supplements May complement lifestyle and medication. Always consult your provider before starting — doses matter." [expanded=false, ref=e65]
+    - StaticText "Natural Supplements"
+    - StaticText "May complement lifestyle and medication. Always consult your provider before starting — doses matter."
+- StaticText "Latest Research & Statistics"
+- StaticText "Key data points from global PCOS research"
+- StaticText "8–13%"
+- StaticText "Global Prevalence"
+- StaticText "of reproductive-age women"
+- StaticText "2–3 yrs"
+- StaticText "Time to Diagnosis"
+- StaticText "average delay worldwide"
+- StaticText "60–80%"
+- StaticText "Lifestyle Success"
+- StaticText "symptom improvement with changes"
+- StaticText "70–80%"
+- StaticText "Pregnancy Success"
+- StaticText "with ovulation induction"
+- paragraph
+  - StaticText "Sources: WHO, NIH, Monash University PCOS Guidelines, and peer-reviewed studies."
+- StaticText "Myths vs Facts"
+- StaticText "Clearing up common misconceptions about PCOS"
+- StaticText "MYTH"
+- paragraph
+  - StaticText "PCOS means you have cysts on your ovaries."
+- StaticText "FACT"
+- paragraph
+  - StaticText "Not always — many women with PCOS do not have cysts, and many women with cysts do not have PCOS. Diagnosis requires 2 of 3 Rotterdam criteria."
+- StaticText "MYTH"
+- paragraph
+  - StaticText "You can't get pregnant with PCOS."
+- StaticText "FACT"
+- paragraph
+  - StaticText "Many women with PCOS conceive naturally or with treatment. Up to 80% success rate with ovulation induction (Clomid/Letrozole)."
+- StaticText "MYTH"
+- paragraph
+  - StaticText "PCOS only affects overweight women."
+- StaticText "FACT"
+- paragraph
+  - StaticText "PCOS affects women of all sizes. Lean PCOS is real and often under-diagnosed because weight is mistakenly used as a gatekeeper symptom."
+- StaticText "MYTH"
+- paragraph
+  - StaticText "PCOS goes away after menopause."
+- StaticText "FACT"
+- paragraph
+  - StaticText "Symptoms may change, but the underlying metabolic issues (insulin resistance, diabetes risk) persist and require lifelong management."
+- StaticText "MYTH"
+- paragraph
+  - StaticText "Birth control cures PCOS."
+- StaticText "FACT"
+- paragraph
+  - StaticText "Birth control manages symptoms (cycles, acne, hair) but does not treat the root cause. Symptoms often return when stopped."
+- StaticText "Frequently Asked Questions"
+- StaticText "Answers to the questions women ask most about PCOS"
+- heading "Is PCOS curable?" [level=3, ref=e46]
+  - button "Is PCOS curable?" [expanded=false, ref=e66]
+    - StaticText "Is PCOS curable?"
+- heading "Can I get pregnant with PCOS?" [level=3, ref=e47]
+  - button "Can I get pregnant with PCOS?" [expanded=false, ref=e67]
+    - StaticText "Can I get pregnant with PCOS?"
+- heading "Does PCOS cause weight gain?" [level=3, ref=e48]
+  - button "Does PCOS cause weight gain?" [expanded=false, ref=e68]
+    - StaticText "Does PCOS cause weight gain?"
+- heading "Is PCOS genetic?" [level=3, ref=e49]
+  - button "Is PCOS genetic?" [expanded=false, ref=e69]
+    - StaticText "Is PCOS genetic?"
+- heading "Can diet really help PCOS?" [level=3, ref=e50]
+  - button "Can diet really help PCOS?" [expanded=false, ref=e70]
+    - StaticText "Can diet really help PCOS?"
+- heading "What foods should I avoid with PCOS?" [level=3, ref=e51]
+  - button "What foods should I avoid with PCOS?" [expanded=false, ref=e71]
+    - StaticText "What foods should I avoid with PCOS?"
+- heading "How long does it take to see results from lifestyle changes?" [level=3, ref=e52]
+  - button "How long does it take to see results from lifestyle changes?" [expanded=false, ref=e72]
+    - StaticText "How long does it take to see results from lifestyle changes?"
+- heading "When should I see a specialist?" [level=3, ref=e53]
+  - button "When should I see a specialist?" [expanded=false, ref=e73]
+    - StaticText "When should I see a specialist?"
+- StaticText "Recommended Reading"
+- StaticText "Trusted sources for further research"
+- link "PCOS Awareness Association Education, advocacy, and community support for women with PCOS. https://pcosawarenessassociation.org" [ref=e54]
+  - heading "PCOS Awareness Association" [level=4, ref=e74]
+  - paragraph
+    - StaticText "Education, advocacy, and community support for women with PCOS."
+  - paragraph
+    - StaticText "https://pcosawarenessassociation.org"
+- link "CDC — PCOS Information U.S. government resource on PCOS and its link to diabetes. https://www.cdc.gov/diabetes/about/pcos.html" [ref=e55]
+  - heading "CDC — PCOS Information" [level=4, ref=e75]
+  - paragraph
+    - StaticText "U.S. government resource on PCOS and its link to diabetes."
+  - paragraph
+    - StaticText "https://www.cdc.gov/diabetes/about/pcos.html"
+- link "Mayo Clinic — PCOS Comprehensive medical overview of causes, symptoms, and treatment. https://www.mayoclinic.org/diseases-conditions/pcos" [ref=e56]
+  - heading "Mayo Clinic — PCOS" [level=4, ref=e76]
+  - paragraph
+    - StaticText "Comprehensive medical overview of causes, symptoms, and treatment."
+  - paragraph
+    - StaticText "https://www.mayoclinic.org/diseases-conditions/pcos"
+- link "NIH — PCOS Research Latest research, clinical trials, and evidence-based information. https://www.nichd.nih.gov/health/topics/pcos" [ref=e57]
+  - heading "NIH — PCOS Research" [level=4, ref=e77]
+  - paragraph
+    - StaticText "Latest research, clinical trials, and evidence-based information."
+  - paragraph
+    - StaticText "https://www.nichd.nih.gov/health/topics/pcos"
+- link "Office on Women's Health Trusted government resource covering all aspects of PCOS care. https://www.womenshealth.gov/pcos" [ref=e58]
+  - heading "Office on Women's Health" [level=4, ref=e78]
+  - paragraph
+    - StaticText "Trusted government resource covering all aspects of PCOS care."
+  - paragraph
+    - StaticText "https://www.womenshealth.gov/pcos"
+- paragraph
+  - strong
+    - StaticText "Medical disclaimer:"
+  - StaticText " This educational content is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your healthcare provider before making decisions about your PCOS care."
+- StaticText "Education Hub"
+- heading "PCOS Awareness Association" [level=4, ref=e74]
+- heading "CDC — PCOS Information" [level=4, ref=e75]
+- heading "Mayo Clinic — PCOS" [level=4, ref=e76]
+- heading "NIH — PCOS Research" [level=4, ref=e77]
+- heading "Office on Women's Health" [level=4, ref=e78]
+- StaticText "Definition & Overview"
+- StaticText "Prevalence & Who It Affects"
+- StaticText "Key Characteristics"
+- StaticText "Total & free testosterone"
+- StaticText "LH / FSH ratio (often ≥ 2:1 in PCOS)"
+- StaticText "Fasting glucose & insulin (HOMA-IR)"
+- StaticText "DHEA-S (adrenal androgen)"
+- StaticText "Lipid panel (cholesterol, triglycerides)"
+- StaticText "Thyroid panel (to rule out thyroid causes)"
+- StaticText "Prolactin (to exclude other conditions)"
+- StaticText "Sex hormone binding globulin (SHBG)"
+- StaticText "Hemoglobin A1C (3-month blood sugar)"
+- StaticText "Anti-Müllerian Hormone (AMH)"
+- StaticText "Lifestyle Modifications"
+- StaticText "The first-line treatment for all PCOS types — and the foundation every other approach builds upon."
+- StaticText "Medications"
+- StaticText "Prescribed by your doctor based on your specific symptoms, labs, and goals (fertility vs. symptom control)."
+- StaticText "Natural Supplements"
+- StaticText "May complement lifestyle and medication. Always consult your provider before starting — doses matter."
+- StaticText "Is PCOS curable?"
+- StaticText "Can I get pregnant with PCOS?"
+- StaticText "Does PCOS cause weight gain?"
+- StaticText "Is PCOS genetic?"
+- StaticText "Can diet really help PCOS?"
+- StaticText "What foods should I avoid with PCOS?"
+- StaticText "How long does it take to see results from lifestyle changes?"
+- StaticText "When should I see a specialist?"

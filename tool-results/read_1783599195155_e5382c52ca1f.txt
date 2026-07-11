@@ -1,0 +1,1009 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useSyncExternalStore } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Settings as SettingsIcon,
+     7→  User,
+     8→  Mail,
+     9→  Calendar,
+    10→  Ruler,
+    11→  Weight,
+    12→  Bell,
+    13→  Shield,
+    14→  Palette,
+    15→  Watch,
+    16→  Crown,
+    17→  Info,
+    18→  LogOut,
+    19→  Edit2,
+    20→  Save,
+    21→  X,
+    22→  Download,
+    23→  Trash2,
+    24→  Lock,
+    25→  FileText,
+    26→  HelpCircle,
+    27→  Sun,
+    28→  Moon,
+    29→  Monitor,
+    30→  Check,
+    31→  ChevronRight,
+    32→  ExternalLink,
+    33→  Apple,
+    34→  Activity,
+    35→  HeartPulse,
+    36→  Zap,
+    37→  Smartphone,
+    38→  AlertTriangle,
+    39→  Sparkles,
+    40→  ShieldCheck,
+    41→  KeyRound,
+    42→  FileLock2,
+    43→  Compass,
+    44→  RotateCcw,
+    45→} from 'lucide-react'
+    46→import {
+    47→  Card,
+    48→  CardContent,
+    49→  CardDescription,
+    50→  CardHeader,
+    51→  CardTitle,
+    52→  CardFooter,
+    53→} from '@/components/ui/card'
+    54→import { Badge } from '@/components/ui/badge'
+    55→import { Button } from '@/components/ui/button'
+    56→import { Input } from '@/components/ui/input'
+    57→import { Label } from '@/components/ui/label'
+    58→import { Switch } from '@/components/ui/switch'
+    59→import { Separator } from '@/components/ui/separator'
+    60→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+    61→import {
+    62→  Select,
+    63→  SelectContent,
+    64→  SelectItem,
+    65→  SelectTrigger,
+    66→  SelectValue,
+    67→} from '@/components/ui/select'
+    68→import {
+    69→  Tabs,
+    70→  TabsContent,
+    71→  TabsList,
+    72→  TabsTrigger,
+    73→} from '@/components/ui/tabs'
+    74→import {
+    75→  AlertDialog,
+    76→  AlertDialogAction,
+    77→  AlertDialogCancel,
+    78→  AlertDialogContent,
+    79→  AlertDialogDescription,
+    80→  AlertDialogFooter,
+    81→  AlertDialogHeader,
+    82→  AlertDialogTitle,
+    83→  AlertDialogTrigger,
+    84→} from '@/components/ui/alert-dialog'
+    85→import {
+    86→  Dialog,
+    87→  DialogContent,
+    88→  DialogDescription,
+    89→  DialogFooter,
+    90→  DialogHeader,
+    91→  DialogTitle,
+    92→} from '@/components/ui/dialog'
+    93→import { useTheme } from 'next-themes'
+    94→import { cn } from '@/lib/utils'
+    95→import { useAppStore } from '@/lib/store'
+    96→import { toast } from 'sonner'
+    97→
+    98→// ─── Types ──────────────────────────────────────────────────────────────────
+    99→
+   100→interface NotificationPref {
+   101→  id: string
+   102→  label: string
+   103→  description: string
+   104→  enabled: boolean
+   105→  icon: React.ElementType
+   106→  color: string
+   107→}
+   108→
+   109→interface WearableDevice {
+   110→  id: string
+   111→  name: string
+   112→  description: string
+   113→  icon: React.ElementType
+   114→  color: string
+   115→  bgColor: string
+   116→  connected: boolean
+   117→  features: string[]
+   118→}
+   119→
+   120→// ─── Settings Section Wrapper ───────────────────────────────────────────────
+   121→
+   122→function SettingsSection({
+   123→  id,
+   124→  title,
+   125→  description,
+   126→  icon: Icon,
+   127→  iconColor,
+   128→  children,
+   129→  delay = 0,
+   130→}: {
+   131→  id?: string
+   132→  title: string
+   133→  description?: string
+   134→  icon: React.ElementType
+   135→  iconColor: string
+   136→  children: React.ReactNode
+   137→  delay?: number
+   138→}) {
+   139→  return (
+   140→    <motion.div
+   141→      initial={{ opacity: 0, y: 15 }}
+   142→      animate={{ opacity: 1, y: 0 }}
+   143→      transition={{ delay, duration: 0.3 }}
+   144→      id={id}
+   145→    >
+   146→      <Card className="overflow-hidden">
+   147→        <CardHeader className="pb-3">
+   148→          <div className="flex items-center gap-3">
+   149→            <div className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', iconColor)}>
+   150→              <Icon className="h-4 w-4" />
+   151→            </div>
+   152→            <div>
+   153→              <CardTitle className="text-base">{title}</CardTitle>
+   154→              {description && <CardDescription className="text-xs">{description}</CardDescription>}
+   155→            </div>
+   156→          </div>
+   157→        </CardHeader>
+   158→        <CardContent className="pt-0">{children}</CardContent>
+   159→      </Card>
+   160→    </motion.div>
+   161→  )
+   162→}
+   163→
+   164→// ─── Main Module ────────────────────────────────────────────────────────────
+   165→
+   166→export default function SettingsModule() {
+   167→  const { isPremium, setPremium, userProfile, setUserProfile } = useAppStore()
+   168→  const { theme, setTheme } = useTheme()
+   169→  // Detect client-side rendering to avoid hydration mismatch with theme
+   170→  const mounted = useSyncExternalStore(
+   171→    () => () => {},
+   172→    () => true,
+   173→    () => false,
+   174→  )
+   175→  const [isEditing, setIsEditing] = useState(false)
+   176→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+   177→
+   178→  // Form state
+   179→  const [formData, setFormData] = useState({
+   180→    name: userProfile?.name || 'ChandraCycle User',
+   181→    email: userProfile?.email || 'user@chandracycle.health',
+   182→    dob: '1996-08-14',
+   183→    height: '165',
+   184→    weight: '58',
+   185→    cycleLength: String(userProfile?.cycleLength || 28),
+   186→    periodLength: String(userProfile?.periodLength || 5),
+   187→    lastPeriod: userProfile?.lastPeriodStart || '2024-12-01',
+   188→  })
+   189→
+   190→  // Notification preferences
+   191→  const [notifications, setNotifications] = useState<NotificationPref[]>([
+   192→    { id: 'period', label: 'Period Reminders', description: 'Alerts before your period starts', enabled: true, icon: Calendar, color: 'bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400' },
+   193→    { id: 'ovulation', label: 'Ovulation Alerts', description: 'Notifications for fertile window', enabled: true, icon: HeartPulse, color: 'bg-fuchsia-100 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-400' },
+   194→    { id: 'pill', label: 'Medication Reminders', description: 'Birth control & supplement alerts', enabled: false, icon: Zap, color: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' },
+   195→    { id: 'mood', label: 'Mood Check-ins', description: 'Daily mood logging prompts', enabled: true, icon: Activity, color: 'bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400' },
+   196→    { id: 'water', label: 'Hydration Reminders', description: 'Periodic water intake alerts', enabled: false, icon: Activity, color: 'bg-sky-100 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400' },
+   197→    { id: 'sleep', label: 'Sleep Wind-down', description: 'Bedtime reminder alerts', enabled: true, icon: Moon, color: 'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' },
+   198→    { id: 'community', label: 'Community Updates', description: 'Replies, likes, and mentions', enabled: true, icon: User, color: 'bg-teal-100 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400' },
+   199→    { id: 'weekly', label: 'Weekly Health Report', description: 'Summary of your week every Sunday', enabled: true, icon: FileText, color: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' },
+   200→    { id: 'tips', label: 'AI Tips & Insights', description: 'Personalized health tips', enabled: false, icon: Sparkles, color: 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400' },
+   201→  ])
+   202→
+   203→  // Wearable devices
+   204→  const [devices, setDevices] = useState<WearableDevice[]>([
+   205→    {
+   206→      id: 'apple',
+   207→      name: 'Apple Health',
+   208→      description: 'Sync cycle, sleep, steps & heart rate from your iPhone',
+   209→      icon: Apple,
+   210→      color: 'text-pink-600 dark:text-pink-400',
+   211→      bgColor: 'bg-pink-100 dark:bg-pink-950/40',
+   212→      connected: false,
+   213→      features: ['Steps', 'Heart Rate', 'Sleep', 'Cycle'],
+   214→    },
+   215→    {
+   216→      id: 'fitbit',
+   217→      name: 'Fitbit',
+   218→      description: 'Connect your Fitbit for sleep & activity tracking',
+   219→      icon: Watch,
+   220→      color: 'text-teal-600 dark:text-teal-400',
+   221→      bgColor: 'bg-teal-100 dark:bg-teal-950/40',
+   222→      connected: true,
+   223→      features: ['Sleep Stages', 'Heart Rate', 'Steps', 'Stress'],
+   224→    },
+   225→    {
+   226→      id: 'garmin',
+   227→      name: 'Garmin Connect',
+   228→      description: 'Sync Garmin watch data for advanced health metrics',
+   229→      icon: Watch,
+   230→      color: 'text-blue-600 dark:text-blue-400',
+   231→      bgColor: 'bg-blue-100 dark:bg-blue-950/40',
+   232→      connected: false,
+   233→      features: ['Stress Score', 'Sleep', 'SpO2', 'Body Battery'],
+   234→    },
+   235→    {
+   236→      id: 'googlefit',
+   237→      name: 'Google Fit',
+   238→      description: 'Connect Google Fit on Android devices',
+   239→      icon: Smartphone,
+   240→      color: 'text-emerald-600 dark:text-emerald-400',
+   241→      bgColor: 'bg-emerald-100 dark:bg-emerald-950/40',
+   242→      connected: false,
+   243→      features: ['Steps', 'Heart Points', 'Sleep'],
+   244→    },
+   245→  ])
+   246→
+   247→  const toggleNotification = (id: string) => {
+   248→    setNotifications(prev => prev.map(n => n.id === id ? { ...n, enabled: !n.enabled } : n))
+   249→  }
+   250→
+   251→  const toggleDevice = (id: string) => {
+   252→    setDevices(prev => prev.map(d => {
+   253→      if (d.id === id) {
+   254→        const newConnected = !d.connected
+   255→        toast.success(newConnected ? `${d.name} connected` : `${d.name} disconnected`)
+   256→        return { ...d, connected: newConnected }
+   257→      }
+   258→      return d
+   259→    }))
+   260→  }
+   261→
+   262→  const handleSave = () => {
+   263→    setUserProfile({
+   264→      id: userProfile?.id || 'local-user',
+   265→      name: formData.name,
+   266→      email: formData.email,
+   267→      cycleLength: Number(formData.cycleLength),
+   268→      periodLength: Number(formData.periodLength),
+   269→      lastPeriodStart: formData.lastPeriod,
+   270→    })
+   271→    setIsEditing(false)
+   272→    toast.success('Profile updated', {
+   273→      description: 'Your changes have been saved successfully.',
+   274→    })
+   275→  }
+   276→
+   277→  const handleExportData = () => {
+   278→    toast.success('Data export started', {
+   279→      description: 'You\'ll receive an email with your data download link within 24 hours.',
+   280→    })
+   281→  }
+   282→
+   283→  const handleDeleteAccount = () => {
+   284→    setDeleteDialogOpen(false)
+   285→    toast.error('Account scheduled for deletion', {
+   286→      description: 'Your account will be permanently deleted in 30 days. We\'re sorry to see you go.',
+   287→    })
+   288→  }
+   289→
+   290→  const handleSignOut = () => {
+   291→    toast.success('Signed out', {
+   292→      description: 'You\'ve been signed out of ChandraCycle.',
+   293→    })
+   294→  }
+   295→
+   296→  const themeOptions = [
+   297→    { id: 'light', label: 'Light', icon: Sun },
+   298→    { id: 'dark', label: 'Dark', icon: Moon },
+   299→    { id: 'system', label: 'System', icon: Monitor },
+   300→  ] as const
+   301→
+   302→  return (
+   303→    <div className="space-y-5 max-w-4xl mx-auto">
+   304→      {/* Header */}
+   305→      <motion.div
+   306→        initial={{ opacity: 0, y: -10 }}
+   307→        animate={{ opacity: 1, y: 0 }}
+   308→        className="flex items-center gap-3"
+   309→      >
+   310→        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-white shadow-md">
+   311→          <SettingsIcon className="h-6 w-6" />
+   312→        </div>
+   313→        <div>
+   314→          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+   315→          <p className="text-sm text-muted-foreground">Manage your account, preferences, and privacy</p>
+   316→        </div>
+   317→      </motion.div>
+   318→
+   319→      {/* ─── Profile Card ──────────────────────────────────────────── */}
+   320→      <motion.div
+   321→        initial={{ opacity: 0, y: 15 }}
+   322→        animate={{ opacity: 1, y: 0 }}
+   323→        transition={{ delay: 0.05 }}
+   324→      >
+   325→        <Card className="overflow-hidden border-primary/20">
+   326→          <div className="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-purple-500 h-20" />
+   327→          <CardContent className="p-5 -mt-10">
+   328→            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+   329→              <Avatar className="h-20 w-20 border-4 border-card shadow-lg">
+   330→                <AvatarFallback className="bg-gradient-to-br from-rose-400 to-fuchsia-500 text-white text-xl font-bold">
+   331→                  {formData.name.charAt(0).toUpperCase()}
+   332→                </AvatarFallback>
+   333→              </Avatar>
+   334→              <div className="flex-1 min-w-0 pb-1">
+   335→                <div className="flex items-center gap-2 flex-wrap">
+   336→                  <h2 className="text-lg font-bold">{formData.name}</h2>
+   337→                  {isPremium ? (
+   338→                    <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 gap-1">
+   339→                      <Crown className="h-3 w-3" /> Premium
+   340→                    </Badge>
+   341→                  ) : (
+   342→                    <Badge variant="secondary" className="bg-muted text-muted-foreground">Free</Badge>
+   343→                  )}
+   344→                </div>
+   345→                <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+   346→                  <Mail className="h-3.5 w-3.5" /> {formData.email}
+   347→                </p>
+   348→              </div>
+   349→              <Button
+   350→                variant={isEditing ? 'default' : 'outline'}
+   351→                size="sm"
+   352→                onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+   353→              >
+   354→                {isEditing ? (
+   355→                  <><Save className="h-4 w-4 mr-1.5" /> Save Changes</>
+   356→                ) : (
+   357→                  <><Edit2 className="h-4 w-4 mr-1.5" /> Edit Profile</>
+   358→                )}
+   359→              </Button>
+   360→            </div>
+   361→          </CardContent>
+   362→        </Card>
+   363→      </motion.div>
+   364→
+   365→      <AnimatePresence>
+   366→        {isEditing && (
+   367→          <motion.div
+   368→            initial={{ opacity: 0, height: 0 }}
+   369→            animate={{ opacity: 1, height: 'auto' }}
+   370→            exit={{ opacity: 0, height: 0 }}
+   371→          >
+   372→            <Card className="border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10">
+   373→              <CardContent className="p-4 flex items-center gap-2 text-sm">
+   374→                <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+   375→                <span className="text-amber-700 dark:text-amber-300">
+   376→                  You're now editing your profile. Click "Save Changes" at the top to apply.
+   377→                </span>
+   378→                <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setIsEditing(false)}>
+   379→                  <X className="h-4 w-4" />
+   380→                </Button>
+   381→              </CardContent>
+   382→            </Card>
+   383→          </motion.div>
+   384→        )}
+   385→      </AnimatePresence>
+   386→
+   387→      {/* ─── Personal Information ──────────────────────────────────── */}
+   388→      <SettingsSection
+   389→        title="Personal Information"
+   390→        description="Your basic profile details"
+   391→        icon={User}
+   392→        iconColor="bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+   393→        delay={0.1}
+   394→      >
+   395→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   396→          <div className="space-y-1.5">
+   397→            <Label htmlFor="name" className="text-xs flex items-center gap-1.5">
+   398→              <User className="h-3 w-3" /> Full Name
+   399→            </Label>
+   400→            <Input
+   401→              id="name"
+   402→              value={formData.name}
+   403→              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+   404→              disabled={!isEditing}
+   405→              className={!isEditing ? 'bg-muted/50' : ''}
+   406→            />
+   407→          </div>
+   408→          <div className="space-y-1.5">
+   409→            <Label htmlFor="email" className="text-xs flex items-center gap-1.5">
+   410→              <Mail className="h-3 w-3" /> Email Address
+   411→            </Label>
+   412→            <Input
+   413→              id="email"
+   414→              type="email"
+   415→              value={formData.email}
+   416→              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+   417→              disabled={!isEditing}
+   418→              className={!isEditing ? 'bg-muted/50' : ''}
+   419→            />
+   420→          </div>
+   421→          <div className="space-y-1.5">
+   422→            <Label htmlFor="dob" className="text-xs flex items-center gap-1.5">
+   423→              <Calendar className="h-3 w-3" /> Date of Birth
+   424→            </Label>
+   425→            <Input
+   426→              id="dob"
+   427→              type="date"
+   428→              value={formData.dob}
+   429→              onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
+   430→              disabled={!isEditing}
+   431→              className={!isEditing ? 'bg-muted/50' : ''}
+   432→            />
+   433→          </div>
+   434→          <div className="grid grid-cols-2 gap-3">
+   435→            <div className="space-y-1.5">
+   436→              <Label htmlFor="height" className="text-xs flex items-center gap-1.5">
+   437→                <Ruler className="h-3 w-3" /> Height (cm)
+   438→              </Label>
+   439→              <Input
+   440→                id="height"
+   441→                value={formData.height}
+   442→                onChange={(e) => setFormData(prev => ({ ...prev, height: e.target.value }))}
+   443→                disabled={!isEditing}
+   444→                className={!isEditing ? 'bg-muted/50' : ''}
+   445→              />
+   446→            </div>
+   447→            <div className="space-y-1.5">
+   448→              <Label htmlFor="weight" className="text-xs flex items-center gap-1.5">
+   449→                <Weight className="h-3 w-3" /> Weight (kg)
+   450→              </Label>
+   451→              <Input
+   452→                id="weight"
+   453→                value={formData.weight}
+   454→                onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
+   455→                disabled={!isEditing}
+   456→                className={!isEditing ? 'bg-muted/50' : ''}
+   457→              />
+   458→            </div>
+   459→          </div>
+   460→        </div>
+   461→      </SettingsSection>
+   462→
+   463→      {/* ─── Cycle Settings ────────────────────────────────────────── */}
+   464→      <SettingsSection
+   465→        title="Cycle Settings"
+   466→        description="Personalize your cycle tracking parameters"
+   467→        icon={Calendar}
+   468→        iconColor="bg-fuchsia-100 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-400"
+   469→        delay={0.15}
+   470→      >
+   471→        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   472→          <div className="space-y-1.5">
+   473→            <Label className="text-xs">Cycle Length (days)</Label>
+   474→            <Select
+   475→              value={formData.cycleLength}
+   476→              onValueChange={(v) => setFormData(prev => ({ ...prev, cycleLength: v }))}
+   477→              disabled={!isEditing}
+   478→            >
+   479→              <SelectTrigger className={!isEditing ? 'bg-muted/50' : ''}>
+   480→                <SelectValue />
+   481→              </SelectTrigger>
+   482→              <SelectContent>
+   483→                {Array.from({ length: 16 }, (_, i) => i + 21).map(d => (
+   484→                  <SelectItem key={d} value={String(d)}>{d} days</SelectItem>
+   485→                ))}
+   486→              </SelectContent>
+   487→            </Select>
+   488→          </div>
+   489→          <div className="space-y-1.5">
+   490→            <Label className="text-xs">Period Length (days)</Label>
+   491→            <Select
+   492→              value={formData.periodLength}
+   493→              onValueChange={(v) => setFormData(prev => ({ ...prev, periodLength: v }))}
+   494→              disabled={!isEditing}
+   495→            >
+   496→              <SelectTrigger className={!isEditing ? 'bg-muted/50' : ''}>
+   497→                <SelectValue />
+   498→              </SelectTrigger>
+   499→              <SelectContent>
+   500→                {Array.from({ length: 10 }, (_, i) => i + 1).map(d => (
+   501→                  <SelectItem key={d} value={String(d)}>{d} days</SelectItem>
+   502→                ))}
+   503→              </SelectContent>
+   504→            </Select>
+   505→          </div>
+   506→          <div className="space-y-1.5">
+   507→            <Label htmlFor="lastPeriod" className="text-xs">Last Period Start</Label>
+   508→            <Input
+   509→              id="lastPeriod"
+   510→              type="date"
+   511→              value={formData.lastPeriod}
+   512→              onChange={(e) => setFormData(prev => ({ ...prev, lastPeriod: e.target.value }))}
+   513→              disabled={!isEditing}
+   514→              className={!isEditing ? 'bg-muted/50' : ''}
+   515→            />
+   516→          </div>
+   517→        </div>
+   518→        <div className="mt-4 p-3 rounded-lg bg-fuchsia-50 dark:bg-fuchsia-950/20 border border-fuchsia-200 dark:border-fuchsia-900">
+   519→          <p className="text-xs text-fuchsia-700 dark:text-fuchsia-300 flex items-start gap-2">
+   520→            <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+   521→            <span>
+   522→              <strong>Tip:</strong> The more accurate your cycle settings, the better ChandraCycle's predictions.
+   523→              Most women have cycles between 26–32 days. Update if your cycle changes over time.
+   524→            </span>
+   525→          </p>
+   526→        </div>
+   527→      </SettingsSection>
+   528→
+   529→      {/* ─── Notification Preferences ──────────────────────────────── */}
+   530→      <SettingsSection
+   531→        title="Notification Preferences"
+   532→        description="Choose what you want to be notified about"
+   533→        icon={Bell}
+   534→        iconColor="bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+   535→        delay={0.2}
+   536→      >
+   537→        <div className="space-y-1">
+   538→          {notifications.map((n) => (
+   539→            <div
+   540→              key={n.id}
+   541→              className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-muted/40 transition-colors"
+   542→            >
+   543→              <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg shrink-0', n.color)}>
+   544→                <n.icon className="h-4 w-4" />
+   545→              </div>
+   546→              <div className="flex-1 min-w-0">
+   547→                <div className="text-sm font-medium">{n.label}</div>
+   548→                <div className="text-xs text-muted-foreground">{n.description}</div>
+   549→              </div>
+   550→              <Switch
+   551→                checked={n.enabled}
+   552→                onCheckedChange={() => toggleNotification(n.id)}
+   553→              />
+   554→            </div>
+   555→          ))}
+   556→        </div>
+   557→      </SettingsSection>
+   558→
+   559→      {/* ─── Privacy & Security ────────────────────────────────────── */}
+   560→      <SettingsSection
+   561→        title="Privacy & Security"
+   562→        description="Manage your data and account security"
+   563→        icon={Shield}
+   564→        iconColor="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
+   565→        delay={0.25}
+   566→      >
+   567→        <div className="space-y-2">
+   568→          <button
+   569→            onClick={handleExportData}
+   570→            className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   571→          >
+   572→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+   573→              <Download className="h-4 w-4" />
+   574→            </div>
+   575→            <div className="flex-1 min-w-0">
+   576→              <div className="text-sm font-medium">Export My Data</div>
+   577→              <div className="text-xs text-muted-foreground">Download all your health data as a ZIP file</div>
+   578→            </div>
+   579→            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+   580→          </button>
+   581→
+   582→          <button
+   583→            onClick={() => toast.info('Privacy Policy', { description: 'Opening privacy policy in a new tab...' })}
+   584→            className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   585→          >
+   586→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 shrink-0">
+   587→              <FileText className="h-4 w-4" />
+   588→            </div>
+   589→            <div className="flex-1 min-w-0">
+   590→              <div className="text-sm font-medium">Privacy Policy</div>
+   591→              <div className="text-xs text-muted-foreground">Read our full data handling practices</div>
+   592→            </div>
+   593→            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+   594→          </button>
+   595→
+   596→          <div className="flex items-center gap-3 p-3 rounded-lg border bg-emerald-50/50 dark:bg-emerald-950/10">
+   597→            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+   598→              <Lock className="h-4 w-4" />
+   599→            </div>
+   600→            <div className="flex-1 min-w-0">
+   601→              <div className="text-sm font-medium flex items-center gap-1.5">
+   602→                End-to-End Encryption
+   603→                <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+   604→                  <ShieldCheck className="h-2.5 w-2.5 mr-0.5" /> Active
+   605→                </Badge>
+   606→              </div>
+   607→              <div className="text-xs text-muted-foreground">
+   608→                All your health data is encrypted with AES-256 — even we can't read it.
+   609→              </div>
+   610→            </div>
+   611→          </div>
+   612→
+   613→          <Separator className="my-2" />
+   614→
+   615→          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+   616→            <AlertDialogTrigger asChild>
+   617→              <button className="w-full flex items-center gap-3 p-3 rounded-lg border border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors text-left">
+   618→                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 shrink-0">
+   619→                  <Trash2 className="h-4 w-4" />
+   620→                </div>
+   621→                <div className="flex-1 min-w-0">
+   622→                  <div className="text-sm font-medium text-rose-600 dark:text-rose-400">Delete My Account</div>
+   623→                  <div className="text-xs text-muted-foreground">Permanently remove your account and all data</div>
+   624→                </div>
+   625→                <ChevronRight className="h-4 w-4 text-rose-400" />
+   626→              </button>
+   627→            </AlertDialogTrigger>
+   628→            <AlertDialogContent>
+   629→              <AlertDialogHeader>
+   630→                <AlertDialogTitle className="flex items-center gap-2">
+   631→                  <AlertTriangle className="h-5 w-5 text-rose-500" />
+   632→                  Delete account permanently?
+   633→                </AlertDialogTitle>
+   634→                <AlertDialogDescription className="text-sm leading-relaxed">
+   635→                  This will permanently delete your account, all health data, cycle history, community posts, and AI conversations. <strong className="text-foreground">This action cannot be undone.</strong> You'll have a 30-day grace period before permanent deletion. To proceed, type <code className="px-1 py-0.5 bg-muted rounded text-xs">DELETE</code> below.
+   636→                </AlertDialogDescription>
+   637→              </AlertDialogHeader>
+   638→              <Input placeholder="Type DELETE to confirm" className="my-2" />
+   639→              <AlertDialogFooter>
+   640→                <AlertDialogCancel>Cancel</AlertDialogCancel>
+   641→                <AlertDialogAction
+   642→                  onClick={handleDeleteAccount}
+   643→                  className="bg-rose-600 hover:bg-rose-700 text-white"
+   644→                >
+   645→                  Delete Account
+   646→                </AlertDialogAction>
+   647→              </AlertDialogFooter>
+   648→            </AlertDialogContent>
+   649→          </AlertDialog>
+   650→        </div>
+   651→      </SettingsSection>
+   652→
+   653→      {/* ─── Appearance ────────────────────────────────────────────── */}
+   654→      <SettingsSection
+   655→        title="Appearance"
+   656→        description="Customize how ChandraCycle looks for you"
+   657→        icon={Palette}
+   658→        iconColor="bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400"
+   659→        delay={0.3}
+   660→      >
+   661→        <div className="grid grid-cols-3 gap-3">
+   662→          {themeOptions.map(opt => {
+   663→            const isActive = mounted && theme === opt.id
+   664→            return (
+   665→              <button
+   666→                key={opt.id}
+   667→                onClick={() => setTheme(opt.id)}
+   668→                className={cn(
+   669→                  'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
+   670→                  isActive
+   671→                    ? 'border-purple-400 bg-purple-50 dark:bg-purple-950/20 shadow-md'
+   672→                    : 'border-border hover:border-purple-300 dark:hover:border-purple-700'
+   673→                )}
+   674→              >
+   675→                <div className={cn(
+   676→                  'flex h-10 w-10 items-center justify-center rounded-lg',
+   677→                  isActive ? 'bg-purple-500 text-white' : 'bg-muted text-muted-foreground'
+   678→                )}>
+   679→                  <opt.icon className="h-5 w-5" />
+   680→                </div>
+   681→                <span className={cn('text-sm font-medium', isActive && 'text-purple-600 dark:text-purple-400')}>{opt.label}</span>
+   682→                {isActive && (
+   683→                  <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 gap-0.5">
+   684→                    <Check className="h-2.5 w-2.5" /> Active
+   685→                  </Badge>
+   686→                )}
+   687→              </button>
+   688→            )
+   689→          })}
+   690→        </div>
+   691→        {!mounted && (
+   692→          <p className="text-xs text-muted-foreground mt-3 text-center">Loading theme...</p>
+   693→        )}
+   694→      </SettingsSection>
+   695→
+   696→      {/* ─── Health Connections ────────────────────────────────────── */}
+   697→      <SettingsSection
+   698→        title="Health Connections"
+   699→        description="Sync data from your wearable devices"
+   700→        icon={Watch}
+   701→        iconColor="bg-teal-100 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400"
+   702→        delay={0.35}
+   703→      >
+   704→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   705→          {devices.map(device => (
+   706→            <div
+   707→              key={device.id}
+   708→              className={cn(
+   709→                'rounded-xl border p-3 transition-all',
+   710→                device.connected
+   711→                  ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10'
+   712→                  : 'border-border'
+   713→              )}
+   714→            >
+   715→              <div className="flex items-start gap-3">
+   716→                <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg shrink-0', device.bgColor, device.color)}>
+   717→                  <device.icon className="h-5 w-5" />
+   718→                </div>
+   719→                <div className="flex-1 min-w-0">
+   720→                  <div className="flex items-center gap-1.5">
+   721→                    <span className="text-sm font-semibold">{device.name}</span>
+   722→                    {device.connected && (
+   723→                      <Badge variant="secondary" className="text-[9px] h-4 px-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 gap-0.5">
+   724→                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+   725→                      </Badge>
+   726→                    )}
+   727→                  </div>
+   728→                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{device.description}</p>
+   729→                  <div className="flex flex-wrap gap-1 mt-1.5">
+   730→                    {device.features.map(f => (
+   731→                      <span key={f} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+   732→                        {f}
+   733→                      </span>
+   734→                    ))}
+   735→                  </div>
+   736→                </div>
+   737→              </div>
+   738→              <Button
+   739→                size="sm"
+   740→                variant={device.connected ? 'outline' : 'default'}
+   741→                className="w-full mt-3"
+   742→                onClick={() => toggleDevice(device.id)}
+   743→              >
+   744→                {device.connected ? (
+   745→                  <><X className="h-3.5 w-3.5 mr-1.5" /> Disconnect</>
+   746→                ) : (
+   747→                  <><Zap className="h-3.5 w-3.5 mr-1.5" /> Connect</>
+   748→                )}
+   749→              </Button>
+   750→            </div>
+   751→          ))}
+   752→        </div>
+   753→      </SettingsSection>
+   754→
+   755→      {/* ─── Subscription ──────────────────────────────────────────── */}
+   756→      <SettingsSection
+   757→        title="Subscription"
+   758→        description="Manage your ChandraCycle plan"
+   759→        icon={Crown}
+   760→        iconColor="bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+   761→        delay={0.4}
+   762→      >
+   763→        <div className="rounded-xl border overflow-hidden">
+   764→          <div className={cn(
+   765→            'p-4 flex items-center gap-4',
+   766→            isPremium
+   767→              ? 'bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20'
+   768→              : 'bg-muted/40'
+   769→          )}>
+   770→            <div className={cn(
+   771→              'flex h-12 w-12 items-center justify-center rounded-xl shrink-0',
+   772→              isPremium
+   773→                ? 'bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 text-white shadow-md'
+   774→                : 'bg-muted text-muted-foreground'
+   775→            )}>
+   776→              <Crown className="h-6 w-6" />
+   777→            </div>
+   778→            <div className="flex-1 min-w-0">
+   779→              <div className="flex items-center gap-2 flex-wrap">
+   780→                <span className="font-semibold">
+   781→                  {isPremium ? 'Premium Plan' : 'Free Plan'}
+   782→                </span>
+   783→                {isPremium && (
+   784→                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+   785→                    Active
+   786→                  </Badge>
+   787→                )}
+   788→              </div>
+   789→              <p className="text-xs text-muted-foreground mt-0.5">
+   790→                {isPremium
+   791→                  ? '₹299/month · Renews on Jan 1, 2025 · Unlimited AI coach, predictions & reports'
+   792→                  : 'Basic period tracking, mood logging & community access'}
+   793→              </p>
+   794→            </div>
+   795→          </div>
+   796→          <div className="p-3 flex flex-col sm:flex-row gap-2 bg-card">
+   797→            <Button
+   798→              variant={isPremium ? 'outline' : 'default'}
+   799→              className="flex-1"
+   800→              onClick={() => {
+   801→                if (isPremium) {
+   802→                  setPremium(false)
+   803→                  toast.success('Subscription cancelled', {
+   804→                    description: 'Your premium access will end at the next billing cycle.',
+   805→                  })
+   806→                } else {
+   807→                  setPremium(true)
+   808→                  toast.success('Welcome to Premium! 🎉', {
+   809→                    description: 'You now have access to all premium features.',
+   810→                  })
+   811→                }
+   812→              }}
+   813→            >
+   814→              {isPremium ? (
+   815→                <><X className="h-4 w-4 mr-1.5" /> Cancel Subscription</>
+   816→              ) : (
+   817→                <><Crown className="h-4 w-4 mr-1.5" /> Upgrade to Premium</>
+   818→              )}
+   819→            </Button>
+   820→            {isPremium && (
+   821→              <Button variant="ghost" className="flex-1" onClick={() => toast.info('Billing portal', { description: 'Opening billing portal to update payment method...' })}>
+   822→                <FileText className="h-4 w-4 mr-1.5" /> Manage Billing
+   823→              </Button>
+   824→            )}
+   825→          </div>
+   826→        </div>
+   827→      </SettingsSection>
+   828→
+   829→      {/* ─── About ─────────────────────────────────────────────────── */}
+   830→      <SettingsSection
+   831→        title="About ChandraCycle"
+   832→        description="App information and resources"
+   833→        icon={Info}
+   834→        iconColor="bg-sky-100 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400"
+   835→        delay={0.45}
+   836→      >
+   837→        <div className="space-y-2">
+   838→          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+   839→            <div className="flex items-center gap-2">
+   840→              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+   841→                A
+   842→              </div>
+   843→              <div>
+   844→                <div className="text-sm font-semibold">ChandraCycle</div>
+   845→                <div className="text-xs text-muted-foreground">AI Women's Health Companion</div>
+   846→              </div>
+   847→            </div>
+   848→            <Badge variant="secondary" className="text-xs">v2.4.1</Badge>
+   849→          </div>
+   850→
+   851→          <div className="grid grid-cols-2 gap-2">
+   852→            <button
+   853→              onClick={() => toast.info('Terms of Service', { description: 'Opening terms in a new tab...' })}
+   854→              className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   855→            >
+   856→              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+   857→              <span className="text-sm">Terms of Service</span>
+   858→              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+   859→            </button>
+   860→            <button
+   861→              onClick={() => toast.info('Privacy Policy', { description: 'Opening privacy policy in a new tab...' })}
+   862→              className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   863→            >
+   864→              <FileLock2 className="h-4 w-4 text-muted-foreground shrink-0" />
+   865→              <span className="text-sm">Privacy Policy</span>
+   866→              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+   867→            </button>
+   868→            <button
+   869→              onClick={() => toast.info('Support Center', { description: 'Opening support center in a new tab...' })}
+   870→              className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   871→            >
+   872→              <HelpCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+   873→              <span className="text-sm">Help & Support</span>
+   874→              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+   875→            </button>
+   876→            <button
+   877→              onClick={() => toast.info('Contact us', { description: 'support@chandracycle.health · +91 80-4567-8900' })}
+   878→              className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   879→            >
+   880→              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+   881→              <span className="text-sm">Contact Us</span>
+   882→              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+   883→            </button>
+   884→          </div>
+   885→
+   886→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+   887→            {[
+   888→              { label: 'HIPAA', icon: ShieldCheck, color: 'text-emerald-600' },
+   889→              { label: 'GDPR', icon: KeyRound, color: 'text-sky-600' },
+   890→              { label: 'E2E Encrypted', icon: Lock, color: 'text-purple-600' },
+   891→              { label: 'ISO 27001', icon: Shield, color: 'text-amber-600' },
+   892→            ].map(b => (
+   893→              <div key={b.label} className="flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs">
+   894→                <b.icon className={cn('h-3.5 w-3.5', b.color)} />
+   895→                <span className="font-medium">{b.label}</span>
+   896→              </div>
+   897→            ))}
+   898→          </div>
+   899→        </div>
+   900→      </SettingsSection>
+   901→
+   902→      {/* ─── Help & Guidance ─────────────────────────────────────────── */}
+   903→      <SettingsSection
+   904→        title="Help & Guidance"
+   905→        description="Tour the app and find help"
+   906→        icon={Compass}
+   907→        iconColor="bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+   908→        delay={0.48}
+   909→      >
+   910→        <div className="space-y-3">
+   911→          <p className="text-sm text-muted-foreground">
+   912→            New to ChandraCycle? Replay the interactive tour to learn where everything is —
+   913→            the sidebar, Period Tracker, AI Coach, your profile, and Premium.
+   914→          </p>
+   915→          <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/10 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+   916→            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 via-rose-500 to-fuchsia-600 text-white">
+   917→              <Compass className="h-5 w-5" />
+   918→            </div>
+   919→            <div className="flex-1 min-w-0">
+   920→              <div className="text-sm font-semibold">Replay onboarding tour</div>
+   921→              <div className="text-xs text-muted-foreground">
+   922→                Restarts the 60-second guided walkthrough of the app.
+   923→              </div>
+   924→            </div>
+   925→            <Button
+   926→              variant="outline"
+   927→              size="sm"
+   928→              className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
+   929→              onClick={() => {
+   930→                try {
+   931→                  localStorage.removeItem('chandracycle_tour_seen')
+   932→                } catch {
+   933→                  // ignore — best-effort
+   934→                }
+   935→                toast.success('Onboarding tour restarted', {
+   936→                  description: 'The tour will open on the dashboard in a moment.',
+   937→                })
+   938→                // Slight delay so the toast can render before the reload.
+   939→                setTimeout(() => {
+   940→                  window.location.reload()
+   941→                }, 600)
+   942→              }}
+   943→            >
+   944→              <RotateCcw className="h-4 w-4 mr-1.5" />
+   945→              Replay tour
+   946→            </Button>
+   947→          </div>
+   948→
+   949→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+   950→            <button
+   951→              onClick={() =>
+   952→                toast.info('Help Center', {
+   953→                  description: 'Opening the help center in a new tab...',
+   954→                })
+   955→              }
+   956→              className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   957→            >
+   958→              <HelpCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+   959→              <span className="text-sm">Help Center</span>
+   960→              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+   961→            </button>
+   962→            <button
+   963→              onClick={() =>
+   964→                toast.info('Contact us', {
+   965→                  description: 'support@chandracycle.health · +91 80-4567-8900',
+   966→                })
+   967→              }
+   968→              className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/40 transition-colors text-left"
+   969→            >
+   970→              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+   971→              <span className="text-sm">Contact Support</span>
+   972→              <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+   973→            </button>
+   974→          </div>
+   975→        </div>
+   976→      </SettingsSection>
+   977→
+   978→      {/* ─── Sign Out ──────────────────────────────────────────────── */}
+   979→      <motion.div
+   980→        initial={{ opacity: 0, y: 15 }}
+   981→        animate={{ opacity: 1, y: 0 }}
+   982→        transition={{ delay: 0.5 }}
+   983→        className="pb-4"
+   984→      >
+   985→        <Card className="border-rose-200 dark:border-rose-900">
+   986→          <CardContent className="p-4">
+   987→            <Button
+   988→              variant="outline"
+   989→              className="w-full border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/30"
+   990→              onClick={handleSignOut}
+   991→            >
+   992→              <LogOut className="h-4 w-4 mr-2" />
+   993→              Sign Out
+   994→            </Button>
+   995→            <p className="text-xs text-muted-foreground text-center mt-2">
+   996→              You can sign back in anytime with your email.
+   997→            </p>
+   998→          </CardContent>
+   999→        </Card>
+  1000→      </motion.div>
+  1001→
+  1002→      {/* Footer */}
+  1003→      <div className="text-center text-xs text-muted-foreground pb-2">
+  1004→        Made with <HeartPulse className="inline h-3 w-3 text-rose-500" /> for women everywhere · © 2024 ChandraCycle Health
+  1005→      </div>
+  1006→    </div>
+  1007→  )
+  1008→}
+  1009→

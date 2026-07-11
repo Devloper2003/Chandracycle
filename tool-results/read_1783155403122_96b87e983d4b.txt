@@ -1,0 +1,816 @@
+     1→'use client'
+     2→
+     3→import { useMemo, useSyncExternalStore } from 'react'
+     4→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+     5→import { Badge } from '@/components/ui/badge'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Progress } from '@/components/ui/progress'
+     8→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+     9→import { motion } from 'framer-motion'
+    10→import {
+    11→  Droplets,
+    12→  CalendarDays,
+    13→  Brain,
+    14→  HeartPulse,
+    15→  Moon,
+    16→  Sun,
+    17→  CloudSun,
+    18→  Sparkles,
+    19→  TrendingUp,
+    20→  Activity,
+    21→  Clock,
+    22→  Bell,
+    23→  CheckCircle2,
+    24→  Circle,
+    25→  Flower2,
+    26→  Baby,
+    27→  Waves,
+    28→  Zap,
+    29→  Leaf,
+    30→  Eye,
+    31→  Dumbbell,
+    32→  Utensils,
+    33→  Bed,
+    34→  GlassWater,
+    35→  SmilePlus,
+    36→  Stethoscope,
+    37→  AlertCircle,
+    38→  Pill,
+    39→  Timer,
+    40→  ChevronRight,
+    41→  Coffee,
+    42→  Apple,
+    43→  Footprints,
+    44→} from 'lucide-react'
+    45→import {
+    46→  LineChart,
+    47→  Line,
+    48→  BarChart,
+    49→  Bar,
+    50→  XAxis,
+    51→  YAxis,
+    52→  CartesianGrid,
+    53→  Tooltip,
+    54→  ResponsiveContainer,
+    55→  ReferenceLine,
+    56→  PieChart,
+    57→  Pie,
+    58→  Cell as RechartsCell,
+    59→} from 'recharts'
+    60→
+    61→// ─── Mock Data ───────────────────────────────────────────────────────────────
+    62→
+    63→const CYCLE_DAY = 14
+    64→const CYCLE_LENGTH = 28
+    65→const PERIOD_LENGTH = 5
+    66→
+    67→const phaseInfo = {
+    68→  name: 'Ovulation',
+    69→  color: '#f97316',
+    70→  bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+    71→  textColor: 'text-orange-600 dark:text-orange-400',
+    72→  borderColor: 'border-orange-200 dark:border-orange-800',
+    73→  description: 'Peak fertility window',
+    74→}
+    75→
+    76→const phaseBreakdown = [
+    77→  { name: 'Menstrual', days: '1-5', color: '#e11d48', pct: 18 },
+    78→  { name: 'Follicular', days: '6-13', color: '#8b5cf6', pct: 29 },
+    79→  { name: 'Ovulation', days: '14-16', color: '#f97316', pct: 11 },
+    80→  { name: 'Luteal', days: '17-28', color: '#06b6d4', pct: 43 },
+    81→]
+    82→
+    83→// Realistic 28-day hormone data
+    84→const hormoneData = Array.from({ length: 28 }, (_, i) => {
+    85→  const day = i + 1
+    86→  // Estrogen: rises follicular, peaks around day 12-14, dips, secondary rise luteal
+    87→  let estrogen: number
+    88→  if (day <= 5) estrogen = 30 + day * 4
+    89→  else if (day <= 12) estrogen = 50 + (day - 5) * 30
+    90→  else if (day <= 14) estrogen = 260 + (day - 12) * 40
+    91→  else if (day <= 16) estrogen = 340 - (day - 14) * 80
+    92→  else if (day <= 22) estrogen = 180 + (day - 16) * 10
+    93→  else estrogen = 240 - (day - 22) * 25
+    94→
+    95→  // Progesterone: low until ovulation, rises luteal, drops before period
+    96→  let progesterone: number
+    97→  if (day <= 14) progesterone = 5 + day * 0.5
+    98→  else if (day <= 21) progesterone = 12 + (day - 14) * 20
+    99→  else progesterone = 152 - (day - 21) * 18
+   100→
+   101→  return {
+   102→    day,
+   103→    estrogen: Math.round(estrogen),
+   104→    progesterone: Math.round(progesterone),
+   105→  }
+   106→})
+   107→
+   108→const weeklySymptomData = [
+   109→  { name: 'Mon', Cramps: 2, Bloating: 1, Headache: 0, Fatigue: 1, Mood: 0 },
+   110→  { name: 'Tue', Cramps: 1, Bloating: 2, Headache: 1, Fatigue: 0, Mood: 1 },
+   111→  { name: 'Wed', Cramps: 0, Bloating: 1, Headache: 2, Fatigue: 1, Mood: 2 },
+   112→  { name: 'Thu', Cramps: 1, Bloating: 0, Headache: 0, Fatigue: 2, Mood: 1 },
+   113→  { name: 'Fri', Cramps: 0, Bloating: 1, Headache: 1, Fatigue: 1, Mood: 0 },
+   114→  { name: 'Sat', Cramps: 0, Bloating: 0, Headache: 0, Fatigue: 1, Mood: 1 },
+   115→  { name: 'Sun', Cramps: 0, Bloating: 1, Headache: 0, Fatigue: 0, Mood: 0 },
+   116→]
+   117→
+   118→const symptomColors = ['#e11d48', '#8b5cf6', '#f97316', '#06b6d4', '#10b981']
+   119→
+   120→const aiInsights = [
+   121→  {
+   122→    icon: Zap,
+   123→    title: 'Energy Peak',
+   124→    description: 'Your energy levels are at their highest during ovulation. Channel this into intense workouts or creative projects.',
+   125→    color: 'text-orange-500',
+   126→    bg: 'bg-orange-50 dark:bg-orange-950/30',
+   127→  },
+   128→  {
+   129→    icon: Utensils,
+   130→    title: 'Nutrition Focus',
+   131→    description: 'Boost zinc and vitamin B6 intake to support progesterone production as you enter the luteal phase.',
+   132→    color: 'text-emerald-500',
+   133→    bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+   134→  },
+   135→  {
+   136→    icon: HeartPulse,
+   137→    title: 'Heart Health',
+   138→    description: 'Estrogen peaks improve cardiovascular function. Great time for cardio and endurance training.',
+   139→    color: 'text-rose-500',
+   140→    bg: 'bg-rose-50 dark:bg-rose-950/30',
+   141→  },
+   142→  {
+   143→    icon: Brain,
+   144→    title: 'Cognitive Boost',
+   145→    description: 'High estrogen enhances verbal fluency and social cognition. Schedule important meetings or presentations.',
+   146→    color: 'text-purple-500',
+   147→    bg: 'bg-purple-50 dark:bg-purple-950/30',
+   148→  },
+   149→]
+   150→
+   151→const reminders = [
+   152→  { icon: Pill, title: 'Take Prenatal Vitamin', time: '8:00 AM', done: true },
+   153→  { icon: GlassWater, title: 'Drink 8 Glasses of Water', time: 'Throughout day', done: false },
+   154→  { icon: Dumbbell, title: 'Morning Yoga Session', time: '7:30 AM', done: true },
+   155→  { icon: Bed, title: 'Sleep by 10:30 PM', time: 'Tonight', done: false },
+   156→  { icon: Stethoscope, title: 'Annual Check-up Reminder', time: 'In 3 days', done: false },
+   157→]
+   158→
+   159→const recentActivity = [
+   160→  { icon: Droplets, title: 'Logged period flow — Light', time: '2 hours ago', color: 'text-rose-500' },
+   161→  { icon: SmilePlus, title: 'Mood logged — Happy & Energetic', time: '4 hours ago', color: 'text-purple-500' },
+   162→  { icon: GlassWater, title: 'Water intake — 6/8 glasses', time: '5 hours ago', color: 'text-blue-500' },
+   163→  { icon: Activity, title: 'Completed 30-min yoga session', time: 'Yesterday', color: 'text-emerald-500' },
+   164→  { icon: Bed, title: 'Sleep tracked — 7h 23m', time: 'Yesterday', color: 'text-indigo-500' },
+   165→]
+   166→
+   167→const quickLogButtons = [
+   168→  { icon: Droplets, label: 'Log Period', color: 'bg-rose-500 hover:bg-rose-600', textColor: 'text-white' },
+   169→  { icon: SmilePlus, label: 'Log Mood', color: 'bg-purple-500 hover:bg-purple-600', textColor: 'text-white' },
+   170→  { icon: HeartPulse, label: 'Log Symptoms', color: 'bg-pink-500 hover:bg-pink-600', textColor: 'text-white' },
+   171→  { icon: GlassWater, label: 'Log Water', color: 'bg-sky-500 hover:bg-sky-600', textColor: 'text-white' },
+   172→  { icon: Moon, label: 'Log Sleep', color: 'bg-indigo-500 hover:bg-indigo-600', textColor: 'text-white' },
+   173→]
+   174→
+   175→const fertilityData = [
+   176→  { name: 'Low', value: 10, color: '#94a3b8' },
+   177→  { name: 'Medium', value: 20, color: '#fbbf24' },
+   178→  { name: 'High', value: 30, color: '#f97316' },
+   179→  { name: 'Peak', value: 40, color: '#e11d48' },
+   180→]
+   181→
+   182→// ─── Animation Variants ──────────────────────────────────────────────────────
+   183→
+   184→const containerVariants = {
+   185→  hidden: { opacity: 0 },
+   186→  visible: {
+   187→    opacity: 1,
+   188→    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+   189→  },
+   190→}
+   191→
+   192→const itemVariants = {
+   193→  hidden: { opacity: 0, y: 16 },
+   194→  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+   195→}
+   196→
+   197→// ─── SVG Circular Progress ───────────────────────────────────────────────────
+   198→
+   199→function CycleProgressRing() {
+   200→  const radius = 90
+   201→  const strokeWidth = 10
+   202→  const normalizedRadius = radius - strokeWidth / 2
+   203→  const circumference = normalizedRadius * 2 * Math.PI
+   204→  const progress = CYCLE_DAY / CYCLE_LENGTH
+   205→  const strokeDashoffset = circumference - progress * circumference
+   206→
+   207→  return (
+   208→    <div className="relative flex items-center justify-center">
+   209→      <svg
+   210→        height={radius * 2}
+   211→        width={radius * 2}
+   212→        className="transform -rotate-90"
+   213→        role="img"
+   214→        aria-label={`Cycle day ${CYCLE_DAY} of ${CYCLE_LENGTH}`}
+   215→      >
+   216→        {/* Background track */}
+   217→        <circle
+   218→          stroke="oklch(0.91 0.02 325)"
+   219→          fill="transparent"
+   220→          strokeWidth={strokeWidth}
+   221→          r={normalizedRadius}
+   222→          cx={radius}
+   223→          cy={radius}
+   224→        />
+   225→        {/* Phase segments — visual markers on the track */}
+   226→        {/* Menstrual: day 1-5 (18%) */}
+   227→        <circle
+   228→          stroke="#e11d48"
+   229→          fill="transparent"
+   230→          strokeWidth={strokeWidth}
+   231→          strokeDasharray={`${circumference * 0.178} ${circumference}`}
+   232→          strokeDashoffset={0}
+   233→          r={normalizedRadius}
+   234→          cx={radius}
+   235→          cy={radius}
+   236→          opacity={0.3}
+   237→          strokeLinecap="round"
+   238→        />
+   239→        {/* Follicular: day 6-13 (29%) */}
+   240→        <circle
+   241→          stroke="#8b5cf6"
+   242→          fill="transparent"
+   243→          strokeWidth={strokeWidth}
+   244→          strokeDasharray={`${circumference * 0.286} ${circumference}`}
+   245→          strokeDashoffset={-circumference * 0.178}
+   246→          r={normalizedRadius}
+   247→          cx={radius}
+   248→          cy={radius}
+   249→          opacity={0.3}
+   250→          strokeLinecap="round"
+   251→        />
+   252→        {/* Ovulation: day 14-16 (11%) */}
+   253→        <circle
+   254→          stroke="#f97316"
+   255→          fill="transparent"
+   256→          strokeWidth={strokeWidth}
+   257→          strokeDasharray={`${circumference * 0.107} ${circumference}`}
+   258→          strokeDashoffset={-circumference * 0.464}
+   259→          r={normalizedRadius}
+   260→          cx={radius}
+   261→          cy={radius}
+   262→          opacity={0.3}
+   263→          strokeLinecap="round"
+   264→        />
+   265→        {/* Luteal: day 17-28 (43%) */}
+   266→        <circle
+   267→          stroke="#06b6d4"
+   268→          fill="transparent"
+   269→          strokeWidth={strokeWidth}
+   270→          strokeDasharray={`${circumference * 0.429} ${circumference}`}
+   271→          strokeDashoffset={-circumference * 0.571}
+   272→          r={normalizedRadius}
+   273→          cx={radius}
+   274→          cy={radius}
+   275→          opacity={0.3}
+   276→          strokeLinecap="round"
+   277→        />
+   278→        {/* Active progress arc */}
+   279→        <circle
+   280→          stroke={phaseInfo.color}
+   281→          fill="transparent"
+   282→          strokeWidth={strokeWidth + 2}
+   283→          strokeDasharray={`${circumference} ${circumference}`}
+   284→          strokeDashoffset={strokeDashoffset}
+   285→          strokeLinecap="round"
+   286→          r={normalizedRadius}
+   287→          cx={radius}
+   288→          cy={radius}
+   289→          style={{ transition: 'stroke-dashoffset 1.2s ease-in-out' }}
+   290→          className="drop-shadow-lg"
+   291→        />
+   292→        {/* Glow dot at current position */}
+   293→      </svg>
+   294→      {/* Center text */}
+   295→      <div className="absolute inset-0 flex flex-col items-center justify-center">
+   296→        <span className="text-4xl font-bold gradient-text">{CYCLE_DAY}</span>
+   297→        <span className="text-xs text-muted-foreground mt-0.5">of {CYCLE_LENGTH} days</span>
+   298→        <Badge
+   299→          className="mt-2 border-0 text-white font-semibold text-xs px-3 py-1"
+   300→          style={{ backgroundColor: phaseInfo.color }}
+   301→        >
+   302→          {phaseInfo.name}
+   303→        </Badge>
+   304→      </div>
+   305→    </div>
+   306→  )
+   307→}
+   308→
+   309→// ─── Main Component ──────────────────────────────────────────────────────────
+   310→
+   311→const emptySubscribe = () => () => {}
+   312→
+   313→export default function DashboardModule() {
+   314→  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
+   315→
+   316→  const greeting = useMemo(() => {
+   317→    const hour = new Date().getHours()
+   318→    if (hour < 12) return 'Good Morning'
+   319→    if (hour < 17) return 'Good Afternoon'
+   320→    return 'Good Evening'
+   321→  }, [])
+   322→
+   323→  const formattedDate = useMemo(() => {
+   324→    return new Date().toLocaleDateString('en-US', {
+   325→      weekday: 'long',
+   326→      month: 'long',
+   327→      day: 'numeric',
+   328→      year: 'numeric',
+   329→    })
+   330→  }, [])
+   331→
+   332→  const daysUntilPeriod = CYCLE_LENGTH - CYCLE_DAY
+   333→  const nextOvulationDate = useMemo(() => {
+   334→    const d = new Date()
+   335→    // Next ovulation would be next cycle day 14
+   336→    const daysAhead = CYCLE_LENGTH - CYCLE_DAY + 14
+   337→    d.setDate(d.getDate() + daysAhead)
+   338→    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+   339→  }, [])
+   340→
+   341→  const greetingIcon = useMemo(() => {
+   342→    const hour = new Date().getHours()
+   343→    if (hour < 12) return Sun
+   344→    if (hour < 17) return CloudSun
+   345→    return Moon
+   346→  }, [])
+   347→
+   348→  const GreetingIcon = greetingIcon
+   349→
+   350→  if (!mounted) {
+   351→    return (
+   352→      <div className="space-y-6 animate-pulse">
+   353→        <div className="h-10 w-64 bg-muted rounded-lg" />
+   354→        <div className="h-72 bg-muted rounded-2xl" />
+   355→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   356→          {[...Array(4)].map((_, i) => (
+   357→            <div key={i} className="h-28 bg-muted rounded-xl" />
+   358→          ))}
+   359→        </div>
+   360→      </div>
+   361→    )
+   362→  }
+   363→
+   364→  return (
+   365→    <motion.div
+   366→      variants={containerVariants}
+   367→      initial="hidden"
+   368→      animate="visible"
+   369→      className="space-y-6"
+   370→    >
+   371→      {/* ─── 1. Welcome Header ──────────────────────────────────────────────── */}
+   372→      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+   373→        <div>
+   374→          <div className="flex items-center gap-2 mb-1">
+   375→            <GreetingIcon className="h-6 w-6 text-amber-500" />
+   376→            <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">
+   377→              <span className="gradient-text-luxe">{greeting}</span>, Priya
+   378→            </h1>
+   379→          </div>
+   380→          <p className="text-sm text-muted-foreground">{formattedDate}</p>
+   381→        </div>
+   382→        <div className="flex items-center gap-2">
+   383→          <Badge variant="secondary" className="gap-1.5 px-3 py-1 text-xs font-medium">
+   384→            <Droplets className="h-3 w-3 text-rose-500" />
+   385→            Day {CYCLE_DAY} of Cycle
+   386→          </Badge>
+   387→          <Badge
+   388→            className="gap-1.5 px-3 py-1 text-xs font-semibold text-white border-0"
+   389→            style={{ backgroundColor: phaseInfo.color }}
+   390→          >
+   391→            <Sparkles className="h-3 w-3" />
+   392→            {phaseInfo.name} Phase
+   393→          </Badge>
+   394→        </div>
+   395→      </motion.div>
+   396→
+   397→      {/* ─── 2. Cycle Status Hero Card ──────────────────────────────────────── */}
+   398→      <motion.div variants={itemVariants}>
+   399→        <Card className="glass overflow-hidden border-0 shadow-lg">
+   400→          <CardContent className="p-6">
+   401→            <div className="flex flex-col lg:flex-row items-center gap-8">
+   402→              {/* Circular Progress Ring */}
+   403→              <div className="flex-shrink-0">
+   404→                <CycleProgressRing />
+   405→              </div>
+   406→
+   407→              {/* Phase Info */}
+   408→              <div className="flex-1 text-center lg:text-left space-y-4">
+   409→                <div>
+   410→                  <h2 className="text-xl font-serif font-bold mb-1">
+   411→                    You&apos;re in your{' '}
+   412→                    <span style={{ color: phaseInfo.color }} className="font-extrabold">
+   413→                      {phaseInfo.name}
+   414→                    </span>{' '}
+   415→                    phase
+   416→                  </h2>
+   417→                  <p className="text-muted-foreground text-sm">
+   418→                    {phaseInfo.description} — Your body is releasing an egg and fertility is at its peak.
+   419→                  </p>
+   420→                </div>
+   421→
+   422→                <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+   423→                  <div className="text-center px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/30">
+   424→                    <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{daysUntilPeriod}</p>
+   425→                    <p className="text-xs text-muted-foreground">Days until period</p>
+   426→                  </div>
+   427→                  <div className="text-center px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/30">
+   428→                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{2}</p>
+   429→                    <p className="text-xs text-muted-foreground">Ovulation days left</p>
+   430→                  </div>
+   431→                  <div className="text-center px-4 py-2 rounded-xl bg-orange-50 dark:bg-orange-950/30">
+   432→                    <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">Peak</p>
+   433→                    <p className="text-xs text-muted-foreground">Fertility level</p>
+   434→                  </div>
+   435→                </div>
+   436→
+   437→                {/* Phase Breakdown Legend */}
+   438→                <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+   439→                  {phaseBreakdown.map((phase) => (
+   440→                    <div key={phase.name} className="flex items-center gap-1.5 text-xs">
+   441→                      <span
+   442→                        className="inline-block h-2.5 w-2.5 rounded-full"
+   443→                        style={{ backgroundColor: phase.color }}
+   444→                      />
+   445→                      <span className="text-muted-foreground">
+   446→                        {phase.name} <span className="font-medium text-foreground">({phase.days})</span>
+   447→                      </span>
+   448→                    </div>
+   449→                  ))}
+   450→                </div>
+   451→              </div>
+   452→
+   453→              {/* Fertility Pie Chart */}
+   454→              <div className="flex-shrink-0 w-40">
+   455→                <ResponsiveContainer width="100%" height={140}>
+   456→                  <PieChart>
+   457→                    <Pie
+   458→                      data={fertilityData}
+   459→                      cx="50%"
+   460→                      cy="50%"
+   461→                      innerRadius={35}
+   462→                      outerRadius={55}
+   463→                      paddingAngle={3}
+   464→                      dataKey="value"
+   465→                      strokeWidth={0}
+   466→                    >
+   467→                      {fertilityData.map((entry, index) => (
+   468→                        <RechartsCell key={`cell-${index}`} fill={entry.color} />
+   469→                      ))}
+   470→                    </Pie>
+   471→                  </PieChart>
+   472→                </ResponsiveContainer>
+   473→                <p className="text-center text-xs text-muted-foreground mt-1">Fertility Window</p>
+   474→              </div>
+   475→            </div>
+   476→          </CardContent>
+   477→        </Card>
+   478→      </motion.div>
+   479→
+   480→      {/* ─── 3. Quick Stats Row ─────────────────────────────────────────────── */}
+   481→      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   482→        {[
+   483→          {
+   484→            title: 'Cycle Day',
+   485→            value: CYCLE_DAY,
+   486→            subtitle: `of ${CYCLE_LENGTH} days`,
+   487→            icon: CalendarDays,
+   488→            color: 'text-rose-500',
+   489→            bg: 'bg-rose-50 dark:bg-rose-950/30',
+   490→            badge: { text: phaseInfo.name, bg: phaseInfo.color },
+   491→          },
+   492→          {
+   493→            title: 'Days Until Period',
+   494→            value: daysUntilPeriod,
+   495→            subtitle: 'countdown',
+   496→            icon: Clock,
+   497→            color: 'text-purple-500',
+   498→            bg: 'bg-purple-50 dark:bg-purple-950/30',
+   499→            badge: null,
+   500→          },
+   501→          {
+   502→            title: 'Fertility Status',
+   503→            value: 'Peak',
+   504→            subtitle: 'High chance',
+   505→            icon: Baby,
+   506→            color: 'text-orange-500',
+   507→            bg: 'bg-orange-50 dark:bg-orange-950/30',
+   508→            badge: { text: 'Peak', bg: '#e11d48' },
+   509→          },
+   510→          {
+   511→            title: 'Next Ovulation',
+   512→            value: nextOvulationDate,
+   513→            subtitle: `in ${CYCLE_LENGTH - CYCLE_DAY + 14} days`,
+   514→            icon: Flower2,
+   515→            color: 'text-emerald-500',
+   516→            bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+   517→            badge: null,
+   518→          },
+   519→        ].map((stat) => (
+   520→          <Card key={stat.title} className="glass border-0 shadow-md hover:shadow-lg transition-shadow">
+   521→            <CardContent className="p-4">
+   522→              <div className="flex items-center justify-between mb-3">
+   523→                <div className={`p-2 rounded-lg ${stat.bg}`}>
+   524→                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+   525→                </div>
+   526→                {stat.badge && (
+   527→                  <Badge
+   528→                    className="text-white border-0 text-[10px] px-2 py-0.5"
+   529→                    style={{ backgroundColor: stat.badge.bg }}
+   530→                  >
+   531→                    {stat.badge.text}
+   532→                  </Badge>
+   533→                )}
+   534→              </div>
+   535→              <p className="text-2xl font-bold">{stat.value}</p>
+   536→              <p className="text-xs text-muted-foreground mt-0.5">{stat.subtitle}</p>
+   537→            </CardContent>
+   538→          </Card>
+   539→        ))}
+   540→      </motion.div>
+   541→
+   542→      {/* ─── 4. Hormone Preview ─────────────────────────────────────────────── */}
+   543→      <motion.div variants={itemVariants}>
+   544→        <Card className="glass border-0 shadow-lg">
+   545→          <CardHeader className="pb-2">
+   546→            <div className="flex items-center justify-between">
+   547→              <div className="flex items-center gap-2">
+   548→                <Activity className="h-5 w-5 text-rose-500" />
+   549→                <CardTitle className="text-base">Hormone Preview</CardTitle>
+   550→              </div>
+   551→              <div className="flex items-center gap-4 text-xs">
+   552→                <span className="flex items-center gap-1.5">
+   553→                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-rose-500" />
+   554→                  Estrogen
+   555→                </span>
+   556→                <span className="flex items-center gap-1.5">
+   557→                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-cyan-500" />
+   558→                  Progesterone
+   559→                </span>
+   560→              </div>
+   561→            </div>
+   562→            <CardDescription>Real-time hormone fluctuations across your 28-day cycle</CardDescription>
+   563→          </CardHeader>
+   564→          <CardContent>
+   565→            <div className="h-64 sm:h-72">
+   566→              <ResponsiveContainer width="100%" height="100%">
+   567→                <LineChart data={hormoneData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+   568→                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.91 0.02 325)" />
+   569→                  <XAxis
+   570→                    dataKey="day"
+   571→                    tick={{ fontSize: 11 }}
+   572→                    tickLine={false}
+   573→                    axisLine={false}
+   574→                    tickFormatter={(v) => `D${v}`}
+   575→                  />
+   576→                  <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+   577→                  <Tooltip
+   578→                    contentStyle={{
+   579→                      borderRadius: '12px',
+   580→                      border: 'none',
+   581→                      boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+   582→                      fontSize: '12px',
+   583→                    }}
+   584→                    labelFormatter={(v) => `Day ${v}`}
+   585→                  />
+   586→                  <ReferenceLine
+   587→                    x={CYCLE_DAY}
+   588→                    stroke={phaseInfo.color}
+   589→                    strokeWidth={2}
+   590→                    strokeDasharray="6 3"
+   591→                    label={{
+   592→                      value: 'Today',
+   593→                      position: 'top',
+   594→                      fill: phaseInfo.color,
+   595→                      fontSize: 11,
+   596→                      fontWeight: 600,
+   597→                    }}
+   598→                  />
+   599→                  <Line
+   600→                    type="monotone"
+   601→                    dataKey="estrogen"
+   602→                    stroke="#e11d48"
+   603→                    strokeWidth={2.5}
+   604→                    dot={false}
+   605→                    activeDot={{ r: 5, fill: '#e11d48' }}
+   606→                  />
+   607→                  <Line
+   608→                    type="monotone"
+   609→                    dataKey="progesterone"
+   610→                    stroke="#06b6d4"
+   611→                    strokeWidth={2.5}
+   612→                    dot={false}
+   613→                    activeDot={{ r: 5, fill: '#06b6d4' }}
+   614→                  />
+   615→                </LineChart>
+   616→              </ResponsiveContainer>
+   617→            </div>
+   618→          </CardContent>
+   619→        </Card>
+   620→      </motion.div>
+   621→
+   622→      {/* ─── 5. AI Insights Section ─────────────────────────────────────────── */}
+   623→      <motion.div variants={itemVariants}>
+   624→        <div className="flex items-center gap-2 mb-3">
+   625→          <Sparkles className="h-5 w-5 text-primary" />
+   626→          <h2 className="text-lg font-serif font-bold">AI Insights for Your Phase</h2>
+   627→          <Badge variant="secondary" className="text-[10px]">Powered by AI</Badge>
+   628→        </div>
+   629→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   630→          {aiInsights.map((insight, i) => (
+   631→            <motion.div
+   632→              key={insight.title}
+   633→              variants={itemVariants}
+   634→              whileHover={{ y: -4, scale: 1.02 }}
+   635→              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+   636→            >
+   637→              <Card className="glass border-0 shadow-md h-full cursor-pointer">
+   638→                <CardContent className="p-4">
+   639→                  <div className={`inline-flex p-2.5 rounded-xl mb-3 ${insight.bg}`}>
+   640→                    <insight.icon className={`h-5 w-5 ${insight.color}`} />
+   641→                  </div>
+   642→                  <h3 className="font-semibold text-sm mb-1.5">{insight.title}</h3>
+   643→                  <p className="text-xs text-muted-foreground leading-relaxed">{insight.description}</p>
+   644→                </CardContent>
+   645→              </Card>
+   646→            </motion.div>
+   647→          ))}
+   648→        </div>
+   649→      </motion.div>
+   650→
+   651→      {/* ─── 6 & 7. Reminders + Quick Log ───────────────────────────────────── */}
+   652→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   653→        {/* Upcoming Reminders */}
+   654→        <motion.div variants={itemVariants}>
+   655→          <Card className="glass border-0 shadow-lg h-full">
+   656→            <CardHeader className="pb-2">
+   657→              <div className="flex items-center gap-2">
+   658→                <Bell className="h-5 w-5 text-amber-500" />
+   659→                <CardTitle className="text-base">Upcoming Reminders</CardTitle>
+   660→              </div>
+   661→            </CardHeader>
+   662→            <CardContent>
+   663→              <div className="space-y-3">
+   664→                {reminders.map((reminder, i) => (
+   665→                  <motion.div
+   666→                    key={reminder.title}
+   667→                    initial={{ opacity: 0, x: -12 }}
+   668→                    animate={{ opacity: 1, x: 0 }}
+   669→                    transition={{ delay: i * 0.08 }}
+   670→                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/50 transition-colors group"
+   671→                  >
+   672→                    <div className={`p-2 rounded-lg ${reminder.done ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-muted'}`}>
+   673→                      <reminder.icon className={`h-4 w-4 ${reminder.done ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+   674→                    </div>
+   675→                    <div className="flex-1 min-w-0">
+   676→                      <p className={`text-sm font-medium truncate ${reminder.done ? 'line-through text-muted-foreground' : ''}`}>
+   677→                        {reminder.title}
+   678→                      </p>
+   679→                      <p className="text-xs text-muted-foreground">{reminder.time}</p>
+   680→                    </div>
+   681→                    {reminder.done ? (
+   682→                      <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+   683→                    ) : (
+   684→                      <Circle className="h-5 w-5 text-muted-foreground/40 shrink-0 group-hover:text-primary transition-colors" />
+   685→                    )}
+   686→                  </motion.div>
+   687→                ))}
+   688→              </div>
+   689→            </CardContent>
+   690→          </Card>
+   691→        </motion.div>
+   692→
+   693→        {/* Quick Log Buttons */}
+   694→        <motion.div variants={itemVariants}>
+   695→          <Card className="glass border-0 shadow-lg h-full">
+   696→            <CardHeader className="pb-2">
+   697→              <div className="flex items-center gap-2">
+   698→                <Zap className="h-5 w-5 text-primary" />
+   699→                <CardTitle className="text-base">Quick Log</CardTitle>
+   700→              </div>
+   701→              <CardDescription>Track your health in one tap</CardDescription>
+   702→            </CardHeader>
+   703→            <CardContent>
+   704→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   705→                {quickLogButtons.map((btn, i) => (
+   706→                  <motion.button
+   707→                    key={btn.label}
+   708→                    whileHover={{ scale: 1.05, y: -2 }}
+   709→                    whileTap={{ scale: 0.97 }}
+   710→                    initial={{ opacity: 0, y: 12 }}
+   711→                    animate={{ opacity: 1, y: 0 }}
+   712→                    transition={{ delay: i * 0.06, type: 'spring', stiffness: 400, damping: 20 }}
+   713→                    className={`${btn.color} ${btn.textColor} rounded-xl p-4 flex flex-col items-center justify-center gap-2 shadow-md hover:shadow-lg transition-shadow cursor-pointer`}
+   714→                    aria-label={btn.label}
+   715→                  >
+   716→                    <btn.icon className="h-6 w-6" />
+   717→                    <span className="text-xs font-semibold">{btn.label}</span>
+   718→                  </motion.button>
+   719→                ))}
+   720→              </div>
+   721→            </CardContent>
+   722→          </Card>
+   723→        </motion.div>
+   724→      </div>
+   725→
+   726→      {/* ─── 8. Weekly Symptom Chart ─────────────────────────────────────────── */}
+   727→      <motion.div variants={itemVariants}>
+   728→        <Card className="glass border-0 shadow-lg">
+   729→          <CardHeader className="pb-2">
+   730→            <div className="flex items-center justify-between">
+   731→              <div className="flex items-center gap-2">
+   732→                <HeartPulse className="h-5 w-5 text-pink-500" />
+   733→                <CardTitle className="text-base">Weekly Symptoms</CardTitle>
+   734→              </div>
+   735→              <div className="flex flex-wrap gap-3 text-xs">
+   736→                {['Cramps', 'Bloating', 'Headache', 'Fatigue', 'Mood'].map((s, i) => (
+   737→                  <span key={s} className="flex items-center gap-1">
+   738→                    <span
+   739→                      className="inline-block h-2 w-2 rounded-full"
+   740→                      style={{ backgroundColor: symptomColors[i] }}
+   741→                    />
+   742→                    {s}
+   743→                  </span>
+   744→                ))}
+   745→              </div>
+   746→            </div>
+   747→          </CardHeader>
+   748→          <CardContent>
+   749→            <div className="h-56 sm:h-64">
+   750→              <ResponsiveContainer width="100%" height="100%">
+   751→                <BarChart data={weeklySymptomData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+   752→                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.91 0.02 325)" />
+   753→                  <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+   754→                  <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+   755→                  <Tooltip
+   756→                    contentStyle={{
+   757→                      borderRadius: '12px',
+   758→                      border: 'none',
+   759→                      boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+   760→                      fontSize: '12px',
+   761→                    }}
+   762→                  />
+   763→                  {['Cramps', 'Bloating', 'Headache', 'Fatigue', 'Mood'].map((key, i) => (
+   764→                    <Bar key={key} dataKey={key} fill={symptomColors[i]} radius={[4, 4, 0, 0]} barSize={8} />
+   765→                  ))}
+   766→                </BarChart>
+   767→              </ResponsiveContainer>
+   768→            </div>
+   769→          </CardContent>
+   770→        </Card>
+   771→      </motion.div>
+   772→
+   773→      {/* ─── 9. Recent Activity Feed ─────────────────────────────────────────── */}
+   774→      <motion.div variants={itemVariants}>
+   775→        <Card className="glass border-0 shadow-lg">
+   776→          <CardHeader className="pb-2">
+   777→            <div className="flex items-center justify-between">
+   778→              <div className="flex items-center gap-2">
+   779→                <TrendingUp className="h-5 w-5 text-emerald-500" />
+   780→                <CardTitle className="text-base">Recent Activity</CardTitle>
+   781→              </div>
+   782→              <Button variant="ghost" size="sm" className="text-xs gap-1">
+   783→                View All <ChevronRight className="h-3 w-3" />
+   784→              </Button>
+   785→            </div>
+   786→          </CardHeader>
+   787→          <CardContent>
+   788→            <div className="space-y-1">
+   789→              {recentActivity.map((activity, i) => (
+   790→                <motion.div
+   791→                  key={activity.title}
+   792→                  initial={{ opacity: 0, x: -12 }}
+   793→                  animate={{ opacity: 1, x: 0 }}
+   794→                  transition={{ delay: i * 0.07 }}
+   795→                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 transition-colors"
+   796→                >
+   797→                  <div className="p-2 rounded-lg bg-muted">
+   798→                    <activity.icon className={`h-4 w-4 ${activity.color}`} />
+   799→                  </div>
+   800→                  <div className="flex-1 min-w-0">
+   801→                    <p className="text-sm font-medium truncate">{activity.title}</p>
+   802→                  </div>
+   803→                  <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
+   804→                </motion.div>
+   805→              ))}
+   806→            </div>
+   807→          </CardContent>
+   808→        </Card>
+   809→      </motion.div>
+   810→
+   811→      {/* ─── Bottom spacer for scroll ───────────────────────────────────────── */}
+   812→      <div className="h-4" />
+   813→    </motion.div>
+   814→  )
+   815→}
+   816→

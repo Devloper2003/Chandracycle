@@ -1,0 +1,964 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Card,
+     7→  CardContent,
+     8→  CardFooter,
+     9→  CardHeader,
+    10→  CardTitle,
+    11→  CardDescription,
+    12→} from '@/components/ui/card'
+    13→import { Badge } from '@/components/ui/badge'
+    14→import { Button } from '@/components/ui/button'
+    15→import { Input } from '@/components/ui/input'
+    16→import { Separator } from '@/components/ui/separator'
+    17→import { ScrollArea } from '@/components/ui/scroll-area'
+    18→import {
+    19→  Sheet,
+    20→  SheetContent,
+    21→  SheetHeader,
+    22→  SheetTitle,
+    23→  SheetDescription,
+    24→  SheetFooter,
+    25→} from '@/components/ui/sheet'
+    26→import { cn } from '@/lib/utils'
+    27→import { toast } from 'sonner'
+    28→import {
+    29→  ShoppingBag,
+    30→  ShoppingCart,
+    31→  Search,
+    32→  Star,
+    33→  Heart,
+    34→  Plus,
+    35→  Minus,
+    36→  Trash2,
+    37→  Tag,
+    38→  Truck,
+    39→  ShieldCheck,
+    40→  CheckCircle2,
+    41→  ArrowRight,
+    42→  Sparkles,
+    43→  TrendingUp,
+    44→  X,
+    45→  ChevronRight,
+    46→  ChevronLeft,
+    47→  Flame,
+    48→  Clock,
+    49→  Gift,
+    50→  Award,
+    51→  Package,
+    52→  CreditCard,
+    53→  RotateCcw,
+    54→  BadgePercent,
+    55→  Leaf,
+    56→  Baby,
+    57→  Dumbbell,
+    58→  Droplet,
+    59→  Pill,
+    60→  Flower2,
+    61→  ThermometerSun,
+    62→  FlaskConical,
+    63→  BookOpen,
+    64→  Wind,
+    65→  Activity,
+    66→} from 'lucide-react'
+    67→
+    68→// ─── Types ───────────────────────────────────────────────────────────────────
+    69→
+    70→type CategoryId =
+    71→  | 'all'
+    72→  | 'period'
+    73→  | 'supplements'
+    74→  | 'skincare'
+    75→  | 'fertility'
+    76→  | 'pregnancy'
+    77→  | 'wellness'
+    78→  | 'fitness'
+    79→
+    80→interface Product {
+    81→  id: string
+    82→  name: string
+    83→  brand: string
+    84→  category: Exclude<CategoryId, 'all'>
+    85→  categoryLabel: string
+    86→  price: number
+    87→  originalPrice: number
+    88→  rating: number
+    89→  reviews: number
+    90→  emoji: string
+    91→  gradient: string
+    92→  description: string
+    93→  bestSeller?: boolean
+    94→  aiRecommended?: boolean
+    95→  trending?: boolean
+    96→}
+    97→
+    98→interface CartItem {
+    99→  product: Product
+   100→  quantity: number
+   101→}
+   102→
+   103→// ─── Static Data ─────────────────────────────────────────────────────────────
+   104→
+   105→const CATEGORIES: { id: CategoryId; label: string; icon: React.ElementType }[] = [
+   106→  { id: 'all', label: 'All Products', icon: ShoppingBag },
+   107→  { id: 'period', label: 'Period Care', icon: Droplet },
+   108→  { id: 'supplements', label: 'Supplements', icon: Pill },
+   109→  { id: 'skincare', label: 'Skincare', icon: Flower2 },
+   110→  { id: 'fertility', label: 'Fertility', icon: ThermometerSun },
+   111→  { id: 'pregnancy', label: 'Pregnancy', icon: Baby },
+   112→  { id: 'wellness', label: 'Wellness', icon: Leaf },
+   113→  { id: 'fitness', label: 'Fitness', icon: Dumbbell },
+   114→]
+   115→
+   116→// NOTE: Demo / placeholder product listings were removed. The marketplace has no
+   117→// real product backend yet — when one is wired up, fetch products from the API
+   118→// and populate this array (or replace the constant with a fetch + state).
+   119→const PRODUCTS: Product[] = []
+   120→
+   121→// Featured products: top 4 best sellers
+   122→const FEATURED: Product[] = []
+   123→
+   124→// AI recommendation groups — empty until a real personalization backend exists.
+   125→const AI_GROUP_PCODS: Product[] = []
+   126→const AI_GROUP_CYCLE: Product[] = []
+   127→const AI_GROUP_TRENDING: Product[] = []
+   128→
+   129→// ─── Helpers ─────────────────────────────────────────────────────────────────
+   130→
+   131→const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`
+   132→
+   133→const discountPct = (p: Product) =>
+   134→  Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
+   135→
+   136→// ─── Sub-components ──────────────────────────────────────────────────────────
+   137→
+   138→function Stars({ rating, className }: { rating: number; className?: string }) {
+   139→  return (
+   140→    <div className={cn('flex items-center gap-0.5', className)}>
+   141→      {[1, 2, 3, 4, 5].map((i) => (
+   142→        <Star
+   143→          key={i}
+   144→          className={cn(
+   145→            'h-3.5 w-3.5',
+   146→            i <= Math.round(rating)
+   147→              ? 'fill-amber-400 text-amber-400'
+   148→              : 'fill-muted text-muted-foreground/40'
+   149→          )}
+   150→        />
+   151→      ))}
+   152→    </div>
+   153→  )
+   154→}
+   155→
+   156→function ProductImage({ product, className }: { product: Product; className?: string }) {
+   157→  return (
+   158→    <div
+   159→      className={cn(
+   160→        'relative flex items-center justify-center bg-gradient-to-br overflow-hidden',
+   161→        product.gradient,
+   162→        className
+   163→      )}
+   164→    >
+   165→      {/* Decorative blurred blobs */}
+   166→      <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full bg-white/20 blur-2xl" />
+   167→      <div className="absolute -bottom-6 -right-6 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+   168→      <span className="relative text-5xl drop-shadow-lg select-none" role="img" aria-hidden="true">
+   169→        {product.emoji}
+   170→      </span>
+   171→    </div>
+   172→  )
+   173→}
+   174→
+   175→function ProductCard({
+   176→  product,
+   177→  onAdd,
+   178→  inCart,
+   179→  layout = 'grid',
+   180→}: {
+   181→  product: Product
+   182→  onAdd: (p: Product) => void
+   183→  inCart: boolean
+   184→  layout?: 'grid' | 'wide'
+   185→}) {
+   186→  const [liked, setLiked] = useState(false)
+   187→
+   188→  return (
+   189→    <motion.div
+   190→      layout
+   191→      initial={{ opacity: 0, y: 16 }}
+   192→      animate={{ opacity: 1, y: 0 }}
+   193→      exit={{ opacity: 0, scale: 0.95 }}
+   194→      transition={{ duration: 0.3, ease: 'easeOut' }}
+   195→      whileHover={{ y: -4 }}
+   196→      className="h-full"
+   197→    >
+   198→      <Card className="group relative h-full overflow-hidden border-rose-100 dark:border-rose-900/30 hover:shadow-xl hover:shadow-rose-200/50 dark:hover:shadow-rose-950/30 transition-shadow duration-300 py-0 gap-0">
+   199→        {/* Image area */}
+   200→        <div className={cn('relative', layout === 'grid' ? 'aspect-square' : 'aspect-[4/3]')}>
+   201→          <ProductImage product={product} className="h-full w-full" />
+   202→
+   203→          {/* Top-left badges */}
+   204→          <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
+   205→            {product.bestSeller && (
+   206→              <Badge className="bg-amber-500 text-white border-0 shadow-sm text-[10px] gap-1">
+   207→                <Award className="h-3 w-3" /> Best Seller
+   208→              </Badge>
+   209→            )}
+   210→            {product.aiRecommended && (
+   211→              <Badge className="bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-0 shadow-sm text-[10px] gap-1">
+   212→                <Sparkles className="h-3 w-3" /> AI Recommended
+   213→              </Badge>
+   214→            )}
+   215→          </div>
+   216→
+   217→          {/* Discount badge */}
+   218→          <div className="absolute top-2 right-2">
+   219→            <Badge className="bg-rose-600 text-white border-0 shadow-sm text-[10px]">
+   220→              -{discountPct(product)}%
+   221→            </Badge>
+   222→          </div>
+   223→
+   224→          {/* Heart / wishlist button */}
+   225→          <button
+   226→            onClick={() => setLiked((v) => !v)}
+   227→            aria-label="Toggle wishlist"
+   228→            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-white/90 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform"
+   229→          >
+   230→            <Heart
+   231→              className={cn(
+   232→                'h-4 w-4 transition-colors',
+   233→                liked ? 'fill-rose-500 text-rose-500' : 'text-rose-400'
+   234→              )}
+   235→            />
+   236→          </button>
+   237→
+   238→          {/* Category tag */}
+   239→          <div className="absolute bottom-2 left-2">
+   240→            <Badge
+   241→              variant="secondary"
+   242→              className="bg-white/90 dark:bg-black/50 backdrop-blur-sm text-[10px] border-0 text-rose-700 dark:text-rose-200"
+   243→            >
+   244→              {product.categoryLabel}
+   245→            </Badge>
+   246→          </div>
+   247→        </div>
+   248→
+   249→        {/* Content */}
+   250→        <CardContent className="p-3 space-y-2 flex-1">
+   251→          <div>
+   252→            <p className="text-[11px] uppercase tracking-wider text-rose-500 font-semibold">
+   253→              {product.brand}
+   254→            </p>
+   255→            <h3 className="font-semibold text-sm leading-tight line-clamp-2 mt-0.5">
+   256→              {product.name}
+   257→            </h3>
+   258→          </div>
+   259→          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+   260→
+   261→          <div className="flex items-center gap-1.5">
+   262→            <Stars rating={product.rating} />
+   263→            <span className="text-[11px] text-muted-foreground">
+   264→              {product.rating.toFixed(1)} ({product.reviews.toLocaleString('en-IN')})
+   265→            </span>
+   266→          </div>
+   267→
+   268→          <div className="flex items-end gap-2 pt-0.5">
+   269→            <span className="text-lg font-bold text-rose-700 dark:text-rose-300">
+   270→              {formatINR(product.price)}
+   271→            </span>
+   272→            <span className="text-xs text-muted-foreground line-through">
+   273→              {formatINR(product.originalPrice)}
+   274→            </span>
+   275→          </div>
+   276→        </CardContent>
+   277→
+   278→        <CardFooter className="p-3 pt-0">
+   279→          <Button
+   280→            onClick={() => onAdd(product)}
+   281→            className={cn(
+   282→              'w-full h-9 text-xs font-semibold gap-1.5 transition-all',
+   283→              inCart
+   284→                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+   285→                : 'bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md shadow-rose-500/20'
+   286→            )}
+   287→          >
+   288→            {inCart ? (
+   289→              <>
+   290→                <CheckCircle2 className="h-4 w-4" /> Added to Cart
+   291→              </>
+   292→            ) : (
+   293→              <>
+   294→                <ShoppingCart className="h-4 w-4" /> Add to Cart
+   295→              </>
+   296→            )}
+   297→          </Button>
+   298→        </CardFooter>
+   299→      </Card>
+   300→    </motion.div>
+   301→  )
+   302→}
+   303→
+   304→function FeaturedCard({ product, onAdd }: { product: Product; onAdd: (p: Product) => void }) {
+   305→  return (
+   306→    <motion.div
+   307→      initial={{ opacity: 0, scale: 0.96 }}
+   308→      animate={{ opacity: 1, scale: 1 }}
+   309→      transition={{ duration: 0.4, ease: 'easeOut' }}
+   310→      className="min-w-[280px] sm:min-w-[340px] snap-center"
+   311→    >
+   312→      <Card className="overflow-hidden border-0 shadow-xl shadow-rose-200/40 dark:shadow-rose-950/40 py-0 gap-0">
+   313→        <div className="relative h-44">
+   314→          <ProductImage product={product} className="h-full w-full" />
+   315→          <div className="absolute top-3 left-3 flex gap-1.5">
+   316→            <Badge className="bg-amber-500 text-white border-0 shadow-sm gap-1">
+   317→              <Award className="h-3 w-3" /> Best Seller
+   318→            </Badge>
+   319→            <Badge className="bg-rose-600 text-white border-0 shadow-sm">
+   320→              -{discountPct(product)}% OFF
+   321→            </Badge>
+   322→          </div>
+   323→        </div>
+   324→        <CardContent className="p-4 space-y-3">
+   325→          <div>
+   326→            <p className="text-[11px] uppercase tracking-wider text-rose-500 font-semibold">
+   327→              {product.brand}
+   328→            </p>
+   329→            <h3 className="font-bold text-base leading-tight mt-0.5">{product.name}</h3>
+   330→            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
+   331→          </div>
+   332→          <div className="flex items-center gap-1.5">
+   333→            <Stars rating={product.rating} />
+   334→            <span className="text-xs text-muted-foreground">
+   335→              {product.rating.toFixed(1)} · {product.reviews.toLocaleString('en-IN')} reviews
+   336→            </span>
+   337→          </div>
+   338→          <div className="flex items-center justify-between">
+   339→            <div className="flex items-end gap-2">
+   340→              <span className="text-xl font-bold text-rose-700 dark:text-rose-300">
+   341→                {formatINR(product.price)}
+   342→              </span>
+   343→              <span className="text-xs text-muted-foreground line-through">
+   344→                {formatINR(product.originalPrice)}
+   345→              </span>
+   346→            </div>
+   347→            <Button
+   348→              size="sm"
+   349→              onClick={() => onAdd(product)}
+   350→              className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md shadow-rose-500/20 gap-1.5"
+   351→            >
+   352→              <ShoppingCart className="h-3.5 w-3.5" /> Add
+   353→            </Button>
+   354→          </div>
+   355→        </CardContent>
+   356→      </Card>
+   357→    </motion.div>
+   358→  )
+   359→}
+   360→
+   361→function RecommendationRow({
+   362→  title,
+   363→  subtitle,
+   364→  icon: Icon,
+   365→  iconBg,
+   366→  products,
+   367→  onAdd,
+   368→  cartIds,
+   369→}: {
+   370→  title: string
+   371→  subtitle: string
+   372→  icon: React.ElementType
+   373→  iconBg: string
+   374→  products: Product[]
+   375→  onAdd: (p: Product) => void
+   376→  cartIds: Set<string>
+   377→}) {
+   378→  return (
+   379→    <Card className="overflow-hidden border-rose-100 dark:border-rose-900/30 py-0 gap-0">
+   380→      <CardHeader className="pb-3 pt-4 bg-gradient-to-r from-rose-50/80 to-pink-50/80 dark:from-rose-950/20 dark:to-pink-950/20 border-b border-rose-100 dark:border-rose-900/30">
+   381→        <div className="flex items-center gap-3">
+   382→          <div
+   383→            className={cn(
+   384→              'h-10 w-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white shadow-md',
+   385→              iconBg
+   386→            )}
+   387→          >
+   388→            <Icon className="h-5 w-5" />
+   389→          </div>
+   390→          <div>
+   391→            <CardTitle className="text-base flex items-center gap-2">
+   392→              {title}
+   393→              <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200 border-0 text-[10px] gap-1">
+   394→                <Sparkles className="h-3 w-3" /> AI
+   395→              </Badge>
+   396→            </CardTitle>
+   397→            <CardDescription className="text-xs">{subtitle}</CardDescription>
+   398→          </div>
+   399→        </div>
+   400→      </CardHeader>
+   401→      <CardContent className="p-3">
+   402→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+   403→          {products.map((product) => (
+   404→            <div
+   405→              key={`${title}-${product.id}`}
+   406→              className="flex gap-3 p-2 rounded-xl border border-rose-50 dark:border-rose-900/20 hover:border-rose-200 dark:hover:border-rose-800 transition-colors"
+   407→            >
+   408→              <ProductImage
+   409→                product={product}
+   410→                className="h-16 w-16 rounded-lg shrink-0"
+   411→              />
+   412→              <div className="flex-1 min-w-0 flex flex-col justify-between">
+   413→                <div>
+   414→                  <p className="text-[10px] uppercase tracking-wider text-rose-500 font-semibold">
+   415→                    {product.brand}
+   416→                  </p>
+   417→                  <h4 className="text-xs font-semibold leading-tight line-clamp-1">
+   418→                    {product.name}
+   419→                  </h4>
+   420→                  <div className="flex items-center gap-1 mt-0.5">
+   421→                    <Stars rating={product.rating} className="scale-90" />
+   422→                  </div>
+   423→                </div>
+   424→                <div className="flex items-center justify-between">
+   425→                  <span className="text-sm font-bold text-rose-700 dark:text-rose-300">
+   426→                    {formatINR(product.price)}
+   427→                  </span>
+   428→                  <Button
+   429→                    size="sm"
+   430→                    variant="outline"
+   431→                    onClick={() => onAdd(product)}
+   432→                    className={cn(
+   433→                      'h-7 px-2 text-[11px] gap-1',
+   434→                      cartIds.has(product.id)
+   435→                        ? 'border-emerald-500 text-emerald-600'
+   436→                        : 'border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+   437→                    )}
+   438→                  >
+   439→                    {cartIds.has(product.id) ? (
+   440→                      <CheckCircle2 className="h-3 w-3" />
+   441→                    ) : (
+   442→                      <Plus className="h-3 w-3" />
+   443→                    )}
+   444→                    {cartIds.has(product.id) ? 'Added' : 'Add'}
+   445→                  </Button>
+   446→                </div>
+   447→              </div>
+   448→            </div>
+   449→          ))}
+   450→        </div>
+   451→      </CardContent>
+   452→    </Card>
+   453→  )
+   454→}
+   455→
+   456→// ─── Main Component ──────────────────────────────────────────────────────────
+   457→
+   458→export default function MarketplaceModule() {
+   459→  const [cart, setCart] = useState<CartItem[]>([])
+   460→  const [cartOpen, setCartOpen] = useState(false)
+   461→  const [activeCategory, setActiveCategory] = useState<CategoryId>('all')
+   462→  const [searchQuery, setSearchQuery] = useState('')
+   463→  const [featuredIndex, setFeaturedIndex] = useState(0)
+   464→
+   465→  // Cart helpers
+   466→  const addToCart = (product: Product) => {
+   467→    setCart((prev) => {
+   468→      const existing = prev.find((i) => i.product.id === product.id)
+   469→      if (existing) {
+   470→        return prev.map((i) =>
+   471→          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+   472→        )
+   473→      }
+   474→      return [...prev, { product, quantity: 1 }]
+   475→    })
+   476→    toast.success(`${product.name} added to cart`, {
+   477→      description: formatINR(product.price),
+   478→    })
+   479→  }
+   480→
+   481→  const removeFromCart = (productId: string) => {
+   482→    setCart((prev) => prev.filter((i) => i.product.id !== productId))
+   483→  }
+   484→
+   485→  const updateQty = (productId: string, delta: number) => {
+   486→    setCart((prev) =>
+   487→      prev
+   488→        .map((i) =>
+   489→          i.product.id === productId
+   490→            ? { ...i, quantity: Math.max(0, i.quantity + delta) }
+   491→            : i
+   492→        )
+   493→        .filter((i) => i.quantity > 0)
+   494→    )
+   495→  }
+   496→
+   497→  const clearCart = () => {
+   498→    setCart([])
+   499→    toast.info('Cart cleared')
+   500→  }
+   501→
+   502→  // Cart derived values
+   503→  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0)
+   504→  const subtotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+   505→  const shipping = subtotal > 499 || subtotal === 0 ? 0 : 49
+   506→  const total = subtotal + shipping
+   507→  const cartIds = useMemo(() => new Set(cart.map((i) => i.product.id)), [cart])
+   508→
+   509→  // Filtered products by category + search
+   510→  const filteredProducts = useMemo(() => {
+   511→    const q = searchQuery.trim().toLowerCase()
+   512→    return PRODUCTS.filter((p) => {
+   513→      const catMatch = activeCategory === 'all' || p.category === activeCategory
+   514→      const searchMatch =
+   515→        !q ||
+   516→        p.name.toLowerCase().includes(q) ||
+   517→        p.brand.toLowerCase().includes(q) ||
+   518→        p.categoryLabel.toLowerCase().includes(q) ||
+   519→        p.description.toLowerCase().includes(q)
+   520→      return catMatch && searchMatch
+   521→    })
+   522→  }, [activeCategory, searchQuery])
+   523→
+   524→  return (
+   525→    <div className="space-y-6">
+   526→      {/* ─── 1. HEADER ─────────────────────────────────────────────────────── */}
+   527→      <motion.div
+   528→        initial={{ opacity: 0, y: -10 }}
+   529→        animate={{ opacity: 1, y: 0 }}
+   530→        transition={{ duration: 0.4 }}
+   531→        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-6 sm:p-8 text-white shadow-xl shadow-rose-500/20"
+   532→      >
+   533→        {/* Decorative blobs */}
+   534→        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+   535→        <div className="absolute -bottom-16 -left-12 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+   536→        <div className="absolute top-4 right-32 h-24 w-24 rounded-full bg-amber-300/20 blur-2xl" />
+   537→
+   538→        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+   539→          <div className="space-y-2 max-w-xl">
+   540→            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-xs font-medium">
+   541→              <ShoppingBag className="h-3.5 w-3.5" />
+   542→              ChandraCycle Marketplace
+   543→            </div>
+   544→            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
+   545→              <span className="bg-gradient-to-r from-white via-rose-50 to-amber-100 bg-clip-text text-transparent">
+   546→                Wellness Market
+   547→              </span>
+   548→            </h1>
+   549→            <p className="text-white/90 text-sm sm:text-base">
+   550→              Curated products for your health journey
+   551→            </p>
+   552→          </div>
+   553→
+   554→          {/* Search + Cart */}
+   555→          <div className="flex items-center gap-3">
+   556→            <div className="relative flex-1 lg:w-72">
+   557→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-300" />
+   558→              <Input
+   559→                value={searchQuery}
+   560→                onChange={(e) => setSearchQuery(e.target.value)}
+   561→                placeholder="Search products, brands..."
+   562→                className="pl-10 h-11 bg-white/95 text-rose-900 border-0 placeholder:text-rose-400 focus-visible:ring-2 focus-visible:ring-white/60"
+   563→              />
+   564→            </div>
+   565→            <Button
+   566→              onClick={() => setCartOpen(true)}
+   567→              size="icon"
+   568→              className="relative h-11 w-11 bg-white text-rose-600 hover:bg-rose-50 shadow-lg shrink-0"
+   569→            >
+   570→              <ShoppingCart className="h-5 w-5" />
+   571→              <AnimatePresence>
+   572→                {cartCount > 0 && (
+   573→                  <motion.span
+   574→                    initial={{ scale: 0 }}
+   575→                    animate={{ scale: 1 }}
+   576→                    exit={{ scale: 0 }}
+   577→                    className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md border-2 border-white"
+   578→                  >
+   579→                    {cartCount}
+   580→                  </motion.span>
+   581→                )}
+   582→              </AnimatePresence>
+   583→            </Button>
+   584→          </div>
+   585→        </div>
+   586→      </motion.div>
+   587→
+   588→      {/* ─── 8. TRUST & INFO ───────────────────────────────────────────────── */}
+   589→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   590→        {[
+   591→          { icon: Truck, title: 'Free Shipping', sub: 'On orders above ₹499', color: 'text-rose-500' },
+   592→          { icon: RotateCcw, title: '7-Day Returns', sub: 'Hassle-free returns', color: 'text-pink-500' },
+   593→          { icon: ShieldCheck, title: 'Secure Payments', sub: '100% protected', color: 'text-fuchsia-500' },
+   594→          { icon: BadgePercent, title: 'Authentic Products', sub: 'Verified & tested', color: 'text-amber-500' },
+   595→        ].map((item) => (
+   596→          <Card key={item.title} className="py-0 gap-0 border-rose-100 dark:border-rose-900/30">
+   597→            <CardContent className="flex items-center gap-3 p-3">
+   598→              <div className={cn('h-10 w-10 rounded-xl bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center shrink-0', item.color)}>
+   599→                <item.icon className="h-5 w-5" />
+   600→              </div>
+   601→              <div className="min-w-0">
+   602→                <p className="text-xs font-semibold leading-tight truncate">{item.title}</p>
+   603→                <p className="text-[11px] text-muted-foreground leading-tight truncate">{item.sub}</p>
+   604→              </div>
+   605→            </CardContent>
+   606→          </Card>
+   607→        ))}
+   608→      </div>
+   609→
+   610→      {/* ─── 7. SPECIAL OFFERS BANNER ─────────────────────────────────────── */}
+   611→      {/* Removed: "Flash Sale Live!" banner with a fake countdown timer. The
+   612→          marketplace has no real products yet, so any sale / coupon expiry
+   613→          countdown would be misleading. Add this back when there is a real
+   614→          promotional calendar tied to live inventory. */}
+   615→
+   616→      {/* ─── 3. FEATURED PRODUCTS (Hero Carousel) ─────────────────────────── */}
+   617→      {/* Removed: empty carousel of fake best-sellers. The marketplace has no
+   618→          real products yet, so a featured-products carousel would render
+   619→          nothing or rely on demo data. Restore when there are real featured
+   620→          products to showcase. */}
+   621→
+   622→      {/* ─── 2. CATEGORY TABS ─────────────────────────────────────────────── */}
+   623→      <div className="sticky top-[57px] z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-md border-y border-rose-100 dark:border-rose-900/30">
+   624→        <ScrollArea className="w-full whitespace-nowrap">
+   625→          <div className="flex gap-2 min-w-max pb-1">
+   626→            {CATEGORIES.map((cat) => {
+   627→              const active = activeCategory === cat.id
+   628→              const Icon = cat.icon
+   629→              return (
+   630→                <button
+   631→                  key={cat.id}
+   632→                  onClick={() => setActiveCategory(cat.id)}
+   633→                  className={cn(
+   634→                    'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all whitespace-nowrap',
+   635→                    active
+   636→                      ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white border-transparent shadow-md shadow-rose-500/20'
+   637→                      : 'bg-card text-muted-foreground border-rose-100 dark:border-rose-900/30 hover:border-rose-300 hover:text-rose-600'
+   638→                  )}
+   639→                >
+   640→                  <Icon className="h-3.5 w-3.5" />
+   641→                  {cat.label}
+   642→                </button>
+   643→              )
+   644→            })}
+   645→          </div>
+   646→        </ScrollArea>
+   647→      </div>
+   648→
+   649→      {/* ─── 6. AI RECOMMENDATIONS ───────────────────────────────────────── */}
+   650→      {/* Removed: "AI-Powered Recommendations" rows that relied on fake
+   651→          per-persona product groups (and a fake "50,000+ ChandraCycle women"
+   652→          claim). Restore this section once there is a real personalization
+   653→          backend that returns recommended SKUs based on the user's profile. */}
+   654→
+   655→      {/* ─── 4. PRODUCT GRID ─────────────────────────────────────────────── */}
+   656→      <section className="space-y-4">
+   657→        <div className="flex items-center justify-between flex-wrap gap-2">
+   658→          <div className="flex items-center gap-2">
+   659→            <Package className="h-5 w-5 text-rose-500" />
+   660→            <h2 className="text-xl font-bold">
+   661→              {activeCategory === 'all'
+   662→                ? 'All Products'
+   663→                : CATEGORIES.find((c) => c.id === activeCategory)?.label}
+   664→            </h2>
+   665→            <Badge variant="secondary" className="bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 border-0">
+   666→              {filteredProducts.length} items
+   667→            </Badge>
+   668→          </div>
+   669→          {searchQuery && (
+   670→            <Button
+   671→              variant="ghost"
+   672→              size="sm"
+   673→              className="text-rose-600 hover:bg-rose-50"
+   674→              onClick={() => setSearchQuery('')}
+   675→            >
+   676→              <X className="h-3.5 w-3.5" /> Clear search
+   677→            </Button>
+   678→          )}
+   679→        </div>
+   680→
+   681→        {filteredProducts.length === 0 ? (
+   682→          <Card className="border-dashed border-rose-200 dark:border-rose-900/40 py-16">
+   683→            <CardContent className="flex flex-col items-center justify-center text-center gap-3">
+   684→              <div className="h-14 w-14 rounded-2xl bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center">
+   685→                <ShoppingBag className="h-6 w-6 text-rose-400" />
+   686→              </div>
+   687→              <div className="space-y-1">
+   688→                <p className="font-semibold text-base">Coming soon</p>
+   689→                <p className="text-sm text-muted-foreground max-w-sm">
+   690→                  {searchQuery || activeCategory !== 'all'
+   691→                    ? `No products match your ${searchQuery ? 'search' : 'category'} yet. We're curating the best wellness products — check back soon.`
+   692→                    : "We're curating the best wellness products for you. The marketplace will open once our first collection is ready."}
+   693→                </p>
+   694→              </div>
+   695→              {(searchQuery || activeCategory !== 'all') && (
+   696→                <Button
+   697→                  variant="outline"
+   698→                  size="sm"
+   699→                  className="border-rose-300 text-rose-600 hover:bg-rose-50"
+   700→                  onClick={() => {
+   701→                    setSearchQuery('')
+   702→                    setActiveCategory('all')
+   703→                  }}
+   704→                >
+   705→                  Reset filters
+   706→                </Button>
+   707→              )}
+   708→            </CardContent>
+   709→          </Card>
+   710→        ) : (
+   711→          <motion.div
+   712→            layout
+   713→            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+   714→          >
+   715→            <AnimatePresence mode="popLayout">
+   716→              {filteredProducts.map((product) => (
+   717→                <ProductCard
+   718→                  key={product.id}
+   719→                  product={product}
+   720→                  onAdd={addToCart}
+   721→                  inCart={cartIds.has(product.id)}
+   722→                />
+   723→              ))}
+   724→            </AnimatePresence>
+   725→          </motion.div>
+   726→        )}
+   727→      </section>
+   728→
+   729→      {/* ─── Footer Promo ─────────────────────────────────────────────────── */}
+   730→      <Card className="overflow-hidden border-0 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 text-white py-0 gap-0">
+   731→        <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+   732→          <div className="flex items-center gap-3 text-center sm:text-left">
+   733→            <Gift className="h-8 w-8 shrink-0" />
+   734→            <div>
+   735→              <p className="font-bold text-base">Become a Premium Member</p>
+   736→              <p className="text-sm text-white/90">Get 15% off all marketplace orders + free shipping</p>
+   737→            </div>
+   738→          </div>
+   739→          <Button className="bg-white text-rose-600 hover:bg-rose-50 font-semibold gap-1.5 shrink-0">
+   740→            Upgrade Now <ArrowRight className="h-4 w-4" />
+   741→          </Button>
+   742→        </CardContent>
+   743→      </Card>
+   744→
+   745→      {/* ─── 6. SHOPPING CART (Sheet) ─────────────────────────────────────── */}
+   746→      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+   747→        <SheetContent
+   748→          side="right"
+   749→          className="w-full sm:max-w-md p-0 flex flex-col bg-card"
+   750→        >
+   751→          {/* Header */}
+   752→          <SheetHeader className="px-5 pt-5 pb-3 border-b border-rose-100 dark:border-rose-900/30">
+   753→            <SheetTitle className="flex items-center gap-2 text-lg">
+   754→              <ShoppingCart className="h-5 w-5 text-rose-500" />
+   755→              Your Cart
+   756→              {cartCount > 0 && (
+   757→                <Badge className="bg-rose-500 text-white border-0">
+   758→                  {cartCount} {cartCount === 1 ? 'item' : 'items'}
+   759→                </Badge>
+   760→              )}
+   761→            </SheetTitle>
+   762→            <SheetDescription>
+   763→              {cartCount === 0
+   764→                ? 'Your cart is currently empty'
+   765→                : 'Review your items and proceed to checkout'}
+   766→            </SheetDescription>
+   767→          </SheetHeader>
+   768→
+   769→          {/* Body */}
+   770→          {cart.length === 0 ? (
+   771→            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+   772→              <motion.div
+   773→                initial={{ scale: 0.8, opacity: 0 }}
+   774→                animate={{ scale: 1, opacity: 1 }}
+   775→                className="h-20 w-20 rounded-full bg-gradient-to-br from-rose-100 to-pink-100 dark:from-rose-950/40 dark:to-pink-950/40 flex items-center justify-center"
+   776→              >
+   777→                <ShoppingBag className="h-9 w-9 text-rose-400" />
+   778→              </motion.div>
+   779→              <div className="space-y-1">
+   780→                <p className="font-semibold">Your cart is empty</p>
+   781→                <p className="text-sm text-muted-foreground max-w-xs">
+   782→                  Browse our wellness collection and find products curated for your journey.
+   783→                </p>
+   784→              </div>
+   785→              <Button
+   786→                onClick={() => setCartOpen(false)}
+   787→                className="bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white gap-1.5"
+   788→              >
+   789→                <ArrowRight className="h-4 w-4 rotate-180" /> Continue Shopping
+   790→              </Button>
+   791→            </div>
+   792→          ) : (
+   793→            <>
+   794→              {/* Free shipping progress */}
+   795→              <div className="px-5 py-3 bg-rose-50/60 dark:bg-rose-950/20 border-b border-rose-100 dark:border-rose-900/30">
+   796→                {subtotal >= 499 ? (
+   797→                  <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+   798→                    <CheckCircle2 className="h-3.5 w-3.5" />
+   799→                    You&apos;ve unlocked <strong>FREE shipping!</strong>
+   800→                  </div>
+   801→                ) : (
+   802→                  <>
+   803→                    <p className="text-xs text-rose-700 dark:text-rose-300 mb-1.5">
+   804→                      Add <strong>{formatINR(499 - subtotal)}</strong> more for FREE shipping
+   805→                    </p>
+   806→                    <div className="h-1.5 rounded-full bg-rose-200 dark:bg-rose-900/50 overflow-hidden">
+   807→                      <motion.div
+   808→                        className="h-full bg-gradient-to-r from-rose-500 to-pink-500"
+   809→                        initial={{ width: 0 }}
+   810→                        animate={{ width: `${Math.min(100, (subtotal / 499) * 100)}%` }}
+   811→                        transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+   812→                      />
+   813→                    </div>
+   814→                  </>
+   815→                )}
+   816→              </div>
+   817→
+   818→              {/* Items list */}
+   819→              <ScrollArea className="flex-1">
+   820→                <div className="p-4 space-y-3">
+   821→                  <AnimatePresence initial={false}>
+   822→                    {cart.map((item) => (
+   823→                      <motion.div
+   824→                        key={item.product.id}
+   825→                        layout
+   826→                        initial={{ opacity: 0, x: 20 }}
+   827→                        animate={{ opacity: 1, x: 0 }}
+   828→                        exit={{ opacity: 0, x: -20, height: 0 }}
+   829→                        transition={{ duration: 0.2 }}
+   830→                        className="flex gap-3 p-2 rounded-xl border border-rose-100 dark:border-rose-900/30 bg-background"
+   831→                      >
+   832→                        <ProductImage
+   833→                          product={item.product}
+   834→                          className="h-16 w-16 rounded-lg shrink-0"
+   835→                        />
+   836→                        <div className="flex-1 min-w-0">
+   837→                          <div className="flex items-start justify-between gap-2">
+   838→                            <div className="min-w-0">
+   839→                              <p className="text-[10px] uppercase tracking-wider text-rose-500 font-semibold truncate">
+   840→                                {item.product.brand}
+   841→                              </p>
+   842→                              <h4 className="text-xs font-semibold leading-tight line-clamp-1">
+   843→                                {item.product.name}
+   844→                              </h4>
+   845→                            </div>
+   846→                            <Button
+   847→                              variant="ghost"
+   848→                              size="icon"
+   849→                              className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 shrink-0"
+   850→                              onClick={() => removeFromCart(item.product.id)}
+   851→                            >
+   852→                              <Trash2 className="h-3.5 w-3.5" />
+   853→                            </Button>
+   854→                          </div>
+   855→
+   856→                          <div className="flex items-center justify-between mt-2">
+   857→                            {/* Quantity stepper */}
+   858→                            <div className="inline-flex items-center rounded-lg border border-rose-200 dark:border-rose-900/40 overflow-hidden">
+   859→                              <button
+   860→                                onClick={() => updateQty(item.product.id, -1)}
+   861→                                className="h-7 w-7 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
+   862→                                aria-label="Decrease quantity"
+   863→                              >
+   864→                                <Minus className="h-3 w-3" />
+   865→                              </button>
+   866→                              <span className="w-8 text-center text-xs font-semibold tabular-nums">
+   867→                                {item.quantity}
+   868→                              </span>
+   869→                              <button
+   870→                                onClick={() => updateQty(item.product.id, 1)}
+   871→                                className="h-7 w-7 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
+   872→                                aria-label="Increase quantity"
+   873→                              >
+   874→                                <Plus className="h-3 w-3" />
+   875→                              </button>
+   876→                            </div>
+   877→
+   878→                            <div className="text-right">
+   879→                              <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
+   880→                                {formatINR(item.product.price * item.quantity)}
+   881→                              </p>
+   882→                              <p className="text-[10px] text-muted-foreground">
+   883→                                {formatINR(item.product.price)} each
+   884→                              </p>
+   885→                            </div>
+   886→                          </div>
+   887→                        </div>
+   888→                      </motion.div>
+   889→                    ))}
+   890→                  </AnimatePresence>
+   891→
+   892→                  <button
+   893→                    onClick={clearCart}
+   894→                    className="w-full text-xs text-muted-foreground hover:text-rose-600 transition-colors py-2 flex items-center justify-center gap-1.5"
+   895→                  >
+   896→                    <Trash2 className="h-3 w-3" /> Clear cart
+   897→                  </button>
+   898→                </div>
+   899→              </ScrollArea>
+   900→
+   901→              {/* Footer: totals + checkout */}
+   902→              <SheetFooter className="border-t border-rose-100 dark:border-rose-900/30 p-4 space-y-3">
+   903→                <div className="space-y-1.5 text-sm">
+   904→                  <div className="flex justify-between text-muted-foreground">
+   905→                    <span>Subtotal</span>
+   906→                    <span className="font-medium text-foreground">{formatINR(subtotal)}</span>
+   907→                  </div>
+   908→                  <div className="flex justify-between text-muted-foreground">
+   909→                    <span>Shipping</span>
+   910→                    <span className="font-medium text-foreground">
+   911→                      {shipping === 0 ? (
+   912→                        <span className="text-emerald-600 dark:text-emerald-400">FREE</span>
+   913→                      ) : (
+   914→                        formatINR(shipping)
+   915→                      )}
+   916→                    </span>
+   917→                  </div>
+   918→                  <Separator className="my-2 bg-rose-100 dark:bg-rose-900/30" />
+   919→                  <div className="flex justify-between items-center">
+   920→                    <span className="font-semibold">Total</span>
+   921→                    <span className="text-xl font-bold text-rose-700 dark:text-rose-300">
+   922→                      {formatINR(total)}
+   923→                    </span>
+   924→                  </div>
+   925→                  <p className="text-[11px] text-muted-foreground text-right">
+   926→                    Inclusive of all taxes · Save {formatINR(
+   927→                      cart.reduce(
+   928→                        (sum, i) => sum + (i.product.originalPrice - i.product.price) * i.quantity,
+   929→                        0
+   930→                      )
+   931→                    )} on this order
+   932→                  </p>
+   933→                </div>
+   934→
+   935→                <div className="flex flex-col gap-2">
+   936→                  <Button
+   937→                    className="w-full h-11 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold shadow-md shadow-rose-500/20 gap-1.5"
+   938→                    onClick={() => {
+   939→                      toast.success('Order placed successfully! 🎉', {
+   940→                        description: `${cartCount} items · ${formatINR(total)}`,
+   941→                      })
+   942→                      setCart([])
+   943→                      setCartOpen(false)
+   944→                    }}
+   945→                  >
+   946→                    <CreditCard className="h-4 w-4" /> Proceed to Checkout
+   947→                  </Button>
+   948→                  <Button
+   949→                    variant="outline"
+   950→                    className="w-full h-10 border-rose-200 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+   951→                    onClick={() => setCartOpen(false)}
+   952→                  >
+   953→                    Continue Shopping
+   954→                  </Button>
+   955→                </div>
+   956→              </SheetFooter>
+   957→            </>
+   958→          )}
+   959→        </SheetContent>
+   960→      </Sheet>
+   961→    </div>
+   962→  )
+   963→}
+   964→

@@ -1,0 +1,851 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  BarChart,
+     7→  Bar,
+     8→  PieChart,
+     9→  Pie,
+    10→  LineChart,
+    11→  Line,
+    12→  RadarChart,
+    13→  Radar,
+    14→  PolarGrid,
+    15→  PolarAngleAxis,
+    16→  PolarRadiusAxis,
+    17→  XAxis,
+    18→  YAxis,
+    19→  CartesianGrid,
+    20→  Cell,
+    21→  ResponsiveContainer,
+    22→  Legend,
+    23→} from 'recharts'
+    24→import {
+    25→  Download,
+    26→  FileSpreadsheet,
+    27→  FileText,
+    28→  TrendingUp,
+    29→  TrendingDown,
+    30→  Minus,
+    31→  Activity,
+    32→  Heart,
+    33→  Moon,
+    34→  Droplets,
+    35→  Brain,
+    36→  BarChart3,
+    37→  Sparkles,
+    38→  ChevronRight,
+    39→} from 'lucide-react'
+    40→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    41→import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+    42→import { Button } from '@/components/ui/button'
+    43→import { Badge } from '@/components/ui/badge'
+    44→import { Progress } from '@/components/ui/progress'
+    45→import { Separator } from '@/components/ui/separator'
+    46→
+    47→// ── Types ───────────────────────────────────────────────────────────────────
+    48→type ReportPeriod = 'daily' | 'weekly' | 'monthly' | 'annual'
+    49→
+    50→interface PeriodData {
+    51→  cycleSummary: { day: number; phase: string; note: string }[]
+    52→  symptomFrequency: { name: string; count: number }[]
+    53→  moodDistribution: { name: string; value: number; color: string }[]
+    54→  sleepAvg: number
+    55→  waterAvg: number
+    56→  cycleRegularity: number
+    57→  symptomSeverity: number
+    58→  moodStability: number
+    59→  wellnessScore: number
+    60→  prevCycleRegularity: number
+    61→  prevSymptomSeverity: number
+    62→  prevMoodStability: number
+    63→  prevWellnessScore: number
+    64→  insights: string[]
+    65→  trendLine: { label: string; wellness: number; symptoms: number }[]
+    66→  radarData: { subject: string; current: number; previous: number }[]
+    67→}
+    68→
+    69→// ── Mock Data ───────────────────────────────────────────────────────────────
+    70→const periodDataMap: Record<ReportPeriod, PeriodData> = {
+    71→  daily: {
+    72→    cycleSummary: [{ day: 14, phase: 'Ovulation', note: 'Peak fertility window' }],
+    73→    symptomFrequency: [
+    74→      { name: 'Bloating', count: 2 },
+    75→      { name: 'Headache', count: 1 },
+    76→      { name: 'Cramps', count: 0 },
+    77→      { name: 'Fatigue', count: 3 },
+    78→      { name: 'Acne', count: 1 },
+    79→    ],
+    80→    moodDistribution: [
+    81→      { name: 'Happy', value: 45, color: '#10b981' },
+    82→      { name: 'Calm', value: 30, color: '#14b8a6' },
+    83→      { name: 'Anxious', value: 15, color: '#f59e0b' },
+    84→      { name: 'Sad', value: 10, color: '#ef4444' },
+    85→    ],
+    86→    sleepAvg: 7.2,
+    87→    waterAvg: 6.5,
+    88→    cycleRegularity: 82,
+    89→    symptomSeverity: 28,
+    90→    moodStability: 75,
+    91→    wellnessScore: 73,
+    92→    prevCycleRegularity: 80,
+    93→    prevSymptomSeverity: 32,
+    94→    prevMoodStability: 70,
+    95→    prevWellnessScore: 70,
+    96→    insights: [
+    97→      'Your energy levels were higher today, likely aligned with ovulation phase.',
+    98→      'Water intake was below the recommended 8 glasses — try to increase hydration.',
+    99→      'Mood was mostly positive with brief anxious moments in the afternoon.',
+   100→    ],
+   101→    trendLine: [
+   102→      { label: '6AM', wellness: 65, symptoms: 20 },
+   103→      { label: '9AM', wellness: 72, symptoms: 15 },
+   104→      { label: '12PM', wellness: 78, symptoms: 10 },
+   105→      { label: '3PM', wellness: 70, symptoms: 25 },
+   106→      { label: '6PM', wellness: 75, symptoms: 18 },
+   107→      { label: '9PM', wellness: 68, symptoms: 22 },
+   108→    ],
+   109→    radarData: [
+   110→      { subject: 'Energy', current: 75, previous: 68 },
+   111→      { subject: 'Sleep', current: 72, previous: 70 },
+   112→      { subject: 'Mood', current: 80, previous: 72 },
+   113→      { subject: 'Hydration', current: 55, previous: 60 },
+   114→      { subject: 'Pain', current: 85, previous: 78 },
+   115→    ],
+   116→  },
+   117→  weekly: {
+   118→    cycleSummary: [
+   119→      { day: 8, phase: 'Follicular', note: 'Energy building' },
+   120→      { day: 9, phase: 'Follicular', note: 'Rising estrogen' },
+   121→      { day: 10, phase: 'Follicular', note: 'Good energy day' },
+   122→      { day: 11, phase: 'Follicular', note: 'Peak mood' },
+   123→      { day: 12, phase: 'Follicular', note: 'Pre-ovulation' },
+   124→      { day: 13, phase: 'Ovulation', note: 'Ovulation day' },
+   125→      { day: 14, phase: 'Luteal', note: 'Early luteal' },
+   126→    ],
+   127→    symptomFrequency: [
+   128→      { name: 'Bloating', count: 4 },
+   129→      { name: 'Headache', count: 3 },
+   130→      { name: 'Cramps', count: 2 },
+   131→      { name: 'Fatigue', count: 5 },
+   132→      { name: 'Acne', count: 2 },
+   133→      { name: 'Back Pain', count: 3 },
+   134→    ],
+   135→    moodDistribution: [
+   136→      { name: 'Happy', value: 38, color: '#10b981' },
+   137→      { name: 'Calm', value: 28, color: '#14b8a6' },
+   138→      { name: 'Anxious', value: 20, color: '#f59e0b' },
+   139→      { name: 'Sad', value: 8, color: '#ef4444' },
+   140→      { name: 'Energetic', value: 6, color: '#8b5cf6' },
+   141→    ],
+   142→    sleepAvg: 6.8,
+   143→    waterAvg: 5.8,
+   144→    cycleRegularity: 78,
+   145→    symptomSeverity: 35,
+   146→    moodStability: 68,
+   147→    wellnessScore: 70,
+   148→    prevCycleRegularity: 75,
+   149→    prevSymptomSeverity: 40,
+   150→    prevMoodStability: 65,
+   151→    prevWellnessScore: 66,
+   152→    insights: [
+   153→      'Your follicular phase showed strong energy — great week for productive tasks.',
+   154→      'Fatigue was the most frequent symptom; consider earlier bedtimes.',
+   155→      'Mood was more variable mid-week, likely linked to ovulation hormonal shifts.',
+   156→      'Sleep averaged 6.8 hours — aim for 7.5+ for optimal hormonal balance.',
+   157→    ],
+   158→    trendLine: [
+   159→      { label: 'Mon', wellness: 68, symptoms: 30 },
+   160→      { label: 'Tue', wellness: 72, symptoms: 25 },
+   161→      { label: 'Wed', wellness: 65, symptoms: 40 },
+   162→      { label: 'Thu', wellness: 74, symptoms: 20 },
+   163→      { label: 'Fri', wellness: 78, symptoms: 15 },
+   164→      { label: 'Sat', wellness: 75, symptoms: 18 },
+   165→      { label: 'Sun', wellness: 70, symptoms: 22 },
+   166→    ],
+   167→    radarData: [
+   168→      { subject: 'Energy', current: 72, previous: 65 },
+   169→      { subject: 'Sleep', current: 68, previous: 72 },
+   170→      { subject: 'Mood', current: 70, previous: 63 },
+   171→      { subject: 'Hydration', current: 60, previous: 58 },
+   172→      { subject: 'Pain', current: 80, previous: 74 },
+   173→      { subject: 'Exercise', current: 65, previous: 55 },
+   174→    ],
+   175→  },
+   176→  monthly: {
+   177→    cycleSummary: [
+   178→      { day: 1, phase: 'Menstrual', note: 'Period started' },
+   179→      { day: 5, phase: 'Menstrual', note: 'Period ending' },
+   180→      { day: 8, phase: 'Follicular', note: 'Energy returning' },
+   181→      { day: 14, phase: 'Ovulation', note: 'Ovulation day' },
+   182→      { day: 20, phase: 'Luteal', note: 'PMS may start' },
+   183→      { day: 25, phase: 'Luteal', note: 'Pre-period symptoms' },
+   184→      { day: 28, phase: 'Luteal', note: 'Cycle ending' },
+   185→    ],
+   186→    symptomFrequency: [
+   187→      { name: 'Bloating', count: 12 },
+   188→      { name: 'Headache', count: 8 },
+   189→      { name: 'Cramps', count: 10 },
+   190→      { name: 'Fatigue', count: 15 },
+   191→      { name: 'Acne', count: 7 },
+   192→      { name: 'Back Pain', count: 9 },
+   193→      { name: 'Breast Tenderness', count: 6 },
+   194→      { name: 'Mood Swings', count: 11 },
+   195→    ],
+   196→    moodDistribution: [
+   197→      { name: 'Happy', value: 32, color: '#10b981' },
+   198→      { name: 'Calm', value: 25, color: '#14b8a6' },
+   199→      { name: 'Anxious', value: 22, color: '#f59e0b' },
+   200→      { name: 'Sad', value: 12, color: '#ef4444' },
+   201→      { name: 'Energetic', value: 5, color: '#8b5cf6' },
+   202→      { name: 'Irritable', value: 4, color: '#f97316' },
+   203→    ],
+   204→    sleepAvg: 6.5,
+   205→    waterAvg: 5.5,
+   206→    cycleRegularity: 85,
+   207→    symptomSeverity: 42,
+   208→    moodStability: 62,
+   209→    wellnessScore: 68,
+   210→    prevCycleRegularity: 80,
+   211→    prevSymptomSeverity: 48,
+   212→    prevMoodStability: 58,
+   213→    prevWellnessScore: 63,
+   214→    insights: [
+   215→      'Your cycle was 29 days this month — within the healthy 21-35 day range.',
+   216→      'Fatigue peaked during the luteal phase; consider magnesium supplementation.',
+   217→      'Mood swings were most common days 22-26 — aligns with progesterone withdrawal.',
+   218→      'Overall wellness score improved 5 points from last month. Great progress!',
+   219→      'Water intake consistently fell short; set hourly reminders to stay hydrated.',
+   220→    ],
+   221→    trendLine: [
+   222→      { label: 'Week 1', wellness: 60, symptoms: 45 },
+   223→      { label: 'Week 2', wellness: 78, symptoms: 20 },
+   224→      { label: 'Week 3', wellness: 72, symptoms: 30 },
+   225→      { label: 'Week 4', wellness: 58, symptoms: 50 },
+   226→    ],
+   227→    radarData: [
+   228→      { subject: 'Energy', current: 68, previous: 62 },
+   229→      { subject: 'Sleep', current: 65, previous: 68 },
+   230→      { subject: 'Mood', current: 66, previous: 58 },
+   231→      { subject: 'Hydration', current: 55, previous: 52 },
+   232→      { subject: 'Pain', current: 72, previous: 65 },
+   233→      { subject: 'Exercise', current: 60, previous: 50 },
+   234→      { subject: 'Nutrition', current: 70, previous: 64 },
+   235→    ],
+   236→  },
+   237→  annual: {
+   238→    cycleSummary: [
+   239→      { day: 1, phase: 'Menstrual', note: 'Cycle 1' },
+   240→      { day: 28, phase: 'Luteal', note: 'Cycle 1 end' },
+   241→      { day: 29, phase: 'Menstrual', note: 'Cycle 2' },
+   242→      { day: 56, phase: 'Luteal', note: 'Cycle 2 end' },
+   243→      { day: 85, phase: 'Luteal', note: 'Cycle 3 end' },
+   244→      { day: 113, phase: 'Luteal', note: 'Cycle 4 end' },
+   245→      { day: 142, phase: 'Luteal', note: 'Cycle 5 end' },
+   246→      { day: 170, phase: 'Luteal', note: 'Cycle 6 end' },
+   247→      { day: 199, phase: 'Luteal', note: 'Cycle 7 end' },
+   248→      { day: 227, phase: 'Luteal', note: 'Cycle 8 end' },
+   249→      { day: 256, phase: 'Luteal', note: 'Cycle 9 end' },
+   250→      { day: 284, phase: 'Luteal', note: 'Cycle 10 end' },
+   251→      { day: 313, phase: 'Luteal', note: 'Cycle 11 end' },
+   252→      { day: 341, phase: 'Luteal', note: 'Cycle 12 end' },
+   253→      { day: 365, phase: 'Luteal', note: 'Cycle 13 end' },
+   254→    ],
+   255→    symptomFrequency: [
+   256→      { name: 'Bloating', count: 95 },
+   257→      { name: 'Headache', count: 72 },
+   258→      { name: 'Cramps', count: 88 },
+   259→      { name: 'Fatigue', count: 120 },
+   260→      { name: 'Acne', count: 65 },
+   261→      { name: 'Back Pain', count: 58 },
+   262→      { name: 'Breast Tenderness', count: 50 },
+   263→      { name: 'Mood Swings', count: 82 },
+   264→      { name: 'Anxiety', count: 45 },
+   265→    ],
+   266→    moodDistribution: [
+   267→      { name: 'Happy', value: 35, color: '#10b981' },
+   268→      { name: 'Calm', value: 22, color: '#14b8a6' },
+   269→      { name: 'Anxious', value: 18, color: '#f59e0b' },
+   270→      { name: 'Sad', value: 10, color: '#ef4444' },
+   271→      { name: 'Energetic', value: 8, color: '#8b5cf6' },
+   272→      { name: 'Irritable', value: 7, color: '#f97316' },
+   273→    ],
+   274→    sleepAvg: 6.7,
+   275→    waterAvg: 5.9,
+   276→    cycleRegularity: 83,
+   277→    symptomSeverity: 38,
+   278→    moodStability: 67,
+   279→    wellnessScore: 71,
+   280→    prevCycleRegularity: 76,
+   281→    prevSymptomSeverity: 45,
+   282→    prevMoodStability: 60,
+   283→    prevWellnessScore: 64,
+   284→    insights: [
+   285→      'Over the year, your average cycle length was 28 days — very regular!',
+   286→      'Fatigue remained the top symptom throughout the year; consider thyroid screening.',
+   287→      'Wellness score improved 7 points from the start of the year.',
+   288→      'Fall months showed the most mood variability — seasonal affective patterns noted.',
+   289→      'Exercise frequency correlated strongly with improved mood scores (r=0.72).',
+   290→      'Your most consistent tracking months were March and October.',
+   291→    ],
+   292→    trendLine: [
+   293→      { label: 'Jan', wellness: 62, symptoms: 45 },
+   294→      { label: 'Feb', wellness: 65, symptoms: 42 },
+   295→      { label: 'Mar', wellness: 68, symptoms: 38 },
+   296→      { label: 'Apr', wellness: 70, symptoms: 35 },
+   297→      { label: 'May', wellness: 74, symptoms: 30 },
+   298→      { label: 'Jun', wellness: 72, symptoms: 32 },
+   299→      { label: 'Jul', wellness: 76, symptoms: 28 },
+   300→      { label: 'Aug', wellness: 73, symptoms: 33 },
+   301→      { label: 'Sep', wellness: 68, symptoms: 40 },
+   302→      { label: 'Oct', wellness: 70, symptoms: 36 },
+   303→      { label: 'Nov', wellness: 72, symptoms: 34 },
+   304→      { label: 'Dec', wellness: 75, symptoms: 30 },
+   305→    ],
+   306→    radarData: [
+   307→      { subject: 'Energy', current: 70, previous: 60 },
+   308→      { subject: 'Sleep', current: 67, previous: 65 },
+   309→      { subject: 'Mood', current: 68, previous: 58 },
+   310→      { subject: 'Hydration', current: 58, previous: 50 },
+   311→      { subject: 'Pain', current: 75, previous: 68 },
+   312→      { subject: 'Exercise', current: 62, previous: 48 },
+   313→      { subject: 'Nutrition', current: 72, previous: 60 },
+   314→      { subject: 'Stress Mgmt', current: 65, previous: 55 },
+   315→    ],
+   316→  },
+   317→}
+   318→
+   319→// ── Helpers ─────────────────────────────────────────────────────────────────
+   320→function TrendIcon({ current, previous }: { current: number; previous: number }) {
+   321→  const diff = current - previous
+   322→  if (diff > 2) return <TrendingUp className="size-4 text-emerald-500" />
+   323→  if (diff < -2) return <TrendingDown className="size-4 text-red-400" />
+   324→  return <Minus className="size-4 text-muted-foreground" />
+   325→}
+   326→
+   327→function TrendLabel({ current, previous, suffix = '' }: { current: number; previous: number; suffix?: string }) {
+   328→  const diff = current - previous
+   329→  const pct = previous !== 0 ? Math.round((diff / previous) * 100) : 0
+   330→  if (diff > 2)
+   331→    return (
+   332→      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+   333→        +{pct}%{suffix}
+   334→      </span>
+   335→    )
+   336→  if (diff < -2)
+   337→    return (
+   338→      <span className="text-xs text-red-500 font-medium">
+   339→        {pct}%{suffix}
+   340→      </span>
+   341→    )
+   342→  return (
+   343→    <span className="text-xs text-muted-foreground font-medium">No change{suffix}</span>
+   344→  )
+   345→}
+   346→
+   347→// ── Score Card ──────────────────────────────────────────────────────────────
+   348→function ScoreCard({
+   349→  title,
+   350→  score,
+   351→  prevScore,
+   352→  icon: Icon,
+   353→  color,
+   354→  delay = 0,
+   355→}: {
+   356→  title: string
+   357→  score: number
+   358→  prevScore: number
+   359→  icon: React.ElementType
+   360→  color: string
+   361→  delay?: number
+   362→}) {
+   363→  return (
+   364→    <motion.div
+   365→      initial={{ opacity: 0, y: 20 }}
+   366→      animate={{ opacity: 1, y: 0 }}
+   367→      transition={{ duration: 0.4, delay }}
+   368→    >
+   369→      <Card className="relative overflow-hidden border-teal-100 dark:border-teal-900/50 hover:shadow-md transition-shadow">
+   370→        <CardContent className="p-4">
+   371→          <div className="flex items-start justify-between mb-3">
+   372→            <div className={`p-2 rounded-lg ${color}`}>
+   373→              <Icon className="size-4 text-white" />
+   374→            </div>
+   375→            <div className="flex items-center gap-1">
+   376→              <TrendIcon current={score} previous={prevScore} />
+   377→              <TrendLabel current={score} previous={prevScore} />
+   378→            </div>
+   379→          </div>
+   380→          <p className="text-2xl font-bold text-foreground">{score}</p>
+   381→          <p className="text-xs text-muted-foreground mt-0.5">{title}</p>
+   382→          <Progress value={score} className="mt-3 h-1.5 bg-teal-100 dark:bg-teal-900/50 [&>div]:bg-teal-500" />
+   383→        </CardContent>
+   384→      </Card>
+   385→    </motion.div>
+   386→  )
+   387→}
+   388→
+   389→// ── Main Component ──────────────────────────────────────────────────────────
+   390→export default function ReportsModule() {
+   391→  const [period, setPeriod] = useState<ReportPeriod>('weekly')
+   392→  const data = periodDataMap[period]
+   393→
+   394→  const chartConfig = {
+   395→    wellness: { label: 'Wellness', color: '#14b8a6' },
+   396→    symptoms: { label: 'Symptoms', color: '#f59e0b' },
+   397→    count: { label: 'Count', color: '#14b8a6' },
+   398→  }
+   399→
+   400→  const radarChartConfig = {
+   401→    current: { label: 'Current', color: '#14b8a6' },
+   402→    previous: { label: 'Previous', color: '#99f6e4' },
+   403→  }
+   404→
+   405→  return (
+   406→    <div className="flex flex-col h-full bg-gradient-to-b from-teal-50/50 to-white dark:from-teal-950/20 dark:to-background rounded-xl border border-teal-100 dark:border-teal-900/50">
+   407→      {/* Header */}
+   408→      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-teal-100 dark:border-teal-900/50 bg-white/80 dark:bg-background/80 backdrop-blur-sm rounded-t-xl">
+   409→        <div className="flex items-center gap-2.5">
+   410→          <div className="p-2 rounded-lg bg-teal-500 text-white">
+   411→            <BarChart3 className="size-5" />
+   412→          </div>
+   413→          <div>
+   414→            <h2 className="text-base font-semibold text-foreground">Report Center</h2>
+   415→            <p className="text-xs text-muted-foreground">AI-powered health insights</p>
+   416→          </div>
+   417→        </div>
+   418→
+   419→        {/* Period Selector */}
+   420→        <Tabs value={period} onValueChange={(v) => setPeriod(v as ReportPeriod)}>
+   421→          <TabsList className="bg-teal-50 dark:bg-teal-950/50">
+   422→            <TabsTrigger value="daily" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white text-xs px-3">
+   423→              Daily
+   424→            </TabsTrigger>
+   425→            <TabsTrigger value="weekly" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white text-xs px-3">
+   426→              Weekly
+   427→            </TabsTrigger>
+   428→            <TabsTrigger value="monthly" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white text-xs px-3">
+   429→              Monthly
+   430→            </TabsTrigger>
+   431→            <TabsTrigger value="annual" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white text-xs px-3">
+   432→              Annual
+   433→            </TabsTrigger>
+   434→          </TabsList>
+   435→        </Tabs>
+   436→      </div>
+   437→
+   438→      {/* Scrollable Content */}
+   439→      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5">
+   440→        {/* Score Cards Row */}
+   441→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   442→          <ScoreCard
+   443→            title="Cycle Regularity"
+   444→            score={data.cycleRegularity}
+   445→            prevScore={data.prevCycleRegularity}
+   446→            icon={Activity}
+   447→            color="bg-teal-500"
+   448→            delay={0}
+   449→          />
+   450→          <ScoreCard
+   451→            title="Symptom Severity"
+   452→            score={100 - data.symptomSeverity}
+   453→            prevScore={100 - data.prevSymptomSeverity}
+   454→            icon={Heart}
+   455→            color="bg-rose-400"
+   456→            delay={0.05}
+   457→          />
+   458→          <ScoreCard
+   459→            title="Mood Stability"
+   460→            score={data.moodStability}
+   461→            prevScore={data.prevMoodStability}
+   462→            icon={Brain}
+   463→            color="bg-amber-400"
+   464→            delay={0.1}
+   465→          />
+   466→          <ScoreCard
+   467→            title="Wellness Score"
+   468→            score={data.wellnessScore}
+   469→            prevScore={data.prevWellnessScore}
+   470→            icon={Sparkles}
+   471→            color="bg-emerald-500"
+   472→            delay={0.15}
+   473→          />
+   474→        </div>
+   475→
+   476→        {/* Charts Row 1: Symptom Frequency + Mood Distribution */}
+   477→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   478→          {/* Symptom Frequency Bar Chart */}
+   479→          <motion.div
+   480→            initial={{ opacity: 0, y: 20 }}
+   481→            animate={{ opacity: 1, y: 0 }}
+   482→            transition={{ duration: 0.4, delay: 0.2 }}
+   483→          >
+   484→            <Card className="border-teal-100 dark:border-teal-900/50 h-full">
+   485→              <CardHeader className="pb-2">
+   486→                <CardTitle className="text-sm font-semibold">Symptom Frequency</CardTitle>
+   487→                <CardDescription className="text-xs">Most reported symptoms this period</CardDescription>
+   488→              </CardHeader>
+   489→              <CardContent>
+   490→                <div className="h-[220px]">
+   491→                  <ResponsiveContainer width="100%" height="100%">
+   492→                    <BarChart data={data.symptomFrequency} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+   493→                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+   494→                      <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+   495→                      <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+   496→                      <Bar dataKey="count" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+   497→                    </BarChart>
+   498→                  </ResponsiveContainer>
+   499→                </div>
+   500→              </CardContent>
+   501→            </Card>
+   502→          </motion.div>
+   503→
+   504→          {/* Mood Distribution Pie Chart */}
+   505→          <motion.div
+   506→            initial={{ opacity: 0, y: 20 }}
+   507→            animate={{ opacity: 1, y: 0 }}
+   508→            transition={{ duration: 0.4, delay: 0.25 }}
+   509→          >
+   510→            <Card className="border-teal-100 dark:border-teal-900/50 h-full">
+   511→              <CardHeader className="pb-2">
+   512→                <CardTitle className="text-sm font-semibold">Mood Distribution</CardTitle>
+   513→                <CardDescription className="text-xs">How your moods were distributed</CardDescription>
+   514→              </CardHeader>
+   515→              <CardContent>
+   516→                <div className="h-[220px]">
+   517→                  <ResponsiveContainer width="100%" height="100%">
+   518→                    <PieChart>
+   519→                      <Pie
+   520→                        data={data.moodDistribution}
+   521→                        cx="50%"
+   522→                        cy="50%"
+   523→                        innerRadius={55}
+   524→                        outerRadius={85}
+   525→                        paddingAngle={3}
+   526→                        dataKey="value"
+   527→                      >
+   528→                        {data.moodDistribution.map((entry, index) => (
+   529→                          <Cell key={`cell-${index}`} fill={entry.color} />
+   530→                        ))}
+   531→                      </Pie>
+   532→                      <Legend
+   533→                        iconType="circle"
+   534→                        iconSize={8}
+   535→                        wrapperStyle={{ fontSize: '11px' }}
+   536→                      />
+   537→                    </PieChart>
+   538→                  </ResponsiveContainer>
+   539→                </div>
+   540→              </CardContent>
+   541→            </Card>
+   542→          </motion.div>
+   543→        </div>
+   544→
+   545→        {/* Charts Row 2: Wellness Trend Line + Radar */}
+   546→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   547→          {/* Wellness & Symptom Trend */}
+   548→          <motion.div
+   549→            initial={{ opacity: 0, y: 20 }}
+   550→            animate={{ opacity: 1, y: 0 }}
+   551→            transition={{ duration: 0.4, delay: 0.3 }}
+   552→          >
+   553→            <Card className="border-teal-100 dark:border-teal-900/50 h-full">
+   554→              <CardHeader className="pb-2">
+   555→                <CardTitle className="text-sm font-semibold">Wellness & Symptom Trends</CardTitle>
+   556→                <CardDescription className="text-xs">Tracking over time</CardDescription>
+   557→              </CardHeader>
+   558→              <CardContent>
+   559→                <div className="h-[220px]">
+   560→                  <ResponsiveContainer width="100%" height="100%">
+   561→                    <LineChart data={data.trendLine} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+   562→                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+   563→                      <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+   564→                      <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+   565→                      <Line
+   566→                        type="monotone"
+   567→                        dataKey="wellness"
+   568→                        stroke="#14b8a6"
+   569→                        strokeWidth={2.5}
+   570→                        dot={{ fill: '#14b8a6', r: 3 }}
+   571→                        activeDot={{ r: 5 }}
+   572→                      />
+   573→                      <Line
+   574→                        type="monotone"
+   575→                        dataKey="symptoms"
+   576→                        stroke="#f59e0b"
+   577→                        strokeWidth={2}
+   578→                        dot={{ fill: '#f59e0b', r: 3 }}
+   579→                        activeDot={{ r: 5 }}
+   580→                        strokeDasharray="5 5"
+   581→                      />
+   582→                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+   583→                    </LineChart>
+   584→                  </ResponsiveContainer>
+   585→                </div>
+   586→              </CardContent>
+   587→            </Card>
+   588→          </motion.div>
+   589→
+   590→          {/* Radar: Current vs Previous */}
+   591→          <motion.div
+   592→            initial={{ opacity: 0, y: 20 }}
+   593→            animate={{ opacity: 1, y: 0 }}
+   594→            transition={{ duration: 0.4, delay: 0.35 }}
+   595→          >
+   596→            <Card className="border-teal-100 dark:border-teal-900/50 h-full">
+   597→              <CardHeader className="pb-2">
+   598→                <CardTitle className="text-sm font-semibold">Period Comparison</CardTitle>
+   599→                <CardDescription className="text-xs">Current vs previous period</CardDescription>
+   600→              </CardHeader>
+   601→              <CardContent>
+   602→                <div className="h-[220px]">
+   603→                  <ResponsiveContainer width="100%" height="100%">
+   604→                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data.radarData}>
+   605→                      <PolarGrid stroke="#e5e7eb" />
+   606→                      <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
+   607→                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
+   608→                      <Radar
+   609→                        name="Current"
+   610→                        dataKey="current"
+   611→                        stroke="#14b8a6"
+   612→                        fill="#14b8a6"
+   613→                        fillOpacity={0.25}
+   614→                        strokeWidth={2}
+   615→                      />
+   616→                      <Radar
+   617→                        name="Previous"
+   618→                        dataKey="previous"
+   619→                        stroke="#99f6e4"
+   620→                        fill="#99f6e4"
+   621→                        fillOpacity={0.15}
+   622→                        strokeWidth={1.5}
+   623→                        strokeDasharray="4 4"
+   624→                      />
+   625→                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+   626→                    </RadarChart>
+   627→                  </ResponsiveContainer>
+   628→                </div>
+   629→              </CardContent>
+   630→            </Card>
+   631→          </motion.div>
+   632→        </div>
+   633→
+   634→        {/* Key Metrics Row: Sleep + Water Averages */}
+   635→        <div className="grid grid-cols-2 gap-3">
+   636→          <motion.div
+   637→            initial={{ opacity: 0, y: 20 }}
+   638→            animate={{ opacity: 1, y: 0 }}
+   639→            transition={{ duration: 0.4, delay: 0.4 }}
+   640→          >
+   641→            <Card className="border-teal-100 dark:border-teal-900/50">
+   642→              <CardContent className="p-4 flex items-center gap-3">
+   643→                <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50">
+   644→                  <Moon className="size-5 text-indigo-500" />
+   645→                </div>
+   646→                <div className="flex-1 min-w-0">
+   647→                  <p className="text-xs text-muted-foreground">Sleep Average</p>
+   648→                  <p className="text-lg font-bold text-foreground">{data.sleepAvg}h</p>
+   649→                </div>
+   650→                <Badge variant="secondary" className="text-[10px] shrink-0">
+   651→                  {data.sleepAvg >= 7 ? 'Good' : data.sleepAvg >= 6 ? 'Fair' : 'Low'}
+   652→                </Badge>
+   653→              </CardContent>
+   654→            </Card>
+   655→          </motion.div>
+   656→
+   657→          <motion.div
+   658→            initial={{ opacity: 0, y: 20 }}
+   659→            animate={{ opacity: 1, y: 0 }}
+   660→            transition={{ duration: 0.4, delay: 0.45 }}
+   661→          >
+   662→            <Card className="border-teal-100 dark:border-teal-900/50">
+   663→              <CardContent className="p-4 flex items-center gap-3">
+   664→                <div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/50">
+   665→                  <Droplets className="size-5 text-sky-500" />
+   666→                </div>
+   667→                <div className="flex-1 min-w-0">
+   668→                  <p className="text-xs text-muted-foreground">Water Average</p>
+   669→                  <p className="text-lg font-bold text-foreground">{data.waterAvg} glasses</p>
+   670→                </div>
+   671→                <Badge variant="secondary" className="text-[10px] shrink-0">
+   672→                  {data.waterAvg >= 8 ? 'On Target' : data.waterAvg >= 6 ? 'Fair' : 'Low'}
+   673→                </Badge>
+   674→              </CardContent>
+   675→            </Card>
+   676→          </motion.div>
+   677→        </div>
+   678→
+   679→        {/* Trend Comparison Table */}
+   680→        <motion.div
+   681→          initial={{ opacity: 0, y: 20 }}
+   682→          animate={{ opacity: 1, y: 0 }}
+   683→          transition={{ duration: 0.4, delay: 0.5 }}
+   684→        >
+   685→          <Card className="border-teal-100 dark:border-teal-900/50">
+   686→            <CardHeader className="pb-2">
+   687→              <CardTitle className="text-sm font-semibold">Trend Comparison</CardTitle>
+   688→              <CardDescription className="text-xs">Current vs previous period metrics</CardDescription>
+   689→            </CardHeader>
+   690→            <CardContent>
+   691→              <div className="space-y-3">
+   692→                {[
+   693→                  { label: 'Cycle Regularity', current: data.cycleRegularity, previous: data.prevCycleRegularity, higher: true },
+   694→                  { label: 'Symptom Severity (inverted)', current: 100 - data.symptomSeverity, previous: 100 - data.prevSymptomSeverity, higher: true },
+   695→                  { label: 'Mood Stability', current: data.moodStability, previous: data.prevMoodStability, higher: true },
+   696→                  { label: 'Overall Wellness', current: data.wellnessScore, previous: data.prevWellnessScore, higher: true },
+   697→                  { label: 'Sleep Quality', current: Math.round(data.sleepAvg * 10), previous: Math.round((data.sleepAvg - 0.3) * 10), higher: true },
+   698→                  { label: 'Hydration', current: Math.round(data.waterAvg * 10), previous: Math.round((data.waterAvg - 0.5) * 10), higher: true },
+   699→                ].map((item, i) => (
+   700→                  <div key={item.label} className="flex items-center gap-3">
+   701→                    <p className="text-xs text-muted-foreground w-36 shrink-0 truncate">{item.label}</p>
+   702→                    <div className="flex-1 flex items-center gap-2">
+   703→                      <div className="flex-1 h-2 rounded-full bg-teal-100 dark:bg-teal-900/50 overflow-hidden">
+   704→                        <motion.div
+   705→                          className="h-full rounded-full bg-teal-400"
+   706→                          initial={{ width: 0 }}
+   707→                          animate={{ width: `${item.previous}%` }}
+   708→                          transition={{ duration: 0.8, delay: 0.1 * i }}
+   709→                        />
+   710→                      </div>
+   711→                      <span className="text-[10px] text-muted-foreground w-7 text-right">{item.previous}</span>
+   712→                    </div>
+   713→                    <ChevronRight className="size-3 text-muted-foreground shrink-0" />
+   714→                    <div className="flex-1 flex items-center gap-2">
+   715→                      <div className="flex-1 h-2 rounded-full bg-teal-100 dark:bg-teal-900/50 overflow-hidden">
+   716→                        <motion.div
+   717→                          className="h-full rounded-full bg-teal-600"
+   718→                          initial={{ width: 0 }}
+   719→                          animate={{ width: `${item.current}%` }}
+   720→                          transition={{ duration: 0.8, delay: 0.1 * i + 0.3 }}
+   721→                        />
+   722→                      </div>
+   723→                      <span className="text-[10px] font-medium text-foreground w-7 text-right">{item.current}</span>
+   724→                    </div>
+   725→                  </div>
+   726→                ))}
+   727→                <div className="flex items-center gap-4 pt-1">
+   728→                  <div className="flex items-center gap-1.5">
+   729→                    <div className="size-2.5 rounded-full bg-teal-400" />
+   730→                    <span className="text-[10px] text-muted-foreground">Previous</span>
+   731→                  </div>
+   732→                  <div className="flex items-center gap-1.5">
+   733→                    <div className="size-2.5 rounded-full bg-teal-600" />
+   734→                    <span className="text-[10px] text-muted-foreground">Current</span>
+   735→                  </div>
+   736→                </div>
+   737→              </div>
+   738→            </CardContent>
+   739→          </Card>
+   740→        </motion.div>
+   741→
+   742→        {/* AI Health Insights */}
+   743→        <motion.div
+   744→          initial={{ opacity: 0, y: 20 }}
+   745→          animate={{ opacity: 1, y: 0 }}
+   746→          transition={{ duration: 0.4, delay: 0.55 }}
+   747→        >
+   748→          <Card className="border-teal-100 dark:border-teal-900/50 bg-gradient-to-br from-teal-50/50 to-white dark:from-teal-950/20 dark:to-background">
+   749→            <CardHeader className="pb-2">
+   750→              <div className="flex items-center gap-2">
+   751→                <Sparkles className="size-4 text-teal-500" />
+   752→                <CardTitle className="text-sm font-semibold">AI Health Insights</CardTitle>
+   753→              </div>
+   754→              <CardDescription className="text-xs">Generated based on your tracking data</CardDescription>
+   755→            </CardHeader>
+   756→            <CardContent>
+   757→              <div className="space-y-2.5">
+   758→                {data.insights.map((insight, i) => (
+   759→                  <motion.div
+   760→                    key={i}
+   761→                    initial={{ opacity: 0, x: -10 }}
+   762→                    animate={{ opacity: 1, x: 0 }}
+   763→                    transition={{ duration: 0.3, delay: 0.6 + i * 0.08 }}
+   764→                    className="flex items-start gap-2.5 p-2.5 rounded-lg bg-white/80 dark:bg-background/80 border border-teal-100 dark:border-teal-900/30"
+   765→                  >
+   766→                    <div className="mt-0.5 size-1.5 rounded-full bg-teal-500 shrink-0" />
+   767→                    <p className="text-xs text-foreground leading-relaxed">{insight}</p>
+   768→                  </motion.div>
+   769→                ))}
+   770→              </div>
+   771→            </CardContent>
+   772→          </Card>
+   773→        </motion.div>
+   774→
+   775→        {/* Cycle Summary */}
+   776→        <motion.div
+   777→          initial={{ opacity: 0, y: 20 }}
+   778→          animate={{ opacity: 1, y: 0 }}
+   779→          transition={{ duration: 0.4, delay: 0.6 }}
+   780→        >
+   781→          <Card className="border-teal-100 dark:border-teal-900/50">
+   782→            <CardHeader className="pb-2">
+   783→              <CardTitle className="text-sm font-semibold">Cycle Summary</CardTitle>
+   784→              <CardDescription className="text-xs">Key phase milestones this period</CardDescription>
+   785→            </CardHeader>
+   786→            <CardContent>
+   787→              <div className="space-y-2">
+   788→                {data.cycleSummary.map((item, i) => (
+   789→                  <div key={i} className="flex items-center gap-3 text-xs">
+   790→                    <div className="flex items-center justify-center size-7 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-medium shrink-0">
+   791→                      {item.day}
+   792→                    </div>
+   793→                    <Badge variant="outline" className="text-[10px] border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 shrink-0">
+   794→                      {item.phase}
+   795→                    </Badge>
+   796→                    <span className="text-muted-foreground truncate">{item.note}</span>
+   797→                  </div>
+   798→                ))}
+   799→              </div>
+   800→            </CardContent>
+   801→          </Card>
+   802→        </motion.div>
+   803→
+   804→        {/* Export Options */}
+   805→        <motion.div
+   806→          initial={{ opacity: 0, y: 20 }}
+   807→          animate={{ opacity: 1, y: 0 }}
+   808→          transition={{ duration: 0.4, delay: 0.65 }}
+   809→        >
+   810→          <Card className="border-teal-100 dark:border-teal-900/50">
+   811→            <CardContent className="p-4">
+   812→              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+   813→                <div>
+   814→                  <p className="text-sm font-medium text-foreground">Export Report</p>
+   815→                  <p className="text-xs text-muted-foreground">Download your health data for sharing</p>
+   816→                </div>
+   817→                <div className="flex gap-2">
+   818→                  <Button
+   819→                    variant="outline"
+   820→                    size="sm"
+   821→                    className="text-xs border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50"
+   822→                  >
+   823→                    <FileText className="size-3.5 mr-1.5" />
+   824→                    PDF
+   825→                  </Button>
+   826→                  <Button
+   827→                    variant="outline"
+   828→                    size="sm"
+   829→                    className="text-xs border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50"
+   830→                  >
+   831→                    <FileSpreadsheet className="size-3.5 mr-1.5" />
+   832→                    Excel
+   833→                  </Button>
+   834→                  <Button
+   835→                    variant="outline"
+   836→                    size="sm"
+   837→                    className="text-xs border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50"
+   838→                  >
+   839→                    <Download className="size-3.5 mr-1.5" />
+   840→                    CSV
+   841→                  </Button>
+   842→                </div>
+   843→              </div>
+   844→            </CardContent>
+   845→          </Card>
+   846→        </motion.div>
+   847→      </div>
+   848→    </div>
+   849→  )
+   850→}
+   851→

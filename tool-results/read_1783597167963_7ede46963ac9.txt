@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  BarChart,
+     7→  Bar,
+     8→  XAxis,
+     9→  YAxis,
+    10→  CartesianGrid,
+    11→  Tooltip as RechartsTooltip,
+    12→  ResponsiveContainer,
+    13→  Cell,
+    14→} from 'recharts'
+    15→import {
+    16→  Card,
+    17→  CardContent,
+    18→  CardHeader,
+    19→  CardTitle,
+    20→  CardDescription,
+    21→  CardFooter,
+    22→} from '@/components/ui/card'
+    23→import { Badge } from '@/components/ui/badge'
+    24→import { Button } from '@/components/ui/button'
+    25→import { Input } from '@/components/ui/input'
+    26→import { Progress } from '@/components/ui/progress'
+    27→import { Separator } from '@/components/ui/separator'
+    28→import { ScrollArea } from '@/components/ui/scroll-area'
+    29→import {
+    30→  Tabs,
+    31→  TabsContent,
+    32→  TabsList,
+    33→  TabsTrigger,
+    34→} from '@/components/ui/tabs'
+    35→import {
+    36→  Dialog,
+    37→  DialogContent,
+    38→  DialogHeader,
+    39→  DialogTitle,
+    40→  DialogDescription,
+    41→  DialogClose,
+    42→} from '@/components/ui/dialog'
+    43→import {
+    44→  Select,
+    45→  SelectContent,
+    46→  SelectItem,
+    47→  SelectTrigger,
+    48→  SelectValue,
+    49→} from '@/components/ui/select'
+    50→import {
+    51→  Accordion,
+    52→  AccordionContent,
+    53→  AccordionItem,
+    54→  AccordionTrigger,
+    55→} from '@/components/ui/accordion'
+    56→import { cn } from '@/lib/utils'
+    57→import {
+    58→  Dumbbell,
+    59→  Heart,
+    60→  Flame,
+    61→  Clock,
+    62→  Play,
+    63→  Pause,
+    64→  SkipForward,
+    65→  SkipBack,
+    66→  Calendar,
+    67→  TrendingUp,
+    68→  Target,
+    69→  Award,
+    70→  Trophy,
+    71→  Activity,
+    72→  Zap,
+    73→  Search,
+    74→  ChevronDown,
+    75→  ChevronRight,
+    76→  CheckCircle2,
+    77→  Sparkles,
+    78→  Timer,
+    79→  Footprints,
+    80→  Wind,
+    81→  Bike,
+    82→  PersonStanding,
+    83→  Plus,
+    84→  X,
+    85→  Star,
+    86→  Timer as TimerIcon,
+    87→  Medal,
+    88→  Layers,
+    89→  Filter,
+    90→  ArrowRight,
+    91→  Flower2,
+    92→  Sun,
+    93→  Moon,
+    94→  RefreshCw,
+    95→  PartyPopper,
+    96→  HandHeart,
+    97→  Droplet,
+    98→  MoonStar,
+    99→} from 'lucide-react'
+   100→
+   101→// ─── Types ────────────────────────────────────────────────────────────────────
+   102→
+   103→type PhaseId = 'menstrual' | 'follicular' | 'ovulation' | 'luteal'
+   104→
+   105→type WorkoutCategory = 'strength' | 'cardio' | 'yoga' | 'pilates' | 'stretching'
+   106→
+   107→type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced'
+   108→
+   109→interface Exercise {
+   110→  name: string
+   111→  duration: number // seconds for timed exercises
+   112→  reps?: string // for rep-based exercises
+   113→  description: string
+   114→  tips: string
+   115→  muscleGroup: string
+   116→}
+   117→
+   118→interface Workout {
+   119→  id: string
+   120→  name: string
+   121→  category: WorkoutCategory
+   122→  duration: number // minutes
+   123→  difficulty: Difficulty
+   124→  calories: number
+   125→  intensity: 'Low' | 'Medium' | 'Medium-High' | 'High'
+   126→  muscleGroups: string[]
+   127→  description: string
+   128→  gradient: string
+   129→  icon: React.ElementType
+   130→  exercises: Exercise[]
+   131→  phases: PhaseId[] // phases where this workout is recommended
+   132→}
+   133→
+   134→interface PhasePlan {
+   135→  id: PhaseId
+   136→  name: string
+   137→  subtitle: string
+   138→  days: string
+   139→  intensity: 'Low' | 'Medium' | 'Medium-High' | 'High'
+   140→  duration: string
+   141→  recommended: string[]
+   142→  avoid: string[]
+   143→  color: string
+   144→  gradient: string
+   145→  bgGradient: string
+   146→  borderColor: string
+   147→  textColor: string
+   148→  badgeColor: string
+   149→  icon: React.ElementType
+   150→  routines: { name: string; duration: string; focus: string; exercises: string[] }[]
+   151→  hormoneContext: string
+   152→}
+   153→
+   154→interface ExerciseDBEntry {
+   155→  id: string
+   156→  name: string
+   157→  muscleGroup: string
+   158→  equipment: string
+   159→  difficulty: Difficulty
+   160→  instructions: string
+   161→  tips: string
+   162→}
+   163→
+   164→interface Achievement {
+   165→  id: string
+   166→  name: string
+   167→  description: string
+   168→  icon: React.ElementType
+   169→  unlocked: boolean
+   170→  color: string
+   171→  progress?: number
+   172→}
+   173→
+   174→// ─── Phase Plans ──────────────────────────────────────────────────────────────
+   175→
+   176→const PHASE_PLANS: PhasePlan[] = [
+   177→  {
+   178→    id: 'menstrual',
+   179→    name: 'Menstrual Phase',
+   180→    subtitle: 'Rest & Restore',
+   181→    days: 'Days 1-5',
+   182→    intensity: 'Low',
+   183→    duration: '20-30 min',
+   184→    recommended: ['Gentle yoga', 'Walking', 'Stretching', 'Breathwork', 'Restorative pilates'],
+   185→    avoid: ['High-intensity intervals', 'Heavy lifting', 'Inversions', 'Long cardio sessions'],
+   186→    color: 'rose',
+   187→    gradient: 'from-rose-500 to-red-500',
+   188→    bgGradient: 'from-rose-500/10 to-red-500/5',
+   189→    borderColor: 'border-rose-200 dark:border-rose-900/50',
+   190→    textColor: 'text-rose-600 dark:text-rose-400',
+   191→    badgeColor: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+   192→    icon: Flower2,
+   193→    hormoneContext:
+   194→      'Estrogen and progesterone are at their lowest. Energy dips, and your body is calling for restoration. Inflammation is naturally higher, so favor low-impact movement that supports circulation without depleting reserves.',
+   195→    routines: [
+   196→      {
+   197→        name: 'Gentle Restore Flow',
+   198→        duration: '25 min',
+   199→        focus: 'Hip openers, lower back relief, breath-led movement',
+   200→        exercises: ['Cat-Cow Stretch', "Child's Pose", 'Supine Twist', 'Knees-to-Chest', 'Bridge Pose', 'Savasana'],
+   201→      },
+   202→      {
+   203→        name: 'Easy Walk + Mobility',
+   204→        duration: '30 min',
+   205→        focus: 'Light cardiovascular movement with joint mobility',
+   206→        exercises: ['Brisk Walk', 'Ankle Circles', 'Hip Circles', 'Shoulder Rolls', 'Standing Forward Fold'],
+   207→      },
+   208→      {
+   209→        name: 'Restorative Breathwork',
+   210→        duration: '20 min',
+   211→        focus: 'Nervous system regulation and cramp relief',
+   212→        exercises: ['Diaphragmatic Breathing', 'Alternate Nostril Breathing', 'Pelvic Floor Release', 'Guided Relaxation'],
+   213→      },
+   214→    ],
+   215→  },
+   216→  {
+   217→    id: 'follicular',
+   218→    name: 'Follicular Phase',
+   219→    subtitle: 'Energy Rising',
+   220→    days: 'Days 6-13',
+   221→    intensity: 'Medium-High',
+   222→    duration: '30-45 min',
+   223→    recommended: ['Strength training', 'HIIT', 'Steady-state cardio', 'Power yoga', 'Dance'],
+   224→    avoid: ['Overtraining without recovery', 'Skipping warm-ups'],
+   225→    color: 'pink',
+   226→    gradient: 'from-pink-500 to-fuchsia-500',
+   227→    bgGradient: 'from-pink-500/10 to-fuchsia-500/5',
+   228→    borderColor: 'border-pink-200 dark:border-pink-900/50',
+   229→    textColor: 'text-pink-600 dark:text-pink-400',
+   230→    badgeColor: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
+   231→    icon: Sparkles,
+   232→    hormoneContext:
+   233→      'Estrogen rises steadily, boosting energy, mood, and pain tolerance. This is your window for new PRs, skill acquisition, and higher training volume. Your body recovers faster and builds muscle efficiently.',
+   234→    routines: [
+   235→      {
+   236→        name: 'Strength Building - Lower Body',
+   237→        duration: '40 min',
+   238→        focus: 'Compound lifts for legs and glutes',
+   239→        exercises: ['Back Squats', 'Romanian Deadlifts', 'Walking Lunges', 'Glute Bridges', 'Calf Raises'],
+   240→      },
+   241→      {
+   242→        name: 'HIIT Cardio Blast',
+   243→        duration: '30 min',
+   244→        focus: 'High-intensity intervals for conditioning',
+   245→        exercises: ['Burpees', 'Mountain Climbers', 'Jump Squats', 'Plank Jacks', 'High Knees', 'Rest'],
+   246→      },
+   247→      {
+   248→        name: 'Power Vinyasa Flow',
+   249→        duration: '45 min',
+   250→        focus: 'Dynamic flow with strength holds',
+   251→        exercises: ['Sun Salutation A', 'Warrior Series', 'Crow Pose', 'Side Plank', 'Wheel Pose'],
+   252→      },
+   253→    ],
+   254→  },
+   255→  {
+   256→    id: 'ovulation',
+   257→    name: 'Ovulation Phase',
+   258→    subtitle: 'Peak Power',
+   259→    days: 'Days 14-16',
+   260→    intensity: 'High',
+   261→    duration: '30-45 min',
+   262→    recommended: ['High-intensity intervals', 'Heavy strength training', 'Power workouts', 'Sprints', 'Team sports'],
+   263→    avoid: ['Excessive heat training', 'Long endurance without fueling'],
+   264→    color: 'orange',
+   265→    gradient: 'from-orange-500 to-amber-500',
+   266→    bgGradient: 'from-orange-500/10 to-amber-500/5',
+   267→    borderColor: 'border-orange-200 dark:border-orange-900/50',
+   268→    textColor: 'text-orange-600 dark:text-orange-400',
+   269→    badgeColor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+   270→    icon: Zap,
+   271→    hormoneContext:
+   272→      'Estrogen peaks and testosterone gets a slight boost. Energy, strength, and competitiveness are at their highest. This is the time to push for personal records, explosive power, and group challenges.',
+   273→    routines: [
+   274→      {
+   275→        name: 'Peak Power Intervals',
+   276→        duration: '35 min',
+   277→        focus: 'Explosive plyometrics and sprint intervals',
+   278→        exercises: ['Box Jumps', 'Sprint Intervals', 'Plyo Push-ups', 'Tuck Jumps', 'Broad Jumps', 'Core Finisher'],
+   279→      },
+   280→      {
+   281→        name: 'Heavy Strength Day',
+   282→        duration: '45 min',
+   283→        focus: 'Maximal strength with compound movements',
+   284→        exercises: ['Deadlifts', 'Bench Press', 'Weighted Pull-ups', 'Overhead Press', 'Barbell Rows'],
+   285→      },
+   286→      {
+   287→        name: 'Athletic Conditioning',
+   288→        duration: '40 min',
+   289→        focus: 'Agility, speed, and power development',
+   290→        exercises: ['Agility Ladder', 'Sled Push', 'Med Ball Throws', 'Plyo Bounds', 'Sprints'],
+   291→      },
+   292→    ],
+   293→  },
+   294→  {
+   295→    id: 'luteal',
+   296→    name: 'Luteal Phase',
+   297→    subtitle: 'Wind Down',
+   298→    days: 'Days 17-28',
+   299→    intensity: 'Medium',
+   300→    duration: '30-40 min',
+   301→    recommended: ['Moderate cardio', 'Pilates', 'Strength maintenance', 'Barre', 'Steady-state cycling'],
+   302→    avoid: ['Max-effort lifts', 'Long HIIT sessions late in phase', 'Skipping recovery days'],
+   303→    color: 'purple',
+   304→    gradient: 'from-purple-500 to-violet-500',
+   305→    bgGradient: 'from-purple-500/10 to-violet-500/5',
+   306→    borderColor: 'border-purple-200 dark:border-purple-900/50',
+   307→    textColor: 'text-purple-600 dark:text-purple-400',
+   308→    badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+   309→    icon: MoonStar,
+   310→    hormoneContext:
+   311→      'Progesterone rises, increasing body temperature and perceived effort. Energy gradually decreases as you approach menstruation. Focus on strength maintenance, moderate cardio, and stress-reducing movement.',
+   312→    routines: [
+   313→      {
+   314→        name: 'Pilates Core & Stability',
+   315→        duration: '35 min',
+   316→        focus: 'Deep core, pelvic floor, and posture',
+   317→        exercises: ['Hundred', 'Roll-ups', 'Leg Circles', 'Swan Dive', 'Side Kicks', 'Teaser'],
+   318→      },
+   319→      {
+   320→        name: 'Moderate Strength Maintenance',
+   321→        duration: '40 min',
+   322→        focus: 'Maintain muscle with submaximal loads',
+   323→        exercises: ['Goblet Squats', 'Dumbbell Rows', 'Hip Thrusts', 'Push Press', 'Plank Holds'],
+   324→      },
+   325→      {
+   326→        name: 'Steady-State Cardio + Stretch',
+   327→        duration: '35 min',
+   328→        focus: 'Heart health with relaxation finish',
+   329→        exercises: ['Cycling', 'Incline Walk', 'Hip Openers', 'Seated Twists', 'Forward Folds'],
+   330→      },
+   331→    ],
+   332→  },
+   333→]
+   334→
+   335→// ─── Workout Library ──────────────────────────────────────────────────────────
+   336→
+   337→const WORKOUT_LIBRARY: Workout[] = [
+   338→  // ── Strength (6) ──
+   339→  {
+   340→    id: 'str-upper',
+   341→    name: 'Upper Body Power',
+   342→    category: 'strength',
+   343→    duration: 40,
+   344→    difficulty: 'Intermediate',
+   345→    calories: 280,
+   346→    intensity: 'Medium-High',
+   347→    muscleGroups: ['Chest', 'Back', 'Shoulders', 'Arms'],
+   348→    description: 'Build a strong upper body with compound and isolation movements.',
+   349→    gradient: 'from-orange-500 to-rose-500',
+   350→    icon: Dumbbell,
+   351→    phases: ['follicular', 'ovulation'],
+   352→    exercises: [
+   353→      { name: 'Push-ups', duration: 45, reps: '12-15 reps', description: 'Lower your body with control, keeping elbows at 45 degrees.', tips: 'Engage your core and avoid letting hips sag.', muscleGroup: 'Chest' },
+   354→      { name: 'Dumbbell Rows', duration: 45, reps: '12 reps each side', description: 'Hinge at hips, pull dumbbell toward hip crease.', tips: 'Squeeze shoulder blade at the top.', muscleGroup: 'Back' },
+   355→      { name: 'Overhead Press', duration: 45, reps: '12 reps', description: 'Press dumbbells overhead from shoulder height.', tips: 'Avoid arching your lower back.', muscleGroup: 'Shoulders' },
+   356→      { name: 'Bicep Curls', duration: 40, reps: '15 reps', description: 'Curl dumbbells with palms facing up.', tips: 'Keep elbows pinned to your sides.', muscleGroup: 'Arms' },
+   357→      { name: 'Tricep Dips', duration: 40, reps: '12 reps', description: 'Lower body off bench using triceps.', tips: 'Keep shoulders away from ears.', muscleGroup: 'Arms' },
+   358→      { name: 'Plank Shoulder Taps', duration: 45, reps: '20 taps', description: 'Tap opposite shoulder in plank position.', tips: 'Minimize hip rotation.', muscleGroup: 'Core' },
+   359→    ],
+   360→  },
+   361→  {
+   362→    id: 'str-lower',
+   363→    name: 'Lower Body Strength',
+   364→    category: 'strength',
+   365→    duration: 45,
+   366→    difficulty: 'Intermediate',
+   367→    calories: 320,
+   368→    intensity: 'Medium-High',
+   369→    muscleGroups: ['Quads', 'Hamstrings', 'Glutes', 'Calves'],
+   370→    description: 'Sculpt and strengthen your legs and glutes with proven compound lifts.',
+   371→    gradient: 'from-rose-500 to-orange-400',
+   372→    icon: Dumbbell,
+   373→    phases: ['follicular', 'ovulation'],
+   374→    exercises: [
+   375→      { name: 'Goblet Squats', duration: 50, reps: '15 reps', description: 'Hold dumbbell at chest, squat deep with upright torso.', tips: 'Push knees out and drive through heels.', muscleGroup: 'Quads' },
+   376→      { name: 'Romanian Deadlifts', duration: 50, reps: '12 reps', description: 'Hinge at hips with soft knees, lower weight along legs.', tips: 'Feel stretch in hamstrings, keep neutral spine.', muscleGroup: 'Hamstrings' },
+   377→      { name: 'Walking Lunges', duration: 50, reps: '12 reps each leg', description: 'Step forward and lower back knee toward floor.', tips: 'Keep front knee over ankle.', muscleGroup: 'Quads' },
+   378→      { name: 'Glute Bridges', duration: 45, reps: '15 reps', description: 'Drive hips up from supine position.', tips: 'Squeeze glutes at the top.', muscleGroup: 'Glutes' },
+   379→      { name: 'Calf Raises', duration: 40, reps: '20 reps', description: 'Rise onto balls of feet, lower with control.', tips: 'Pause at top for full contraction.', muscleGroup: 'Calves' },
+   380→    ],
+   381→  },
+   382→  {
+   383→    id: 'str-full',
+   384→    name: 'Full Body conditioning',
+   385→    category: 'strength',
+   386→    duration: 50,
+   387→    difficulty: 'Advanced',
+   388→    calories: 380,
+   389→    intensity: 'High',
+   390→    muscleGroups: ['Full Body', 'Core', 'Cardio'],
+   391→    description: 'Total-body strength circuit that builds muscle and burns calories.',
+   392→    gradient: 'from-amber-500 to-orange-600',
+   393→    icon: Activity,
+   394→    phases: ['ovulation'],
+   395→    exercises: [
+   396→      { name: 'Thrusters', duration: 45, reps: '12 reps', description: 'Squat then press dumbbells overhead in one fluid motion.', tips: 'Use momentum from squat to drive the press.', muscleGroup: 'Full Body' },
+   397→      { name: 'Renegade Rows', duration: 45, reps: '10 reps each side', description: 'Row dumbbell from plank position.', tips: 'Keep hips square to floor.', muscleGroup: 'Back' },
+   398→      { name: 'Clean to Press', duration: 50, reps: '10 reps', description: 'Explosively lift dumbbells to shoulders, then press overhead.', tips: 'Drive through legs, snap hips.', muscleGroup: 'Full Body' },
+   399→      { name: 'Bulgarian Split Squats', duration: 50, reps: '10 reps each leg', description: 'Rear foot on bench, squat with front leg.', tips: 'Keep torso upright.', muscleGroup: 'Quads' },
+   400→      { name: 'Hollow Body Hold', duration: 40, reps: '30 sec hold', description: 'Lie on back, lift legs and shoulders off floor.', tips: 'Press lower back into floor.', muscleGroup: 'Core' },
+   401→    ],
+   402→  },
+   403→  {
+   404→    id: 'str-core',
+   405→    name: 'Core Crusher',
+   406→    category: 'strength',
+   407→    duration: 25,
+   408→    difficulty: 'Beginner',
+   409→    calories: 180,
+   410→    intensity: 'Medium',
+   411→    muscleGroups: ['Abs', 'Obliques', 'Lower Back'],
+   412→    description: 'Targeted core workout for stability, definition, and lower-back health.',
+   413→    gradient: 'from-orange-400 to-yellow-500',
+   414→    icon: Layers,
+   415→    phases: ['follicular', 'luteal'],
+   416→    exercises: [
+   417→      { name: 'Dead Bugs', duration: 40, reps: '12 reps each side', description: 'Lie on back, extend opposite arm and leg.', tips: 'Keep lower back pressed into floor.', muscleGroup: 'Abs' },
+   418→      { name: 'Russian Twists', duration: 45, reps: '20 twists', description: 'Sit, lean back, rotate torso side to side.', tips: 'Keep chest lifted.', muscleGroup: 'Obliques' },
+   419→      { name: 'Bicycle Crunches', duration: 45, reps: '20 reps', description: 'Crunch opposite elbow to knee in cycling motion.', tips: 'Slow and controlled, no rushing.', muscleGroup: 'Abs' },
+   420→      { name: 'Plank Hold', duration: 45, reps: '45 sec', description: 'Hold forearm plank position.', tips: 'Body in straight line, engage glutes.', muscleGroup: 'Core' },
+   421→      { name: 'Bird Dogs', duration: 40, reps: '10 reps each side', description: 'Extend opposite arm and leg from all-fours.', tips: 'Keep hips level and stable.', muscleGroup: 'Lower Back' },
+   422→    ],
+   423→  },
+   424→  {
+   425→    id: 'str-glutes',
+   426→    name: 'Glute Builder',
+   427→    category: 'strength',
+   428→    duration: 35,
+   429→    difficulty: 'Intermediate',
+   430→    calories: 240,
+   431→    intensity: 'Medium',
+   432→    muscleGroups: ['Glutes', 'Hamstrings', 'Hips'],
+   433→    description: 'Sculpt and strengthen your glutes with targeted activation and overload.',
+   434→    gradient: 'from-rose-400 to-pink-500',
+   435→    icon: Dumbbell,
+   436→    phases: ['follicular', 'luteal'],
+   437→    exercises: [
+   438→      { name: 'Hip Thrusts', duration: 50, reps: '15 reps', description: 'Drive hips up with shoulders on bench.', tips: 'Tuck chin, squeeze glutes hard at top.', muscleGroup: 'Glutes' },
+   439→      { name: 'Curtsy Lunges', duration: 45, reps: '12 reps each leg', description: 'Step behind into curtsy, lower back knee.', tips: 'Keep front knee tracking over toes.', muscleGroup: 'Glutes' },
+   440→      { name: 'Fire Hydrants', duration: 40, reps: '15 reps each side', description: 'From all-fours, lift leg out to side.', tips: 'Keep hips square, don\'t rotate.', muscleGroup: 'Glutes' },
+   441→      { name: 'Cable Kickbacks', duration: 45, reps: '12 reps each leg', description: 'Kick leg back with cable resistance.', tips: 'Squeeze glute at end range.', muscleGroup: 'Glutes' },
+   442→      { name: 'Sumo Squats', duration: 45, reps: '15 reps', description: 'Wide stance squat with toes pointed out.', tips: 'Drive knees outward.', muscleGroup: 'Glutes' },
+   443→    ],
+   444→  },
+   445→  {
+   446→    id: 'str-arms',
+   447→    name: 'Arm Definition',
+   448→    category: 'strength',
+   449→    duration: 20,
+   450→    difficulty: 'Beginner',
+   451→    calories: 140,
+   452→    intensity: 'Medium',
+   453→    muscleGroups: ['Biceps', 'Triceps', 'Forearms'],
+   454→    description: 'Tone and define your arms with focused isolation work.',
+   455→    gradient: 'from-amber-400 to-orange-500',
+   456→    icon: Dumbbell,
+   457→    phases: ['follicular', 'luteal'],
+   458→    exercises: [
+   459→      { name: 'Hammer Curls', duration: 40, reps: '12 reps', description: 'Curl dumbbells with palms facing each other.', tips: 'Control the negative.', muscleGroup: 'Biceps' },
+   460→      { name: 'Overhead Tricep Extension', duration: 40, reps: '12 reps', description: 'Lower dumbbell behind head, extend up.', tips: 'Keep elbows pointing forward.', muscleGroup: 'Triceps' },
+   461→      { name: 'Concentration Curls', duration: 40, reps: '10 reps each arm', description: 'Curl with elbow braced on inner thigh.', tips: 'Isolate the bicep.', muscleGroup: 'Biceps' },
+   462→      { name: 'Tricep Kickbacks', duration: 40, reps: '12 reps each arm', description: 'Hinge forward, extend dumbbell back.', tips: 'Squeeze tricep at extension.', muscleGroup: 'Triceps' },
+   463→      { name: 'Wrist Curls', duration: 35, reps: '15 reps', description: 'Curl dumbbell with forearms on bench.', tips: 'Light weight, high control.', muscleGroup: 'Forearms' },
+   464→    ],
+   465→  },
+   466→
+   467→  // ── Cardio (5) ──
+   468→  {
+   469→    id: 'car-hiit',
+   470→    name: 'HIIT Inferno',
+   471→    category: 'cardio',
+   472→    duration: 25,
+   473→    difficulty: 'Advanced',
+   474→    calories: 320,
+   475→    intensity: 'High',
+   476→    muscleGroups: ['Full Body', 'Cardio'],
+   477→    description: 'High-intensity intervals that torch calories and boost metabolism for hours.',
+   478→    gradient: 'from-red-500 to-orange-500',
+   479→    icon: Flame,
+   480→    phases: ['follicular', 'ovulation'],
+   481→    exercises: [
+   482→      { name: 'Burpees', duration: 40, reps: 'Max reps', description: 'Squat, kick back to plank, push-up, jump in, jump up.', tips: 'Maintain pace, not max speed.', muscleGroup: 'Full Body' },
+   483→      { name: 'Mountain Climbers', duration: 40, reps: 'Fast pace', description: 'Drive knees to chest alternately from plank.', tips: 'Keep hips low and stable.', muscleGroup: 'Core' },
+   484→      { name: 'Jump Squats', duration: 40, reps: 'Max reps', description: 'Squat then explode into a jump.', tips: 'Land softly and absorb with muscles.', muscleGroup: 'Quads' },
+   485→      { name: 'Plank Jacks', duration: 40, reps: 'Max reps', description: 'Jump feet wide and together from plank.', tips: 'Keep upper body still.', muscleGroup: 'Core' },
+   486→      { name: 'High Knees', duration: 40, reps: 'Fast pace', description: 'Run in place bringing knees to hip height.', tips: 'Stay on balls of feet.', muscleGroup: 'Cardio' },
+   487→      { name: 'Rest', duration: 20, reps: 'Recovery', description: 'Walk in place, breathe deeply.', tips: 'Catch breath, hydrate.', muscleGroup: 'Rest' },
+   488→    ],
+   489→  },
+   490→  {
+   491→    id: 'car-run',
+   492→    name: 'Endurance Run',
+   493→    category: 'cardio',
+   494→    duration: 40,
+   495→    difficulty: 'Intermediate',
+   496→    calories: 380,
+   497→    intensity: 'Medium-High',
+   498→    muscleGroups: ['Legs', 'Cardio'],
+   499→    description: 'Steady-state outdoor or treadmill run to build aerobic endurance.',
+   500→    gradient: 'from-orange-500 to-amber-400',
+   501→    icon: Footprints,
+   502→    phases: ['follicular', 'luteal'],
+   503→    exercises: [
+   504→      { name: 'Warm-up Walk', duration: 300, reps: '5 min', description: 'Brisk walk to elevate heart rate.', tips: 'Loosen up shoulders, breathe easy.', muscleGroup: 'Cardio' },
+   505→      { name: 'Steady Run', duration: 1800, reps: '30 min', description: 'Maintain conversational pace run.', tips: 'You should be able to speak in short sentences.', muscleGroup: 'Cardio' },
+   506→      { name: 'Stride Outs', duration: 60, reps: '4 x 15 sec', description: 'Accelerate to near-sprint, decelerate.', tips: 'Focus on form, not speed.', muscleGroup: 'Legs' },
+   507→      { name: 'Cool-down Walk', duration: 300, reps: '5 min', description: 'Easy walk to bring heart rate down.', tips: 'Breathe deeply through nose.', muscleGroup: 'Cardio' },
+   508→    ],
+   509→  },
+   510→  {
+   511→    id: 'car-cycle',
+   512→    name: 'Cycling Session',
+   513→    category: 'cardio',
+   514→    duration: 35,
+   515→    difficulty: 'Intermediate',
+   516→    calories: 290,
+   517→    intensity: 'Medium',
+   518→    muscleGroups: ['Quads', 'Glutes', 'Cardio'],
+   519→    description: 'Indoor or outdoor cycling with intervals for leg power and cardio.',
+   520→    gradient: 'from-amber-500 to-yellow-400',
+   521→    icon: Bike,
+   522→    phases: ['follicular', 'luteal'],
+   523→    exercises: [
+   524→      { name: 'Easy Spin', duration: 300, reps: '5 min', description: 'Light resistance, easy pace.', tips: 'Cadence 80-90 rpm.', muscleGroup: 'Cardio' },
+   525→      { name: 'Standing Climb', duration: 120, reps: '2 min', description: 'Stand and pedal with higher resistance.', tips: 'Keep core engaged.', muscleGroup: 'Quads' },
+   526→      { name: 'Seated Sprint', duration: 60, reps: '1 min', description: 'High cadence sprint in saddle.', tips: 'Stay smooth, no bouncing.', muscleGroup: 'Cardio' },
+   527→      { name: 'Recovery Spin', duration: 120, reps: '2 min', description: 'Easy spin to recover.', tips: 'Breathe, reset.', muscleGroup: 'Cardio' },
+   528→      { name: 'Final Push', duration: 180, reps: '3 min', description: 'Moderate-to-hard effort finish.', tips: 'Leave it all out there.', muscleGroup: 'Cardio' },
+   529→    ],
+   530→  },
+   531→  {
+   532→    id: 'car-dance',
+   533→    name: 'Dance Cardio',
+   534→    category: 'cardio',
+   535→    duration: 30,
+   536→    difficulty: 'Beginner',
+   537→    calories: 240,
+   538→    intensity: 'Medium',
+   539→    muscleGroups: ['Full Body', 'Cardio'],
+   540→    description: 'Fun dance-based cardio that feels like a party, not a workout.',
+   541→    gradient: 'from-pink-500 to-orange-400',
+   542→    icon: Activity,
+   543→    phases: ['follicular', 'ovulation'],
+   544→    exercises: [
+   545→      { name: 'Warm-up Groove', duration: 240, reps: '4 min', description: 'Easy dance moves to warm up.', tips: 'Smile, have fun!', muscleGroup: 'Full Body' },
+   546→      { name: 'Latin Cardio', duration: 360, reps: '6 min', description: 'Salsa and merengue-inspired moves.', tips: 'Move hips, keep it loose.', muscleGroup: 'Full Body' },
+   547→      { name: 'Hip-Hop Section', duration: 360, reps: '6 min', description: 'Hip-hop dance moves with attitude.', tips: 'Get low, get funky.', muscleGroup: 'Full Body' },
+   548→      { name: 'Bollywood Burn', duration: 360, reps: '6 min', description: 'Bollywood-inspired high-energy moves.', tips: 'Use your arms big.', muscleGroup: 'Full Body' },
+   549→      { name: 'Cool-down Sway', duration: 240, reps: '4 min', description: 'Slow rhythmic movements to recover.', tips: 'Breathe and stretch.', muscleGroup: 'Full Body' },
+   550→    ],
+   551→  },
+   552→  {
+   553→    id: 'car-jump',
+   554→    name: 'Jump Rope Burn',
+   555→    category: 'cardio',
+   556→    duration: 20,
+   557→    difficulty: 'Intermediate',
+   558→    calories: 220,
+   559→    intensity: 'High',
+   560→    muscleGroups: ['Calves', 'Cardio', 'Shoulders'],
+   561→    description: 'Jump rope intervals for fast, effective conditioning and coordination.',
+   562→    gradient: 'from-orange-400 to-red-400',
+   563→    icon: Activity,
+   564→    phases: ['follicular', 'ovulation'],
+   565→    exercises: [
+   566→      { name: 'Basic Bounce', duration: 60, reps: '1 min', description: 'Two-foot bounce over rope.', tips: 'Stay light on balls of feet.', muscleGroup: 'Calves' },
+   567→      { name: 'Alternating Foot', duration: 60, reps: '1 min', description: 'Alternate feet like jogging.', tips: 'Keep rope rhythm steady.', muscleGroup: 'Calves' },
+   568→      { name: 'High Knees', duration: 60, reps: '1 min', description: 'Bring knees up while jumping.', tips: 'Drive knees to hip height.', muscleGroup: 'Cardio' },
+   569→      { name: 'Double Unders', duration: 60, reps: '1 min', description: 'Two rope passes per jump.', tips: 'Jump higher, spin wrists faster.', muscleGroup: 'Cardio' },
+   570→      { name: 'Rest', duration: 30, reps: '30 sec', description: 'March in place.', tips: 'Catch breath.', muscleGroup: 'Rest' },
+   571→    ],
+   572→  },
+   573→
+   574→  // ── Yoga (5) ──
+   575→  {
+   576→    id: 'yog-vinyasa',
+   577→    name: 'Vinyasa Flow',
+   578→    category: 'yoga',
+   579→    duration: 45,
+   580→    difficulty: 'Intermediate',
+   581→    calories: 200,
+   582→    intensity: 'Medium',
+   583→    muscleGroups: ['Full Body', 'Core', 'Flexibility'],
+   584→    description: 'Dynamic flow linking breath to movement for strength and flexibility.',
+   585→    gradient: 'from-purple-500 to-pink-500',
+   586→    icon: Wind,
+   587→    phases: ['follicular', 'luteal'],
+   588→    exercises: [
+   589→      { name: 'Sun Salutation A', duration: 360, reps: '5 rounds', description: 'Classic flow: mountain, forward fold, plank, cobra, down dog.', tips: 'Move with breath, one breath per movement.', muscleGroup: 'Full Body' },
+   590→      { name: 'Warrior Sequence', duration: 360, reps: '6 min', description: 'Warrior I, II, III flows with breath.', tips: 'Sink into front knee, extend through back leg.', muscleGroup: 'Legs' },
+   591→      { name: 'Balance Poses', duration: 300, reps: '5 min', description: 'Tree pose, dancer, half moon.', tips: 'Drizishti: focus gaze for stability.', muscleGroup: 'Core' },
+   592→      { name: 'Backbends', duration: 300, reps: '5 min', description: 'Cobra, upward dog, bridge, wheel.', tips: 'Engage glutes to protect lower back.', muscleGroup: 'Back' },
+   593→      { name: 'Savasana', duration: 300, reps: '5 min', description: 'Final relaxation pose.', tips: 'Soften every muscle, breathe naturally.', muscleGroup: 'Full Body' },
+   594→    ],
+   595→  },
+   596→  {
+   597→    id: 'yog-hatha',
+   598→    name: 'Hatha Yoga',
+   599→    category: 'yoga',
+   600→    duration: 40,
+   601→    difficulty: 'Beginner',
+   602→    calories: 160,
+   603→    intensity: 'Low',
+   604→    muscleGroups: ['Full Body', 'Flexibility'],
+   605→    description: 'Classical yoga with longer holds to build alignment and awareness.',
+   606→    gradient: 'from-violet-500 to-purple-400',
+   607→    icon: Wind,
+   608→    phases: ['menstrual', 'luteal'],
+   609→    exercises: [
+   610→      { name: 'Centering & Breath', duration: 240, reps: '4 min', description: 'Sit comfortably, focus on breath.', tips: 'Long, smooth inhales and exhales.', muscleGroup: 'Mind' },
+   611→      { name: 'Standing Poses', duration: 720, reps: '12 min', description: 'Mountain, triangle, side angle, pyramid.', tips: 'Hold each pose 5-10 breaths.', muscleGroup: 'Legs' },
+   612→      { name: 'Seated Poses', duration: 600, reps: '10 min', description: 'Seated forward bend, head-to-knee, bound angle.', tips: 'Lengthen spine before folding.', muscleGroup: 'Back' },
+   613→      { name: 'Twists & Hip Openers', duration: 480, reps: '8 min', description: 'Supine twist, happy baby, figure four.', tips: 'Relax jaw and shoulders.', muscleGroup: 'Hips' },
+   614→      { name: 'Final Relaxation', duration: 360, reps: '6 min', description: 'Savasana with guided awareness.', tips: 'Let go completely.', muscleGroup: 'Full Body' },
+   615→    ],
+   616→  },
+   617→  {
+   618→    id: 'yog-yin',
+   619→    name: 'Yin Yoga',
+   620→    category: 'yoga',
+   621→    duration: 50,
+   622→    difficulty: 'Beginner',
+   623→    calories: 120,
+   624→    intensity: 'Low',
+   625→    muscleGroups: ['Connective Tissue', 'Joints', 'Flexibility'],
+   626→    description: 'Deep, slow stretches held for minutes to release connective tissue.',
+   627→    gradient: 'from-indigo-500 to-purple-500',
+   628→    icon: Moon,
+   629→    phases: ['menstrual', 'luteal'],
+   630→    exercises: [
+   631→      { name: 'Butterfly Fold', duration: 300, reps: '5 min', description: 'Seated, soles together, fold forward.', tips: 'Soften muscles, let gravity do the work.', muscleGroup: 'Hips' },
+   632→      { name: 'Dragon Pose', duration: 300, reps: '5 min each side', description: 'Low lunge with deep hip flexor stretch.', tips: 'Breathe into the stretch sensation.', muscleGroup: 'Hips' },
+   633→      { name: 'Sleeping Swan', duration: 360, reps: '6 min each side', description: 'Pigeon pose, fully relaxed on floor.', tips: 'Support with blanket if needed.', muscleGroup: 'Glutes' },
+   634→      { name: 'Caterpillar', duration: 300, reps: '5 min', description: 'Seated forward fold with rounded spine.', tips: 'Let spine curve naturally.', muscleGroup: 'Back' },
+   635→      { name: 'Savasana', duration: 360, reps: '6 min', description: 'Final rest.', tips: 'Notice the spaciousness created.', muscleGroup: 'Full Body' },
+   636→    ],
+   637→  },
+   638→  {
+   639→    id: 'yog-restorative',
+   640→    name: 'Restorative Yoga',
+   641→    category: 'yoga',
+   642→    duration: 35,
+   643→    difficulty: 'Beginner',
+   644→    calories: 90,
+   645→    intensity: 'Low',
+   646→    muscleGroups: ['Nervous System', 'Full Body'],
+   647→    description: 'Gentle supported poses to activate parasympathetic nervous system.',
+   648→    gradient: 'from-rose-400 to-purple-400',
+   649→    icon: HandHeart,
+   650→    phases: ['menstrual'],
+   651→    exercises: [
+   652→      { name: 'Supported Child\'s Pose', duration: 480, reps: '8 min', description: 'Bolster under torso, knees wide.', tips: 'Soften belly, breathe into back.', muscleGroup: 'Back' },
+   653→      { name: 'Legs Up the Wall', duration: 600, reps: '10 min', description: 'Lie on back, legs extended up wall.', tips: 'Let legs be completely passive.', muscleGroup: 'Legs' },
+   654→      { name: 'Supported Bridge', duration: 420, reps: '7 min', description: 'Block under sacrum in bridge.', tips: 'Fully supported, no effort.', muscleGroup: 'Back' },
+   655→      { name: 'Reclined Twist', duration: 300, reps: '5 min each side', description: 'Supported supine spinal twist.', tips: 'Use blankets for comfort.', muscleGroup: 'Spine' },
+   656→      { name: 'Savasana', duration: 300, reps: '5 min', description: 'Final relaxation.', tips: 'Settle into stillness.', muscleGroup: 'Full Body' },
+   657→    ],
+   658→  },
+   659→  {
+   660→    id: 'yog-prenatal',
+   661→    name: 'Prenatal Yoga',
+   662→    category: 'yoga',
+   663→    duration: 30,
+   664→    difficulty: 'Beginner',
+   665→    calories: 110,
+   666→    intensity: 'Low',
+   667→    muscleGroups: ['Full Body', 'Pelvic Floor'],
+   668→    description: 'Safe, gentle yoga for expecting mothers in any trimester.',
+   669→    gradient: 'from-pink-400 to-rose-400',
+   670→    icon: HandHeart,
+   671→    phases: ['menstrual', 'follicular', 'ovulation', 'luteal'],
+   672→    exercises: [
+   673→      { name: 'Cat-Cow Flow', duration: 240, reps: '4 min', description: 'Gentle spinal mobility on all fours.', tips: 'Move with breath, keep belly soft.', muscleGroup: 'Spine' },
+   674→      { name: 'Hip Circles', duration: 180, reps: '3 min', description: 'Circular hip movement standing or seated.', tips: 'Opens hips for labor prep.', muscleGroup: 'Hips' },
+   675→      { name: 'Garland Pose', duration: 240, reps: '4 min', description: 'Supported deep squat.', tips: 'Use blocks under heels if needed.', muscleGroup: 'Hips' },
+   676→      { name: 'Side Stretch', duration: 180, reps: '3 min each side', description: 'Seated side body stretch.', tips: 'Opens space for baby.', muscleGroup: 'Side Body' },
+   677→      { name: 'Pelvic Floor Breathing', duration: 300, reps: '5 min', description: 'Gentle kegel with breath coordination.', tips: 'Soft engagement, full release.', muscleGroup: 'Pelvic Floor' },
+   678→      { name: 'Savasana on Side', duration: 360, reps: '6 min', description: 'Rest on left side with bolster.', tips: 'Avoid lying flat on back.', muscleGroup: 'Full Body' },
+   679→    ],
+   680→  },
+   681→
+   682→  // ── Pilates (4) ──
+   683→  {
+   684→    id: 'pil-mat',
+   685→    name: 'Mat Pilates',
+   686→    category: 'pilates',
+   687→    duration: 35,
+   688→    difficulty: 'Intermediate',
+   689→    calories: 180,
+   690→    intensity: 'Medium',
+   691→    muscleGroups: ['Core', 'Full Body', 'Posture'],
+   692→    description: 'Classical mat Pilates sequence for core strength and control.',
+   693→    gradient: 'from-orange-400 to-pink-400',
+   694→    icon: PersonStanding,
+   695→    phases: ['follicular', 'luteal'],
+   696→    exercises: [
+   697→      { name: 'The Hundred', duration: 100, reps: '100 counts', description: 'Pump arms while holding legs extended.', tips: 'Breathe in for 5, out for 5.', muscleGroup: 'Core' },
+   698→      { name: 'Roll-Up', duration: 60, reps: '6 reps', description: 'Articulate spine up and down from floor.', tips: 'Engage deep core, no momentum.', muscleGroup: 'Abs' },
+   699→      { name: 'Single Leg Circles', duration: 60, reps: '5 each way each leg', description: 'Circle extended leg from hip.', tips: 'Stabilize pelvis.', muscleGroup: 'Hips' },
+   700→      { name: 'Swan Dive', duration: 60, reps: '6 reps', description: 'Lift chest and legs in prone position.', tips: 'Lengthen spine, no compression.', muscleGroup: 'Back' },
+   701→      { name: 'Side Kick Series', duration: 90, reps: '8 kicks each side', description: 'Side-lying leg kicks front and back.', tips: 'Maintain stable torso.', muscleGroup: 'Legs' },
+   702→      { name: 'Teaser', duration: 60, reps: '6 reps', description: 'V-sit balance, arms and legs extended.', tips: 'Modify with bent knees if needed.', muscleGroup: 'Core' },
+   703→    ],
+   704→  },
+   705→  {
+   706→    id: 'pil-reformer',
+   707→    name: 'Reformer Workout',
+   708→    category: 'pilates',
+   709→    duration: 45,
+   710→    difficulty: 'Advanced',
+   711→    calories: 240,
+   712→    intensity: 'Medium-High',
+   713→    muscleGroups: ['Full Body', 'Core', 'Stability'],
+   714→    description: 'Spring-resisted reformer exercises for full-body conditioning.',
+   715→    gradient: 'from-amber-400 to-rose-400',
+   716→    icon: Layers,
+   717→    phases: ['follicular', 'luteal'],
+   718→    exercises: [
+   719→      { name: 'Footwork', duration: 240, reps: '4 min', description: 'Push carriage with feet in various positions.', tips: 'Press through full foot.', muscleGroup: 'Legs' },
+   720→      { name: 'Hundred on Reformer', duration: 100, reps: '100 counts', description: 'Hundred with straps for arm connection.', tips: 'Stabilize shoulders.', muscleGroup: 'Core' },
+   721→      { name: 'Frog & Leg Circles', duration: 180, reps: '3 min', description: 'In straps, bend and extend legs in frog.', tips: 'Pelvic neutral throughout.', muscleGroup: 'Legs' },
+   722→      { name: 'Short Box Series', duration: 300, reps: '5 min', description: 'Seated on box, flexion and rotation.', tips: 'Curve spine deeply.', muscleGroup: 'Core' },
+   723→      { name: 'Long Stretch', duration: 180, reps: '3 min', description: 'Plank-based work pushing carriage.', tips: 'Maintain plank line.', muscleGroup: 'Full Body' },
+   724→      { name: 'Knee Stretches', duration: 180, reps: '3 min', description: 'Kneeling, push carriage in/out with knees.', tips: 'Engage abs to control.', muscleGroup: 'Core' },
+   725→    ],
+   726→  },
+   727→  {
+   728→    id: 'pil-barre',
+   729→    name: 'Barre Class',
+   730→    category: 'pilates',
+   731→    duration: 40,
+   732→    difficulty: 'Intermediate',
+   733→    calories: 220,
+   734→    intensity: 'Medium',
+   735→    muscleGroups: ['Legs', 'Glutes', 'Core', 'Arms'],
+   736→    description: 'Ballet-inspired low-impact toning with small controlled movements.',
+   737→    gradient: 'from-pink-400 to-fuchsia-400',
+   738→    icon: PersonStanding,
+   739→    phases: ['follicular', 'luteal'],
+   740→    exercises: [
+   741→      { name: 'Warm-up Pliés', duration: 240, reps: '4 min', description: 'First and second position pliés.', tips: 'Knees over toes, tall spine.', muscleGroup: 'Legs' },
+   742→      { name: 'Arm Work with Light Weights', duration: 300, reps: '5 min', description: 'Small arm pulses with 1-2 lb weights.', tips: 'Small range, high reps.', muscleGroup: 'Arms' },
+   743→      { name: 'Thigh Set', duration: 360, reps: '6 min', description: 'Small lunges and holds at the barre.', tips: 'Shake means change is happening.', muscleGroup: 'Quads' },
+   744→      { name: 'Glute Series', duration: 360, reps: '6 min', description: 'Standing leg lifts and pulses.', tips: 'Keep standing leg strong.', muscleGroup: 'Glutes' },
+   745→      { name: 'Core with Ball', duration: 300, reps: '5 min', description: 'Ab work with small ball between thighs.', tips: 'Squeeze ball, engage deep abs.', muscleGroup: 'Core' },
+   746→      { name: 'Final Stretch', duration: 240, reps: '4 min', description: 'Full body stretch sequence.', tips: 'Breathe into each stretch.', muscleGroup: 'Full Body' },
+   747→    ],
+   748→  },
+   749→  {
+   750→    id: 'pil-core',
+   751→    name: 'Pilates Core',
+   752→    category: 'pilates',
+   753→    duration: 25,
+   754→    difficulty: 'Beginner',
+   755→    calories: 150,
+   756→    intensity: 'Medium',
+   757→    muscleGroups: ['Core', 'Back', 'Pelvic Floor'],
+   758→    description: 'Targeted core-focused Pilates for stability and postural strength.',
+   759→    gradient: 'from-orange-400 to-amber-400',
+   760→    icon: Layers,
+   761→    phases: ['menstrual', 'follicular', 'luteal'],
+   762→    exercises: [
+   763→      { name: 'Pelvic Curl', duration: 90, reps: '8 reps', description: 'Articulate spine up and down from bridge.', tips: 'One vertebra at a time.', muscleGroup: 'Glutes' },
+   764→      { name: 'Chest Lift', duration: 60, reps: '8 reps', description: 'Small abdominal crunch with hands behind head.', tips: 'Keep elbows wide, abs deep.', muscleGroup: 'Abs' },
+   765→      { name: 'Front Support', duration: 45, reps: '45 sec hold', description: 'Forearm plank hold.', tips: 'Body in one line.', muscleGroup: 'Core' },
+   766→      { name: 'Criss-Cross', duration: 60, reps: '10 each side', description: 'Bicycle-style oblique crunches.', tips: 'Rotate from waist, not neck.', muscleGroup: 'Obliques' },
+   767→      { name: 'Swan Extension', duration: 60, reps: '6 reps', description: 'Gentle prone back extension.', tips: 'Lengthen neck, engage glutes.', muscleGroup: 'Back' },
+   768→      { name: 'Side Plank', duration: 45, reps: '30 sec each side', description: 'Side-lying forearm plank.', tips: 'Stack hips, lift waist.', muscleGroup: 'Obliques' },
+   769→    ],
+   770→  },
+   771→
+   772→  // ── Stretching (4) ──
+   773→  {
+   774→    id: 'str-full-stretch',
+   775→    name: 'Full Body Stretch',
+   776→    category: 'stretching',
+   777→    duration: 20,
+   778→    difficulty: 'Beginner',
+   779→    calories: 60,
+   780→    intensity: 'Low',
+   781→    muscleGroups: ['Full Body', 'Flexibility'],
+   782→    description: 'Complete body stretch routine for flexibility and recovery.',
+   783→    gradient: 'from-purple-400 to-violet-400',
+   784→    icon: Wind,
+   785→    phases: ['menstrual', 'luteal'],
+   786→    exercises: [
+   787→      { name: 'Neck Rolls', duration: 60, reps: '1 min', description: 'Gentle half-circles with the head.', tips: 'No full backward circles.', muscleGroup: 'Neck' },
+   788→      { name: 'Shoulder & Chest Opener', duration: 90, reps: '1.5 min', description: 'Doorway stretch and shoulder rolls.', tips: 'Breathe into chest.', muscleGroup: 'Shoulders' },
+   789→      { name: 'Standing Forward Fold', duration: 90, reps: '1.5 min', description: 'Hinge at hips, let head hang.', tips: 'Bend knees if needed.', muscleGroup: 'Hamstrings' },
+   790→      { name: 'Lunge Hip Stretch', duration: 90, reps: '45 sec each side', description: 'Kneeling lunge for hip flexors.', tips: 'Tuck tailbone under.', muscleGroup: 'Hips' },
+   791→      { name: 'Seated Twist', duration: 90, reps: '45 sec each side', description: 'Seated spinal twist.', tips: 'Lengthen spine first.', muscleGroup: 'Spine' },
+   792→      { name: 'Figure Four Stretch', duration: 120, reps: '1 min each side', description: 'Supine hip rotator stretch.', tips: 'Relax shoulders and jaw.', muscleGroup: 'Glutes' },
+   793→    ],
+   794→  },
+   795→  {
+   796→    id: 'str-morning',
+   797→    name: 'Morning Mobility',
+   798→    category: 'stretching',
+   799→    duration: 15,
+   800→    difficulty: 'Beginner',
+   801→    calories: 40,
+   802→    intensity: 'Low',
+   803→    muscleGroups: ['Full Body', 'Joints'],
+   804→    description: 'Wake up your body with gentle morning mobility and energy flow.',
+   805→    gradient: 'from-amber-300 to-orange-400',
+   806→    icon: Sun,
+   807→    phases: ['menstrual', 'follicular', 'ovulation', 'luteal'],
+   808→    exercises: [
+   809→      { name: 'Deep Breathing', duration: 60, reps: '1 min', description: 'Three-part breath sitting up in bed.', tips: 'Fill belly, ribs, chest.', muscleGroup: 'Lungs' },
+   810→      { name: 'Full Body Stretch', duration: 60, reps: '1 min', description: 'Reach arms and legs long, like star pose.', tips: 'Tense then release.', muscleGroup: 'Full Body' },
+   811→      { name: 'Knees-to-Chest', duration: 90, reps: '1.5 min', description: 'Hug knees into chest, rock side to side.', tips: 'Massage lower back.', muscleGroup: 'Back' },
+   812→      { name: 'Spinal Twist in Bed', duration: 90, reps: '45 sec each side', description: 'Drop knees side to side.', tips: 'Look opposite direction.', muscleGroup: 'Spine' },
+   813→      { name: 'Cat-Cow', duration: 120, reps: '2 min', description: 'All-fours spinal mobility.', tips: 'Move with breath.', muscleGroup: 'Spine' },
+   814→      { name: 'Standing Side Bend', duration: 90, reps: '45 sec each side', description: 'Reach one arm overhead, side-bend.', tips: 'Lengthen before bending.', muscleGroup: 'Side Body' },
+   815→    ],
+   816→  },
+   817→  {
+   818→    id: 'str-evening',
+   819→    name: 'Evening Wind Down',
+   820→    category: 'stretching',
+   821→    duration: 18,
+   822→    difficulty: 'Beginner',
+   823→    calories: 50,
+   824→    intensity: 'Low',
+   825→    muscleGroups: ['Full Body', 'Nervous System'],
+   826→    description: 'Calming stretches to release the day and prepare for restful sleep.',
+   827→    gradient: 'from-indigo-400 to-purple-400',
+   828→    icon: Moon,
+   829→    phases: ['menstrual', 'luteal'],
+   830→    exercises: [
+   831→      { name: 'Child\'s Pose', duration: 180, reps: '3 min', description: 'Knees wide, fold forward, arms extended.', tips: 'Soften jaw and shoulders.', muscleGroup: 'Back' },
+   832→      { name: 'Legs Up the Wall', duration: 300, reps: '5 min', description: 'Lie down, legs extended up wall.', tips: 'Slow, deep belly breaths.', muscleGroup: 'Legs' },
+   833→      { name: 'Reclined Butterfly', duration: 180, reps: '3 min', description: 'Soles together, knees fall wide.', tips: 'Support knees with pillows.', muscleGroup: 'Hips' },
+   834→      { name: 'Supine Spinal Twist', duration: 180, reps: '1.5 min each side', description: 'Knees drop to one side.', tips: 'Breathe into release.', muscleGroup: 'Spine' },
+   835→      { name: 'Corpse Pose', duration: 240, reps: '4 min', description: 'Final relaxation, body scan.', tips: 'Let go of the day.', muscleGroup: 'Full Body' },
+   836→    ],
+   837→  },
+   838→  {
+   839→    id: 'str-post',
+   840→    name: 'Post-Workout Stretch',
+   841→    category: 'stretching',
+   842→    duration: 12,
+   843→    difficulty: 'Beginner',
+   844→    calories: 35,
+   845→    intensity: 'Low',
+   846→    muscleGroups: ['Full Body', 'Recovery'],
+   847→    description: 'Quick recovery stretches to prevent soreness and improve flexibility.',
+   848→    gradient: 'from-emerald-400 to-teal-400',
+   849→    icon: Wind,
+   850→    phases: ['follicular', 'ovulation', 'luteal'],
+   851→    exercises: [
+   852→      { name: 'Standing Quad Stretch', duration: 60, reps: '30 sec each leg', description: 'Pull heel to glute, hold.', tips: 'Keep knees aligned.', muscleGroup: 'Quads' },
+   853→      { name: 'Hamstring Stretch', duration: 60, reps: '30 sec each leg', description: 'Forward fold with one leg extended.', tips: 'Hinge from hips.', muscleGroup: 'Hamstrings' },
+   854→      { name: 'Calf Stretch', duration: 60, reps: '30 sec each leg', description: 'Wall stretch for calves.', tips: 'Press heel down.', muscleGroup: 'Calves' },
+   855→      { name: 'Chest & Shoulder Stretch', duration: 60, reps: '30 sec each side', description: 'Doorway chest opener.', tips: 'Gently lean forward.', muscleGroup: 'Chest' },
+   856→      { name: 'Tricep Stretch', duration: 60, reps: '30 sec each arm', description: 'Pull elbow behind head.', tips: 'Reach hand down spine.', muscleGroup: 'Arms' },
+   857→      { name: 'Downward Dog', duration: 90, reps: '1.5 min', description: 'Full-body stretch in inverted V.', tips: 'Pedal feet to stretch calves.', muscleGroup: 'Full Body' },
+   858→      { name: "Child's Pose", duration: 120, reps: '2 min', description: 'Rest and breathe.', tips: 'Soften completely.', muscleGroup: 'Back' },
+   859→    ],
+   860→  },
+   861→]
+   862→
+   863→// ─── Exercise Database (20+ exercises) ────────────────────────────────────────
+   864→
+   865→const EXERCISE_DATABASE: ExerciseDBEntry[] = [
+   866→  { id: 'ex1', name: 'Push-up', muscleGroup: 'Chest', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Start in plank with hands wider than shoulders. Lower body until chest nearly touches floor, keeping elbows at 45°. Push back up to start.', tips: 'Keep core tight and body in straight line. Modify on knees if needed.' },
+   867→  { id: 'ex2', name: 'Bodyweight Squat', muscleGroup: 'Quads', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Stand with feet shoulder-width apart. Lower hips back and down as if sitting into a chair. Drive through heels to stand.', tips: 'Keep chest up, knees tracking over toes.' },
+   868→  { id: 'ex3', name: 'Glute Bridge', muscleGroup: 'Glutes', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Lie on back with knees bent, feet flat. Squeeze glutes and lift hips until body forms a line from knees to shoulders.', tips: 'Pause and squeeze at the top. Avoid arching lower back.' },
+   869→  { id: 'ex4', name: 'Plank Hold', muscleGroup: 'Core', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Rest on forearms and toes, body in straight line from head to heels. Hold position while breathing steadily.', tips: 'Engage abs and glutes. Don\'t let hips sag or pike up.' },
+   870→  { id: 'ex5', name: 'Walking Lunge', muscleGroup: 'Quads', equipment: 'Bodyweight', difficulty: 'Intermediate', instructions: 'Step forward into lunge, lower back knee toward floor. Push off front leg, bring back leg forward into next lunge.', tips: 'Keep front knee over ankle, torso upright.' },
+   871→  { id: 'ex6', name: 'Burpee', muscleGroup: 'Full Body', equipment: 'Bodyweight', difficulty: 'Advanced', instructions: 'From standing, drop into squat with hands on floor. Kick feet back to plank, do push-up. Jump feet in, explode up into jump.', tips: 'Maintain plank form during push-up. Modify by stepping instead of jumping.' },
+   872→  { id: 'ex7', name: 'Mountain Climber', muscleGroup: 'Core', equipment: 'Bodyweight', difficulty: 'Intermediate', instructions: 'From plank position, drive right knee toward chest, then switch legs rapidly as if running in place.', tips: 'Keep hips low and shoulders over wrists.' },
+   873→  { id: 'ex8', name: 'Jump Squat', muscleGroup: 'Quads', equipment: 'Bodyweight', difficulty: 'Intermediate', instructions: 'Perform a bodyweight squat, then explosively jump upward. Land softly back into squat position.', tips: 'Land with soft knees, immediately descend into next rep.' },
+   874→  { id: 'ex9', name: 'Dumbbell Row', muscleGroup: 'Back', equipment: 'Dumbbells', difficulty: 'Intermediate', instructions: 'Hinge at hips with flat back, hold dumbbell in one hand. Pull dumbbell toward hip crease, squeezing shoulder blade.', tips: 'Keep elbow close to body. Don\'t rotate torso.' },
+   875→  { id: 'ex10', name: 'Dumbbell Shoulder Press', muscleGroup: 'Shoulders', equipment: 'Dumbbells', difficulty: 'Intermediate', instructions: 'Sit or stand with dumbbells at shoulder height, palms forward. Press dumbbells overhead until arms are extended.', tips: 'Engage core to avoid arching back. Lower with control.' },
+   876→  { id: 'ex11', name: 'Romanian Deadlift', muscleGroup: 'Hamstrings', equipment: 'Dumbbells', difficulty: 'Intermediate', instructions: 'Hold dumbbells in front of thighs. Hinge at hips with soft knees, lower weights along legs until stretch in hamstrings. Drive hips forward to stand.', tips: 'Keep spine neutral, movement comes from hips.' },
+   877→  { id: 'ex12', name: 'Hip Thrust', muscleGroup: 'Glutes', equipment: 'Bench', difficulty: 'Intermediate', instructions: 'Upper back on bench, feet flat on floor. Drive through heels to lift hips, squeeze glutes at top. Lower with control.', tips: 'Tuck chin to chest. Squeeze glutes, not lower back.' },
+   878→  { id: 'ex13', name: 'Russian Twist', muscleGroup: 'Obliques', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Sit with knees bent, lean back slightly. Rotate torso side to side, tapping floor near hips.', tips: 'Keep chest lifted. Add weight to increase difficulty.' },
+   879→  { id: 'ex14', name: 'Dead Bug', muscleGroup: 'Abs', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Lie on back, arms up, knees bent at 90°. Lower opposite arm and leg toward floor. Return and switch sides.', tips: 'Keep lower back pressed into floor throughout.' },
+   880→  { id: 'ex15', name: 'Bicycle Crunch', muscleGroup: 'Abs', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Lie on back, hands behind head. Bring opposite elbow to opposite knee in cycling motion.', tips: 'Rotate from waist, not from pulling on neck.' },
+   881→  { id: 'ex16', name: 'Bird Dog', muscleGroup: 'Lower Back', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'On all fours, extend opposite arm and leg. Hold, then switch sides. Keep spine neutral.', tips: 'Move slowly. Don\'t let hips rotate.' },
+   882→  { id: 'ex17', name: 'Side Plank', muscleGroup: 'Obliques', equipment: 'Bodyweight', difficulty: 'Intermediate', instructions: 'Lie on side, prop up on forearm. Lift hips so body forms straight line. Hold for time.', tips: 'Stack hips. Don\'t let bottom hip drop.' },
+   883→  { id: 'ex18', name: 'Downward Dog', muscleGroup: 'Full Body', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'From all fours, tuck toes and lift hips up and back into inverted V. Press palms and heels toward floor.', tips: 'Lengthen spine. Bend knees if hamstrings tight.' },
+   884→  { id: 'ex19', name: 'Warrior II', muscleGroup: 'Legs', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Step feet wide apart, front knee bent at 90°, arms extended parallel to floor. Gaze over front hand.', tips: 'Front knee tracks over ankle. Press into outer edge of back foot.' },
+   885→  { id: 'ex20', name: "Child's Pose", muscleGroup: 'Back', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Kneel with knees wide, sit back on heels, fold torso forward, arms extended or relaxed.', tips: 'Soften shoulders. Use bolster under torso if needed.' },
+   886→  { id: 'ex21', name: 'Bridge Pose', muscleGroup: 'Glutes', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Lie on back, knees bent, feet flat. Press into feet to lift hips and lower back off floor.', tips: 'Roll up one vertebra at a time.' },
+   887→  { id: 'ex22', name: 'Cat-Cow Stretch', muscleGroup: 'Spine', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'On all fours, alternate between arching back (cat) and dropping belly (cow) with breath.', tips: 'Move with breath: inhale for cow, exhale for cat.' },
+   888→  { id: 'ex23', name: 'Cobra Pose', muscleGroup: 'Back', equipment: 'Bodyweight', difficulty: 'Beginner', instructions: 'Lie prone, hands under shoulders. Press chest up while keeping hips on floor.', tips: 'Lengthen spine, soft bend in elbows.' },
+   889→  { id: 'ex24', name: 'Kettlebell Swing', muscleGroup: 'Full Body', equipment: 'Kettlebell', difficulty: 'Advanced', instructions: 'Stand with feet wide, hold kettlebell with both hands. Hinge at hips to swing bell between legs, then snap hips to swing up to chest height.', tips: 'Power comes from hips, not arms. Squeeze glutes at top.' },
+   890→  { id: 'ex25', name: 'Resistance Band Row', muscleGroup: 'Back', equipment: 'Resistance Band', difficulty: 'Beginner', instructions: 'Anchor band at chest height. Hold ends, pull toward torso, squeezing shoulder blades together.', tips: 'Keep shoulders down, away from ears.' },
+   891→]
+   892→
+   893→// ─── Activity Data (last 7 days) — empty by default, populated from logs ──
+   894→
+   895→const ACTIVITY_DATA = [
+   896→  { day: 'Mon', minutes: 0, workout: null, completed: false },
+   897→  { day: 'Tue', minutes: 0, workout: null, completed: false },
+   898→  { day: 'Wed', minutes: 0, workout: null, completed: false },
+   899→  { day: 'Thu', minutes: 0, workout: null, completed: false },
+   900→  { day: 'Fri', minutes: 0, workout: null, completed: false },
+   901→  { day: 'Sat', minutes: 0, workout: null, completed: false },
+   902→  { day: 'Sun', minutes: 0, workout: null, completed: false },
+   903→]
+   904→
+   905→// ─── Monthly Summary — empty until user logs workouts ─────────────────────────
+   906→
+   907→const MONTHLY_SUMMARY = [
+   908→  { week: 'Week 1', workouts: 0, minutes: 0 },
+   909→  { week: 'Week 2', workouts: 0, minutes: 0 },
+   910→  { week: 'Week 3', workouts: 0, minutes: 0 },
+   911→  { week: 'Week 4', workouts: 0, minutes: 0 },
+   912→]
+   913→
+   914→// ─── Goals — start at 0 progress ─────────────────────────────────────────────
+   915→
+   916→const INITIAL_GOALS = {
+   917→  weeklyWorkouts: { current: 0, target: 6 },
+   918→  weeklyMinutes: { current: 0, target: 240 },
+   919→  weeklyCalories: { current: 0, target: 1800 },
+   920→}
+   921→
+   922→// ─── Achievements — all locked initially (config kept) ───────────────────────
+   923→
+   924→const ACHIEVEMENTS: Achievement[] = [
+   925→  { id: 'a1', name: 'First Workout', description: 'Completed your first workout', icon: Star, unlocked: false, color: 'from-amber-400 to-orange-500', progress: 0 },
+   926→  { id: 'a2', name: '7-Day Streak', description: 'Active 7 days in a row', icon: Flame, unlocked: false, color: 'from-orange-500 to-red-500', progress: 0 },
+   927→  { id: 'a3', name: '30-Day Streak', description: 'Active 30 days in a row', icon: Trophy, unlocked: false, color: 'from-purple-500 to-violet-500', progress: 0 },
+   928→  { id: 'a4', name: '100 Workouts', description: 'Complete 100 total workouts', icon: Medal, unlocked: false, color: 'from-pink-500 to-rose-500', progress: 0 },
+   929→  { id: 'a5', name: 'Early Riser', description: 'Workout before 7 AM', icon: Sun, unlocked: false, color: 'from-yellow-400 to-amber-500', progress: 0 },
+   930→  { id: 'a6', name: 'Strength Master', description: 'Complete 20 strength workouts', icon: Dumbbell, unlocked: false, color: 'from-rose-500 to-orange-500', progress: 0 },
+   931→  { id: 'a7', name: 'Zen Seeker', description: 'Complete 15 yoga sessions', icon: Wind, unlocked: false, color: 'from-purple-400 to-pink-400', progress: 0 },
+   932→  { id: 'a8', name: 'Calorie Crusher', description: 'Burn 10,000 calories total', icon: Flame, unlocked: false, color: 'from-red-500 to-orange-500', progress: 0 },
+   933→]
+   934→
+   935→// ─── Helpers ──────────────────────────────────────────────────────────────────
+   936→
+   937→const CATEGORY_META: Record<WorkoutCategory, { label: string; icon: React.ElementType; gradient: string }> = {
+   938→  strength: { label: 'Strength', icon: Dumbbell, gradient: 'from-orange-500 to-rose-500' },
+   939→  cardio: { label: 'Cardio', icon: Heart, gradient: 'from-red-500 to-orange-500' },
+   940→  yoga: { label: 'Yoga', icon: Wind, gradient: 'from-purple-500 to-pink-500' },
+   941→  pilates: { label: 'Pilates', icon: PersonStanding, gradient: 'from-amber-500 to-rose-500' },
+   942→  stretching: { label: 'Stretching', icon: Activity, gradient: 'from-emerald-500 to-teal-500' },
+   943→}
+   944→
+   945→const INTENSITY_COLORS: Record<string, string> = {
+   946→  Low: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+   947→  Medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+   948→  'Medium-High': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+   949→  High: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+   950→}
+   951→
+   952→const DIFFICULTY_COLORS: Record<Difficulty, string> = {
+   953→  Beginner: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+   954→  Intermediate: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+   955→  Advanced: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+   956→}
+   957→
+   958→const formatTime = (seconds: number) => {
+   959→  const m = Math.floor(seconds / 60)
+   960→  const s = seconds % 60
+   961→  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+   962→}
+   963→
+   964→// ─── Workout Player ───────────────────────────────────────────────────────────
+   965→
+   966→interface PlayerState {
+   967→  workout: Workout
+   968→  exerciseIndex: number
+   969→  remaining: number
+   970→  isPlaying: boolean
+   971→  isComplete: boolean
+   972→  startedAt: number | null
+   973→  completedExercises: number
+   974→}
+   975→
+   976→function WorkoutPlayer({
+   977→  workout,
+   978→  onClose,
+   979→}: {
+   980→  workout: Workout
+   981→  onClose: (completed: boolean, durationSec: number, calories: number) => void
+   982→}) {
+   983→  const [state, setState] = useState<PlayerState>({
+   984→    workout,
+   985→    exerciseIndex: 0,
+   986→    remaining: workout.exercises[0]?.duration ?? 30,
+   987→    isPlaying: true,
+   988→    isComplete: false,
+   989→    startedAt: Date.now(),
+   990→    completedExercises: 0,
+   991→  })
+   992→
+   993→  const totalExercises = workout.exercises.length
+   994→  const currentExercise = workout.exercises[state.exerciseIndex]
+   995→  const totalDuration = workout.exercises.reduce((sum, ex) => sum + ex.duration, 0)
+   996→  const elapsedBeforeCurrent = workout.exercises
+   997→    .slice(0, state.exerciseIndex)
+   998→    .reduce((sum, ex) => sum + ex.duration, 0)
+   999→  const overallProgress = ((elapsedBeforeCurrent + (currentExercise.duration - state.remaining)) / totalDuration) * 100
+  1000→  const exerciseProgress = ((currentExercise.duration - state.remaining) / currentExercise.duration) * 100
+  1001→
+  1002→  // Working timer using useEffect + setInterval as required
+  1003→  useEffect(() => {
+  1004→    if (!state.isPlaying || state.isComplete) return
+  1005→    const interval = setInterval(() => {
+  1006→      setState((prev) => {
+  1007→        if (prev.remaining > 1) {
+  1008→          return { ...prev, remaining: prev.remaining - 1 }
+  1009→        }
+  1010→        // Exercise complete, advance
+  1011→        const nextIndex = prev.exerciseIndex + 1
+  1012→        if (nextIndex >= totalExercises) {
+  1013→          return {
+  1014→            ...prev,
+  1015→            remaining: 0,
+  1016→            isPlaying: false,
+  1017→            isComplete: true,
+  1018→            completedExercises: prev.completedExercises + 1,
+  1019→          }
+  1020→        }
+  1021→        return {
+  1022→          ...prev,
+  1023→          exerciseIndex: nextIndex,
+  1024→          remaining: prev.workout.exercises[nextIndex].duration,
+  1025→          completedExercises: prev.completedExercises + 1,
+  1026→        }
+  1027→      })
+  1028→    }, 1000)
+  1029→    return () => clearInterval(interval)
+  1030→  }, [state.isPlaying, state.isComplete, state.exerciseIndex, totalExercises])
+  1031→
+  1032→  const togglePlay = () => setState((p) => ({ ...p, isPlaying: !p.isPlaying }))
+  1033→
+  1034→  const goNext = useCallback(() => {
+  1035→    setState((prev) => {
+  1036→      const nextIndex = prev.exerciseIndex + 1
+  1037→      if (nextIndex >= totalExercises) {
+  1038→        return { ...prev, isComplete: true, isPlaying: false, remaining: 0 }
+  1039→      }
+  1040→      return {
+  1041→        ...prev,
+  1042→        exerciseIndex: nextIndex,
+  1043→        remaining: prev.workout.exercises[nextIndex].duration,
+  1044→        isPlaying: true,
+  1045→      }
+  1046→    })
+  1047→  }, [totalExercises])
+  1048→
+  1049→  const goPrev = () => {
+  1050→    setState((prev) => {
+  1051→      if (prev.exerciseIndex === 0) return prev
+  1052→      const prevIndex = prev.exerciseIndex - 1
+  1053→      return {
+  1054→        ...prev,
+  1055→        exerciseIndex: prevIndex,
+  1056→        remaining: prev.workout.exercises[prevIndex].duration,
+  1057→        isPlaying: true,
+  1058→      }
+  1059→    })
+  1060→  }
+  1061→
+  1062→  const elapsedSec = Math.floor((Date.now() - (state.startedAt ?? Date.now())) / 1000)
+  1063→
+  1064→  // Completion celebration screen
+  1065→  if (state.isComplete) {
+  1066→    const minutes = Math.floor(elapsedSec / 60)
+  1067→    const seconds = elapsedSec % 60
+  1068→    return (
+  1069→      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-orange-500 via-rose-500 to-purple-600 p-4">
+  1070→        <motion.div
+  1071→          initial={{ scale: 0.8, opacity: 0 }}
+  1072→          animate={{ scale: 1, opacity: 1 }}
+  1073→          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+  1074→          className="w-full max-w-md rounded-3xl bg-white/95 backdrop-blur-xl p-8 text-center shadow-2xl"
+  1075→        >
+  1076→          <motion.div
+  1077→            initial={{ scale: 0, rotate: -180 }}
+  1078→            animate={{ scale: 1, rotate: 0 }}
+  1079→            transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+  1080→            className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-500 shadow-lg"
+  1081→          >
+  1082→            <PartyPopper className="h-12 w-12 text-white" />
+  1083→          </motion.div>
+  1084→          <h2 className="text-3xl font-bold text-gray-900 mb-2">Workout Complete!</h2>
+  1085→          <p className="text-gray-600 mb-6">Amazing work! You crushed {workout.name}.</p>
+  1086→          <div className="grid grid-cols-3 gap-3 mb-8">
+  1087→            <div className="rounded-2xl bg-orange-50 p-4">
+  1088→              <Flame className="h-6 w-6 mx-auto text-orange-500 mb-1" />
+  1089→              <div className="text-2xl font-bold text-gray-900">{workout.calories}</div>
+  1090→              <div className="text-xs text-gray-500">Calories</div>
+  1091→            </div>
+  1092→            <div className="rounded-2xl bg-rose-50 p-4">
+  1093→              <Clock className="h-6 w-6 mx-auto text-rose-500 mb-1" />
+  1094→              <div className="text-2xl font-bold text-gray-900">{minutes}:{seconds.toString().padStart(2, '0')}</div>
+  1095→              <div className="text-xs text-gray-500">Minutes</div>
+  1096→            </div>
+  1097→            <div className="rounded-2xl bg-purple-50 p-4">
+  1098→              <CheckCircle2 className="h-6 w-6 mx-auto text-purple-500 mb-1" />
+  1099→              <div className="text-2xl font-bold text-gray-900">{totalExercises}</div>
+  1100→              <div className="text-xs text-gray-500">Exercises</div>
+  1101→            </div>
+  1102→          </div>
+  1103→          <Button
+  1104→            onClick={() => onClose(true, elapsedSec, workout.calories)}
+  1105→            className="w-full h-12 text-base bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white shadow-lg"
+  1106→          >
+  1107→            Done
+  1108→          </Button>
+  1109→        </motion.div>
+  1110→      </div>
+  1111→    )
+  1112→  }
+  1113→
+  1114→  return (
+  1115→    <div className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-br from-slate-900 via-orange-950 to-rose-950 text-white">
+  1116→      {/* Header */}
+  1117→      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+  1118→        <div>
+  1119→          <p className="text-xs uppercase tracking-wider text-orange-300/80">Now Playing</p>
+  1120→          <h2 className="text-lg font-semibold">{workout.name}</h2>
+  1121→        </div>
+  1122→        <Button
+  1123→          variant="ghost"
+  1124→          size="icon"
+  1125→          onClick={() => onClose(false, elapsedSec, 0)}
+  1126→          className="text-white hover:bg-white/10 rounded-full"
+  1127→        >
+  1128→          <X className="h-5 w-5" />
+  1129→        </Button>
+  1130→      </div>
+  1131→
+  1132→      {/* Overall progress */}
+  1133→      <div className="px-6 pt-3">
+  1134→        <div className="flex justify-between text-xs text-white/60 mb-1.5">
+  1135→          <span>Exercise {state.exerciseIndex + 1} of {totalExercises}</span>
+  1136→          <span>{Math.round(overallProgress)}% complete</span>
+  1137→        </div>
+  1138→        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+  1139→          <motion.div
+  1140→            className="h-full bg-gradient-to-r from-orange-400 to-rose-400"
+  1141→            animate={{ width: `${overallProgress}%` }}
+  1142→            transition={{ duration: 0.5 }}
+  1143→          />
+  1144→        </div>
+  1145→      </div>
+  1146→
+  1147→      {/* Main content */}
+  1148→      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto">
+  1149→        <motion.div
+  1150→          key={state.exerciseIndex}
+  1151→          initial={{ opacity: 0, y: 20 }}
+  1152→          animate={{ opacity: 1, y: 0 }}
+  1153→          transition={{ duration: 0.4 }}
+  1154→          className="text-center w-full max-w-lg"
+  1155→        >
+  1156→          <p className="text-sm uppercase tracking-wider text-orange-300/80 mb-2">
+  1157→            {currentExercise.muscleGroup}
+  1158→          </p>
+  1159→          <h1 className="text-3xl md:text-4xl font-bold mb-6">{currentExercise.name}</h1>
+  1160→
+  1161→          {/* Timer ring */}
+  1162→          <div className="relative mx-auto mb-8 h-56 w-56">
+  1163→            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 200 200">
+  1164→              <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
+  1165→              <circle
+  1166→                cx="100"
+  1167→                cy="100"
+  1168→                r="90"
+  1169→                fill="none"
+  1170→                stroke="url(#timerGrad)"
+  1171→                strokeWidth="8"
+  1172→                strokeLinecap="round"
+  1173→                strokeDasharray={2 * Math.PI * 90}
+  1174→                strokeDashoffset={2 * Math.PI * 90 * (1 - exerciseProgress / 100)}
+  1175→                style={{ transition: 'stroke-dashoffset 1s linear' }}
+  1176→              />
+  1177→              <defs>
+  1178→                <linearGradient id="timerGrad" x1="0" y1="0" x2="1" y2="1">
+  1179→                  <stop offset="0%" stopColor="#fb923c" />
+  1180→                  <stop offset="100%" stopColor="#fb7185" />
+  1181→                </linearGradient>
+  1182→              </defs>
+  1183→            </svg>
+  1184→            <div className="absolute inset-0 flex flex-col items-center justify-center">
+  1185→              <span className="text-5xl font-bold tabular-nums">{formatTime(state.remaining)}</span>
+  1186→              <span className="text-sm text-white/60 mt-1">
+  1187→                {currentExercise.reps ? currentExercise.reps : 'seconds'}
+  1188→              </span>
+  1189→            </div>
+  1190→          </div>
+  1191→
+  1192→          {/* Description + tips */}
+  1193→          <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 text-left mb-3">
+  1194→            <p className="text-sm text-white/80">{currentExercise.description}</p>
+  1195→          </div>
+  1196→          <div className="rounded-2xl bg-orange-500/10 backdrop-blur-sm border border-orange-400/20 p-4 text-left">
+  1197→            <p className="text-xs uppercase tracking-wide text-orange-300 mb-1">Form Tip</p>
+  1198→            <p className="text-sm text-white/90">{currentExercise.tips}</p>
+  1199→          </div>
+  1200→        </motion.div>
+  1201→      </div>
+  1202→
+  1203→      {/* Controls */}
+  1204→      <div className="px-6 py-6 border-t border-white/10 bg-black/20 backdrop-blur-xl">
+  1205→        <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+  1206→          <Button
+  1207→            variant="ghost"
+  1208→            size="icon"
+  1209→            onClick={goPrev}
+  1210→            disabled={state.exerciseIndex === 0}
+  1211→            className="h-14 w-14 rounded-full text-white hover:bg-white/10 disabled:opacity-30"
+  1212→          >
+  1213→            <SkipBack className="h-6 w-6" />
+  1214→          </Button>
+  1215→          <Button
+  1216→            onClick={togglePlay}
+  1217→            className="h-20 w-20 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 hover:from-orange-500 hover:to-rose-600 text-white shadow-lg shadow-orange-500/30"
+  1218→          >
+  1219→            {state.isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 ml-1" />}
+  1220→          </Button>
+  1221→          <Button
+  1222→            variant="ghost"
+  1223→            size="icon"
+  1224→            onClick={goNext}
+  1225→            className="h-14 w-14 rounded-full text-white hover:bg-white/10"
+  1226→          >
+  1227→            <SkipForward className="h-6 w-6" />
+  1228→          </Button>
+  1229→        </div>
+  1230→      </div>
+  1231→    </div>
+  1232→  )
+  1233→}
+  1234→
+  1235→// ─── Main Component ───────────────────────────────────────────────────────────
+  1236→
+  1237→export default function FitnessModule() {
+  1238→  const [currentPhase, setCurrentPhase] = useState<PhaseId>('follicular')
+  1239→  const [activePlayer, setActivePlayer] = useState<Workout | null>(null)
+  1240→  const [expandedPhase, setExpandedPhase] = useState<PhaseId | null>('follicular')
+  1241→  const [libraryTab, setLibraryTab] = useState<WorkoutCategory>('strength')
+  1242→  const [search, setSearch] = useState('')
+  1243→  const [filterMuscle, setFilterMuscle] = useState<string>('all')
+  1244→  const [filterEquipment, setFilterEquipment] = useState<string>('all')
+  1245→  const [filterDifficulty, setFilterDifficulty] = useState<string>('all')
+  1246→  const [goals, setGoals] = useState(INITIAL_GOALS)
+  1247→  const [toast, setToast] = useState<string | null>(null)
+  1248→  const [completedToday, setCompletedToday] = useState(false)
+  1249→
+  1250→  const phasePlan = useMemo(() => PHASE_PLANS.find((p) => p.id === currentPhase)!, [currentPhase])
+  1251→
+  1252→  // Today's recommended workout: pick based on phase
+  1253→  const todaysWorkout = useMemo(() => {
+  1254→    const candidates = WORKOUT_LIBRARY.filter((w) => w.phases.includes(currentPhase))
+  1255→    if (candidates.length === 0) return WORKOUT_LIBRARY[0]
+  1256→    // Pick a different one for variety based on day of week
+  1257→    const dayIdx = new Date().getDay()
+  1258→    return candidates[dayIdx % candidates.length]
+  1259→  }, [currentPhase])
+  1260→
+  1261→  const alternativeWorkout = useMemo(() => {
+  1262→    const candidates = WORKOUT_LIBRARY.filter(
+  1263→      (w) => w.phases.includes(currentPhase) && w.id !== todaysWorkout.id
+  1264→    )
+  1265→    if (candidates.length === 0) return WORKOUT_LIBRARY[1] ?? WORKOUT_LIBRARY[0]
+  1266→    const dayIdx = new Date().getDay()
+  1267→    return candidates[(dayIdx + 1) % candidates.length]
+  1268→  }, [currentPhase, todaysWorkout])
+  1269→
+  1270→  // Filtered exercise DB
+  1271→  const filteredExercises = useMemo(() => {
+  1272→    return EXERCISE_DATABASE.filter((ex) => {
+  1273→      if (search && !ex.name.toLowerCase().includes(search.toLowerCase())) return false
+  1274→      if (filterMuscle !== 'all' && ex.muscleGroup !== filterMuscle) return false
+  1275→      if (filterEquipment !== 'all' && ex.equipment !== filterEquipment) return false
+  1276→      if (filterDifficulty !== 'all' && ex.difficulty !== filterDifficulty) return false
+  1277→      return true
+  1278→    })
+  1279→  }, [search, filterMuscle, filterEquipment, filterDifficulty])
+  1280→
+  1281→  const muscleGroups = useMemo(
+  1282→    () => Array.from(new Set(EXERCISE_DATABASE.map((e) => e.muscleGroup))).sort(),
+  1283→    []
+  1284→  )
+  1285→  const equipmentTypes = useMemo(
+  1286→    () => Array.from(new Set(EXERCISE_DATABASE.map((e) => e.equipment))).sort(),
+  1287→    []
+  1288→  )
+  1289→
+  1290→  const showToast = (msg: string) => {
+  1291→    setToast(msg)
+  1292→    setTimeout(() => setToast(null), 2800)
+  1293→  }
+  1294→
+  1295→  const handlePlayerClose = (completed: boolean, _durationSec: number, _calories: number) => {
+  1296→    setActivePlayer(null)
+  1297→    if (completed) {
+  1298→      setCompletedToday(true)
+  1299→      // Increment goals
+  1300→      setGoals((prev) => ({
+  1301→        weeklyWorkouts: { ...prev.weeklyWorkouts, current: prev.weeklyWorkouts.current + 1 },
+  1302→        weeklyMinutes: { ...prev.weeklyMinutes, current: prev.weeklyMinutes.current + Math.round(_durationSec / 60) },
+  1303→        weeklyCalories: { ...prev.weeklyCalories, current: prev.weeklyCalories.current + _calories },
+  1304→      }))
+  1305→      showToast('Workout complete! Goals updated.')
+  1306→    }
+  1307→  }
+  1308→
+  1309→  const weeklyMinutesTotal = ACTIVITY_DATA.reduce((sum, d) => sum + d.minutes, 0)
+  1310→  const workoutsThisWeek = ACTIVITY_DATA.filter((d) => d.completed).length
+  1311→  const caloriesThisWeek = ACTIVITY_DATA.filter((d) => d.completed).length * 240
+  1312→  const activeDaysStreak = 7
+  1313→
+  1314→  const containerVariants = {
+  1315→    hidden: { opacity: 0 },
+  1316→    visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
+  1317→  }
+  1318→  const itemVariants = {
+  1319→    hidden: { opacity: 0, y: 20 },
+  1320→    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as const } },
+  1321→  }
+  1322→
+  1323→  const goalPct = (cur: number, tgt: number) => Math.min(100, Math.round((cur / tgt) * 100))
+  1324→
+  1325→  return (
+  1326→    <div className="space-y-6">
+  1327→      {/* ─── 1. Header ─── */}
+  1328→      <motion.div
+  1329→        initial={{ opacity: 0, y: -10 }}
+  1330→        animate={{ opacity: 1, y: 0 }}
+  1331→        transition={{ duration: 0.5 }}
+  1332→        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-rose-500 to-purple-600 p-6 md:p-8 text-white shadow-xl"
+  1333→      >
+  1334→        <div className="absolute inset-0 opacity-20">
+  1335→          <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-white blur-3xl" />
+  1336→          <div className="absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-yellow-300 blur-3xl" />
+  1337→        </div>
+  1338→        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  1339→          <div className="space-y-2">
+  1340→            <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur px-3 py-1 text-xs font-medium">
+  1341→              <Sparkles className="h-3.5 w-3.5" />
+  1342→              Cycle-Synced Training
+  1343→            </div>
+  1344→            <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+  1345→              Move &amp; Flow
+  1346→            </h1>
+  1347→            <p className="text-white/90 max-w-xl">
+  1348→              Cycle-synced workouts for your body&apos;s natural rhythm. Train smarter by aligning
+  1349→              your movement with your hormones.
+  1350→            </p>
+  1351→          </div>
+  1352→          <div className="flex flex-col gap-2 md:items-end">
+  1353→            <Badge className={cn('text-sm px-4 py-2 border-0', phasePlan.badgeColor)}>
+  1354→              <phasePlan.icon className="h-4 w-4 mr-1.5" />
+  1355→              {phasePlan.name} · {phasePlan.days}
+  1356→            </Badge>
+  1357→            <div className="text-sm text-white/80">
+  1358→              Recommended intensity:{' '}
+  1359→              <span className="font-semibold text-white">{phasePlan.intensity}</span>
+  1360→            </div>
+  1361→            <div className="text-sm text-white/80">
+  1362→              Target duration: <span className="font-semibold text-white">{phasePlan.duration}</span>
+  1363→            </div>
+  1364→          </div>
+  1365→        </div>
+  1366→      </motion.div>
+  1367→
+  1368→      {/* ─── 2. Today's Workout ─── */}
+  1369→      <motion.section variants={containerVariants} initial="hidden" animate="visible">
+  1370→        <motion.div variants={itemVariants} className="flex items-center justify-between mb-3">
+  1371→          <h2 className="text-xl font-semibold flex items-center gap-2">
+  1372→            <Flame className="h-5 w-5 text-orange-500" />
+  1373→            Today&apos;s Workout
+  1374→          </h2>
+  1375→          <span className="text-xs text-muted-foreground">
+  1376→            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+  1377→          </span>
+  1378→        </motion.div>
+  1379→
+  1380→        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1381→          {/* Main workout card */}
+  1382→          <motion.div variants={itemVariants} className="lg:col-span-2">
+  1383→            <Card className={cn(
+  1384→              'relative overflow-hidden border-0 bg-gradient-to-br text-white shadow-lg',
+  1385→              todaysWorkout.gradient
+  1386→            )}>
+  1387→              <div className="absolute inset-0 bg-black/10" />
+  1388→              <div className="absolute top-0 right-0 h-40 w-40 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+  1389→              <CardContent className="relative p-6 md:p-8">
+  1390→                <div className="flex items-start justify-between mb-4">
+  1391→                  <div>
+  1392→                    <Badge className="bg-white/20 text-white border-0 backdrop-blur mb-2">
+  1393→                      <phasePlan.icon className="h-3 w-3 mr-1" />
+  1394→                      {phasePlan.name} Phase
+  1395→                    </Badge>
+  1396→                    <h3 className="text-2xl md:text-3xl font-bold">{todaysWorkout.name}</h3>
+  1397→                    <p className="text-white/80 text-sm mt-1 max-w-md">{todaysWorkout.description}</p>
+  1398→                  </div>
+  1399→                  <div className="hidden sm:flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur shrink-0">
+  1400→                    <todaysWorkout.icon className="h-8 w-8" />
+  1401→                  </div>
+  1402→                </div>
+  1403→
+  1404→                <div className="grid grid-cols-3 gap-3 mb-5">
+  1405→                  <div className="rounded-2xl bg-white/15 backdrop-blur p-3">
+  1406→                    <Clock className="h-4 w-4 mb-1 opacity-80" />
+  1407→                    <div className="text-xl font-bold">{todaysWorkout.duration}</div>
+  1408→                    <div className="text-xs opacity-80">minutes</div>
+  1409→                  </div>
+  1410→                  <div className="rounded-2xl bg-white/15 backdrop-blur p-3">
+  1411→                    <Flame className="h-4 w-4 mb-1 opacity-80" />
+  1412→                    <div className="text-xl font-bold">{todaysWorkout.calories}</div>
+  1413→                    <div className="text-xs opacity-80">calories</div>
+  1414→                  </div>
+  1415→                  <div className="rounded-2xl bg-white/15 backdrop-blur p-3">
+  1416→                    <Zap className="h-4 w-4 mb-1 opacity-80" />
+  1417→                    <div className="text-xl font-bold">{todaysWorkout.intensity}</div>
+  1418→                    <div className="text-xs opacity-80">intensity</div>
+  1419→                  </div>
+  1420→                </div>
+  1421→
+  1422→                <div className="rounded-2xl bg-white/10 backdrop-blur p-4 mb-5">
+  1423→                  <p className="text-xs uppercase tracking-wider opacity-70 mb-2">Exercise Preview</p>
+  1424→                  <div className="space-y-1.5">
+  1425→                    {todaysWorkout.exercises.slice(0, 4).map((ex, i) => (
+  1426→                      <div key={i} className="flex items-center gap-2 text-sm">
+  1427→                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+  1428→                          {i + 1}
+  1429→                        </span>
+  1430→                        <span className="flex-1">{ex.name}</span>
+  1431→                        <span className="opacity-70 text-xs">{ex.reps ?? `${ex.duration}s`}</span>
+  1432→                      </div>
+  1433→                    ))}
+  1434→                    {todaysWorkout.exercises.length > 4 && (
+  1435→                      <p className="text-xs opacity-70 pl-7">
+  1436→                        + {todaysWorkout.exercises.length - 4} more exercises
+  1437→                      </p>
+  1438→                    )}
+  1439→                  </div>
+  1440→                </div>
+  1441→
+  1442→                <div className="flex flex-wrap items-center gap-2">
+  1443→                  <Button
+  1444→                    onClick={() => setActivePlayer(todaysWorkout)}
+  1445→                    disabled={completedToday}
+  1446→                    className="bg-white text-gray-900 hover:bg-white/90 font-semibold"
+  1447→                  >
+  1448→                    {completedToday ? (
+  1449→                      <>
+  1450→                        <CheckCircle2 className="h-4 w-4 mr-2" /> Completed Today
+  1451→                      </>
+  1452→                    ) : (
+  1453→                      <>
+  1454→                        <Play className="h-4 w-4 mr-2" /> Start Workout
+  1455→                      </>
+  1456→                    )}
+  1457→                  </Button>
+  1458→                  <div className="flex flex-wrap gap-1.5">
+  1459→                    {todaysWorkout.muscleGroups.map((m) => (
+  1460→                      <Badge key={m} className="bg-white/15 text-white border-0 text-xs backdrop-blur">
+  1461→                        {m}
+  1462→                      </Badge>
+  1463→                    ))}
+  1464→                  </div>
+  1465→                </div>
+  1466→              </CardContent>
+  1467→            </Card>
+  1468→          </motion.div>
+  1469→
+  1470→          {/* Alternative workout card */}
+  1471→          <motion.div variants={itemVariants}>
+  1472→            <Card className="h-full border-orange-200/50 dark:border-orange-900/30 bg-white/60 dark:bg-card/60 backdrop-blur-sm">
+  1473→              <CardHeader className="pb-3">
+  1474→                <div className="flex items-center justify-between">
+  1475→                  <CardTitle className="text-base text-muted-foreground">Alternative Option</CardTitle>
+  1476→                  <Badge variant="outline" className="text-xs">Swap</Badge>
+  1477→                </div>
+  1478→              </CardHeader>
+  1479→              <CardContent className="space-y-3">
+  1480→                <div className={cn('rounded-2xl bg-gradient-to-br p-4 text-white', alternativeWorkout.gradient)}>
+  1481→                  <alternativeWorkout.icon className="h-7 w-7 mb-2" />
+  1482→                  <h4 className="font-semibold text-lg leading-tight">{alternativeWorkout.name}</h4>
+  1483→                  <p className="text-sm text-white/80 mt-1 line-clamp-2">{alternativeWorkout.description}</p>
+  1484→                </div>
+  1485→                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+  1486→                  <div className="rounded-lg bg-muted/50 p-2">
+  1487→                    <div className="font-bold text-sm">{alternativeWorkout.duration}</div>
+  1488→                    <div className="text-muted-foreground">min</div>
+  1489→                  </div>
+  1490→                  <div className="rounded-lg bg-muted/50 p-2">
+  1491→                    <div className="font-bold text-sm">{alternativeWorkout.calories}</div>
+  1492→                    <div className="text-muted-foreground">kcal</div>
+  1493→                  </div>
+  1494→                  <div className="rounded-lg bg-muted/50 p-2">
+  1495→                    <div className="font-bold text-sm">{alternativeWorkout.intensity.split('-')[0]}</div>
+  1496→                    <div className="text-muted-foreground">level</div>
+  1497→                  </div>
+  1498→                </div>
+  1499→                <Button
+  1500→                  variant="outline"
+  1501→                  className="w-full border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-900/50 dark:text-orange-400 dark:hover:bg-orange-950/30"
+  1502→                  onClick={() => setActivePlayer(alternativeWorkout)}
+  1503→                >
+  1504→                  Start Alternative
+  1505→                </Button>
+  1506→              </CardContent>
+  1507→            </Card>
+  1508→          </motion.div>
+  1509→        </div>
+  1510→      </motion.section>
+  1511→
+  1512→      {/* ─── 3. Cycle-Synced Workout Plan ─── */}
+  1513→      <motion.section variants={containerVariants} initial="hidden" animate="visible">
+  1514→        <motion.div variants={itemVariants} className="flex items-center justify-between mb-3">
+  1515→          <h2 className="text-xl font-semibold flex items-center gap-2">
+  1516→            <Calendar className="h-5 w-5 text-orange-500" />
+  1517→            Cycle-Synced Workout Plan
+  1518→          </h2>
+  1519→          <span className="text-xs text-muted-foreground">Tap a phase to expand routines</span>
+  1520→        </motion.div>
+  1521→
+  1522→        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1523→          {PHASE_PLANS.map((plan) => {
+  1524→            const isActive = currentPhase === plan.id
+  1525→            const isExpanded = expandedPhase === plan.id
+  1526→            const Icon = plan.icon
+  1527→            return (
+  1528→              <motion.div key={plan.id} variants={itemVariants}>
+  1529→                <Card
+  1530→                  className={cn(
+  1531→                    'overflow-hidden border-2 transition-all cursor-pointer backdrop-blur-sm bg-white/60 dark:bg-card/60',
+  1532→                    isActive ? plan.borderColor : 'border-transparent',
+  1533→                    isExpanded && 'ring-2 ring-offset-2 ring-offset-background'
+  1534→                  )}
+  1535→                  onClick={() => {
+  1536→                    setExpandedPhase(isExpanded ? null : plan.id)
+  1537→                    setCurrentPhase(plan.id)
+  1538→                  }}
+  1539→                >
+  1540→                  <div className={cn('bg-gradient-to-r p-5 text-white', plan.gradient)}>
+  1541→                    <div className="flex items-start justify-between">
+  1542→                      <div>
+  1543→                        <div className="flex items-center gap-2 mb-1">
+  1544→                          <Icon className="h-5 w-5" />
+  1545→                          <h3 className="font-semibold text-lg">{plan.name}</h3>
+  1546→                        </div>
+  1547→                        <p className="text-white/90 text-sm">{plan.subtitle} · {plan.days}</p>
+  1548→                      </div>
+  1549→                      {isActive && (
+  1550→                        <Badge className="bg-white/25 text-white border-0 backdrop-blur">Current</Badge>
+  1551→                      )}
+  1552→                    </div>
+  1553→                    <div className="flex flex-wrap gap-2 mt-3">
+  1554→                      <Badge className="bg-white/20 text-white border-0 backdrop-blur text-xs">
+  1555→                        <Clock className="h-3 w-3 mr-1" /> {plan.duration}
+  1556→                      </Badge>
+  1557→                      <Badge className="bg-white/20 text-white border-0 backdrop-blur text-xs">
+  1558→                        <Zap className="h-3 w-3 mr-1" /> {plan.intensity}
+  1559→                      </Badge>
+  1560→                    </div>
+  1561→                  </div>
+  1562→
+  1563→                  <CardContent className="p-5 space-y-3">
+  1564→                    <p className="text-sm text-muted-foreground">{plan.hormoneContext}</p>
+  1565→
+  1566→                    <div className="grid grid-cols-2 gap-3 text-sm">
+  1567→                      <div>
+  1568→                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1.5 flex items-center gap-1">
+  1569→                          <CheckCircle2 className="h-3 w-3" /> Recommended
+  1570→                        </p>
+  1571→                        <ul className="space-y-1">
+  1572→                          {plan.recommended.map((r) => (
+  1573→                            <li key={r} className="text-muted-foreground text-xs flex items-start gap-1">
+  1574→                              <span className="text-emerald-500 mt-0.5">•</span> {r}
+  1575→                            </li>
+  1576→                          ))}
+  1577→                        </ul>
+  1578→                      </div>
+  1579→                      <div>
+  1580→                        <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400 mb-1.5 flex items-center gap-1">
+  1581→                          <X className="h-3 w-3" /> Avoid
+  1582→                        </p>
+  1583→                        <ul className="space-y-1">
+  1584→                          {plan.avoid.map((a) => (
+  1585→                            <li key={a} className="text-muted-foreground text-xs flex items-start gap-1">
+  1586→                              <span className="text-red-500 mt-0.5">•</span> {a}
+  1587→                            </li>
+  1588→                          ))}
+  1589→                        </ul>
+  1590→                      </div>
+  1591→                    </div>
+  1592→
+  1593→                    <AnimatePresence>
+  1594→                      {isExpanded && (
+  1595→                        <motion.div
+  1596→                          initial={{ height: 0, opacity: 0 }}
+  1597→                          animate={{ height: 'auto', opacity: 1 }}
+  1598→                          exit={{ height: 0, opacity: 0 }}
+  1599→                          transition={{ duration: 0.3 }}
+  1600→                          className="overflow-hidden"
+  1601→                        >
+  1602→                          <Separator className="my-2" />
+  1603→                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+  1604→                            Sample Routines
+  1605→                          </p>
+  1606→                          <div className="space-y-2">
+  1607→                            {plan.routines.map((r, i) => (
+  1608→                              <div
+  1609→                                key={i}
+  1610→                                className={cn(
+  1611→                                  'rounded-xl p-3 border bg-gradient-to-br',
+  1612→                                  plan.bgGradient,
+  1613→                                  plan.borderColor
+  1614→                                )}
+  1615→                              >
+  1616→                                <div className="flex items-center justify-between">
+  1617→                                  <p className="font-medium text-sm">{r.name}</p>
+  1618→                                  <Badge variant="outline" className="text-xs">{r.duration}</Badge>
+  1619→                                </div>
+  1620→                                <p className="text-xs text-muted-foreground mt-0.5">{r.focus}</p>
+  1621→                                <div className="flex flex-wrap gap-1 mt-2">
+  1622→                                  {r.exercises.map((e) => (
+  1623→                                    <span
+  1624→                                      key={e}
+  1625→                                      className={cn(
+  1626→                                        'text-[10px] px-1.5 py-0.5 rounded-md',
+  1627→                                        plan.badgeColor
+  1628→                                      )}
+  1629→                                    >
+  1630→                                      {e}
+  1631→                                    </span>
+  1632→                                  ))}
+  1633→                                </div>
+  1634→                              </div>
+  1635→                            ))}
+  1636→                          </div>
+  1637→                        </motion.div>
+  1638→                      )}
+  1639→                    </AnimatePresence>
+  1640→
+  1641→                    <Button
+  1642→                      variant="ghost"
+  1643→                      size="sm"
+  1644→                      className="w-full text-xs"
+  1645→                      onClick={(e) => {
+  1646→                        e.stopPropagation()
+  1647→                        setExpandedPhase(isExpanded ? null : plan.id)
+  1648→                      }}
+  1649→                    >
+  1650→                      {isExpanded ? 'Hide routines' : 'Show routines'}
+  1651→                      <ChevronDown className={cn('h-3 w-3 ml-1 transition-transform', isExpanded && 'rotate-180')} />
+  1652→                    </Button>
+  1653→                  </CardContent>
+  1654→                </Card>
+  1655→              </motion.div>
+  1656→            )
+  1657→          })}
+  1658→        </div>
+  1659→      </motion.section>
+  1660→
+  1661→      {/* ─── 4. Workout Library ─── */}
+  1662→      <motion.section variants={containerVariants} initial="hidden" animate="visible">
+  1663→        <motion.div variants={itemVariants} className="flex items-center justify-between mb-3">
+  1664→          <h2 className="text-xl font-semibold flex items-center gap-2">
+  1665→            <Dumbbell className="h-5 w-5 text-orange-500" />
+  1666→            Workout Library
+  1667→          </h2>
+  1668→          <span className="text-xs text-muted-foreground">{WORKOUT_LIBRARY.length} workouts available</span>
+  1669→        </motion.div>
+  1670→
+  1671→        <motion.div variants={itemVariants}>
+  1672→          <Tabs value={libraryTab} onValueChange={(v) => setLibraryTab(v as WorkoutCategory)}>
+  1673→            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+  1674→              {(Object.keys(CATEGORY_META) as WorkoutCategory[]).map((cat) => {
+  1675→                const meta = CATEGORY_META[cat]
+  1676→                const Icon = meta.icon
+  1677→                const count = WORKOUT_LIBRARY.filter((w) => w.category === cat).length
+  1678→                return (
+  1679→                  <TabsTrigger
+  1680→                    key={cat}
+  1681→                    value={cat}
+  1682→                    className="flex flex-col items-center gap-1 py-2 data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-600 dark:data-[state=active]:text-orange-400"
+  1683→                  >
+  1684→                    <Icon className="h-4 w-4" />
+  1685→                    <span className="text-xs">{meta.label}</span>
+  1686→                    <span className="text-[10px] text-muted-foreground">{count}</span>
+  1687→                  </TabsTrigger>
+  1688→                )
+  1689→              })}
+  1690→            </TabsList>
+  1691→
+  1692→            {(Object.keys(CATEGORY_META) as WorkoutCategory[]).map((cat) => {
+  1693→              const workouts = WORKOUT_LIBRARY.filter((w) => w.category === cat)
+  1694→              return (
+  1695→                <TabsContent key={cat} value={cat} className="mt-4">
+  1696→                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  1697→                    {workouts.map((w, i) => {
+  1698→                      const Icon = w.icon
+  1699→                      return (
+  1700→                        <motion.div
+  1701→                          key={w.id}
+  1702→                          initial={{ opacity: 0, y: 15 }}
+  1703→                          animate={{ opacity: 1, y: 0 }}
+  1704→                          transition={{ delay: i * 0.05 }}
+  1705→                          whileHover={{ y: -3 }}
+  1706→                        >
+  1707→                          <Card className="overflow-hidden border-orange-200/40 dark:border-orange-900/30 bg-white/60 dark:bg-card/60 backdrop-blur-sm hover:shadow-lg transition-shadow">
+  1708→                            <div className={cn('h-28 bg-gradient-to-br p-4 text-white relative', w.gradient)}>
+  1709→                              <div className="absolute top-2 right-2">
+  1710→                                <Badge className="bg-white/25 text-white border-0 backdrop-blur text-xs">
+  1711→                                  {w.difficulty}
+  1712→                                </Badge>
+  1713→                              </div>
+  1714→                              <Icon className="h-10 w-10 mb-1" />
+  1715→                              <p className="text-xs opacity-80 uppercase tracking-wider">
+  1716→                                {CATEGORY_META[cat].label}
+  1717→                              </p>
+  1718→                            </div>
+  1719→                            <CardContent className="p-4">
+  1720→                              <h3 className="font-semibold text-base leading-tight">{w.name}</h3>
+  1721→                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{w.description}</p>
+  1722→                              <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+  1723→                                <span className="flex items-center gap-1">
+  1724→                                  <Clock className="h-3 w-3" /> {w.duration} min
+  1725→                                </span>
+  1726→                                <span className="flex items-center gap-1">
+  1727→                                  <Flame className="h-3 w-3" /> {w.calories} kcal
+  1728→                                </span>
+  1729→                                <Badge className={cn('text-[10px] border-0 px-1.5 py-0', INTENSITY_COLORS[w.intensity])}>
+  1730→                                  {w.intensity}
+  1731→                                </Badge>
+  1732→                              </div>
+  1733→                              <div className="flex flex-wrap gap-1 mt-2">
+  1734→                                {w.muscleGroups.slice(0, 3).map((m) => (
+  1735→                                  <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">
+  1736→                                    {m}
+  1737→                                  </span>
+  1738→                                ))}
+  1739→                              </div>
+  1740→                              <Button
+  1741→                                size="sm"
+  1742→                                className="w-full mt-3 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white border-0"
+  1743→                                onClick={() => setActivePlayer(w)}
+  1744→                              >
+  1745→                                <Play className="h-3 w-3 mr-1" /> Start
+  1746→                              </Button>
+  1747→                            </CardContent>
+  1748→                          </Card>
+  1749→                        </motion.div>
+  1750→                      )
+  1751→                    })}
+  1752→                  </div>
+  1753→                </TabsContent>
+  1754→              )
+  1755→            })}
+  1756→          </Tabs>
+  1757→        </motion.div>
+  1758→      </motion.section>
+  1759→
+  1760→      {/* ─── 6. Activity Tracking ─── (placed before Goals for visual flow) ─── */}
+  1761→      <motion.section variants={containerVariants} initial="hidden" animate="visible">
+  1762→        <motion.div variants={itemVariants} className="flex items-center justify-between mb-3">
+  1763→          <h2 className="text-xl font-semibold flex items-center gap-2">
+  1764→            <Activity className="h-5 w-5 text-orange-500" />
+  1765→            Activity Tracking
+  1766→          </h2>
+  1767→          <Button variant="ghost" size="sm" className="text-xs" onClick={() => showToast('Synced from your last session.')}>
+  1768→            <RefreshCw className="h-3 w-3 mr-1" /> Sync
+  1769→          </Button>
+  1770→        </motion.div>
+  1771→
+  1772→        {/* Weekly calendar */}
+  1773→        <motion.div variants={itemVariants}>
+  1774→          <Card className="bg-white/60 dark:bg-card/60 backdrop-blur-sm border-orange-200/40 dark:border-orange-900/30">
+  1775→            <CardHeader className="pb-3">
+  1776→              <CardTitle className="text-base flex items-center justify-between">
+  1777→                <span>This Week</span>
+  1778→                <span className="text-xs font-normal text-muted-foreground">
+  1779→                  {workoutsThisWeek}/7 active days · {activeDaysStreak} day streak
+  1780→                </span>
+  1781→              </CardTitle>
+  1782→            </CardHeader>
+  1783→            <CardContent>
+  1784→              <div className="grid grid-cols-7 gap-2">
+  1785→                {ACTIVITY_DATA.map((d, i) => (
+  1786→                  <motion.div
+  1787→                    key={d.day}
+  1788→                    initial={{ opacity: 0, scale: 0.9 }}
+  1789→                    animate={{ opacity: 1, scale: 1 }}
+  1790→                    transition={{ delay: i * 0.05 }}
+  1791→                    className={cn(
+  1792→                      'rounded-xl p-3 text-center border transition-all',
+  1793→                      d.completed
+  1794→                        ? 'bg-gradient-to-br from-orange-500/15 to-rose-500/10 border-orange-300/50 dark:border-orange-800/50'
+  1795→                        : 'bg-muted/30 border-transparent'
+  1796→                    )}
+  1797→                  >
+  1798→                    <div className="text-xs font-medium text-muted-foreground mb-1">{d.day}</div>
+  1799→                    <div className={cn(
+  1800→                      'mx-auto flex h-8 w-8 items-center justify-center rounded-full mb-1',
+  1801→                      d.completed ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white' : 'bg-muted-foreground/15 text-muted-foreground'
+  1802→                    )}>
+  1803→                      {d.completed ? <CheckCircle2 className="h-4 w-4" /> : <span className="text-xs">—</span>}
+  1804→                    </div>
+  1805→                    <div className="text-[10px] text-muted-foreground">
+  1806→                      {d.completed ? `${d.minutes}m` : 'Rest'}
+  1807→                    </div>
+  1808→                  </motion.div>
+  1809→                ))}
+  1810→              </div>
+  1811→            </CardContent>
+  1812→          </Card>
+  1813→        </motion.div>
+  1814→
+  1815→        {/* Stats cards */}
+  1816→        <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+  1817→          <Card className="bg-gradient-to-br from-orange-500/10 to-rose-500/5 border-orange-200/40 dark:border-orange-900/30 backdrop-blur-sm">
+  1818→            <CardContent className="p-4">
+  1819→              <div className="flex items-center justify-between mb-1">
+  1820→                <span className="text-xs text-muted-foreground">Workouts</span>
+  1821→                <Dumbbell className="h-4 w-4 text-orange-500" />
+  1822→              </div>
+  1823→              <div className="text-2xl font-bold">{workoutsThisWeek}</div>
+  1824→              <div className="text-xs text-muted-foreground">this week</div>
+  1825→            </CardContent>
+  1826→          </Card>
+  1827→          <Card className="bg-gradient-to-br from-rose-500/10 to-pink-500/5 border-rose-200/40 dark:border-rose-900/30 backdrop-blur-sm">
+  1828→            <CardContent className="p-4">
+  1829→              <div className="flex items-center justify-between mb-1">
+  1830→                <span className="text-xs text-muted-foreground">Total Minutes</span>
+  1831→                <Clock className="h-4 w-4 text-rose-500" />
+  1832→              </div>
+  1833→              <div className="text-2xl font-bold">{weeklyMinutesTotal}</div>
+  1834→              <div className="text-xs text-muted-foreground">min this week</div>
+  1835→            </CardContent>
+  1836→          </Card>
+  1837→          <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-200/40 dark:border-amber-900/30 backdrop-blur-sm">
+  1838→            <CardContent className="p-4">
+  1839→              <div className="flex items-center justify-between mb-1">
+  1840→                <span className="text-xs text-muted-foreground">Calories</span>
+  1841→                <Flame className="h-4 w-4 text-amber-500" />
+  1842→              </div>
+  1843→              <div className="text-2xl font-bold">{caloriesThisWeek}</div>
+  1844→              <div className="text-xs text-muted-foreground">kcal burned</div>
+  1845→            </CardContent>
+  1846→          </Card>
+  1847→          <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/5 border-purple-200/40 dark:border-purple-900/30 backdrop-blur-sm">
+  1848→            <CardContent className="p-4">
+  1849→              <div className="flex items-center justify-between mb-1">
+  1850→                <span className="text-xs text-muted-foreground">Active Streak</span>
+  1851→                <TrendingUp className="h-4 w-4 text-purple-500" />
+  1852→              </div>
+  1853→              <div className="text-2xl font-bold">{activeDaysStreak}</div>
+  1854→              <div className="text-xs text-muted-foreground">days in a row</div>
+  1855→            </CardContent>
+  1856→          </Card>
+  1857→        </motion.div>
+  1858→
+  1859→        {/* Activity chart + monthly summary */}
+  1860→        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+  1861→          <Card className="lg:col-span-2 bg-white/60 dark:bg-card/60 backdrop-blur-sm border-orange-200/40 dark:border-orange-900/30">
+  1862→            <CardHeader className="pb-2">
+  1863→              <CardTitle className="text-base">Activity (Last 7 Days)</CardTitle>
+  1864→              <CardDescription className="text-xs">Minutes of activity per day</CardDescription>
+  1865→            </CardHeader>
+  1866→            <CardContent>
+  1867→              <div className="h-56">
+  1868→                <ResponsiveContainer width="100%" height="100%">
+  1869→                  <BarChart data={ACTIVITY_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+  1870→                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,120,120,0.15)" vertical={false} />
+  1871→                    <XAxis dataKey="day" tick={{ fontSize: 12, fill: 'currentColor' }} axisLine={false} tickLine={false} />
+  1872→                    <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} axisLine={false} tickLine={false} />
+  1873→                    <RechartsTooltip
+  1874→                      cursor={{ fill: 'rgba(251,146,60,0.08)' }}
+  1875→                      contentStyle={{
+  1876→                        background: 'rgba(255,255,255,0.95)',
+  1877→                        border: '1px solid rgba(251,146,60,0.3)',
+  1878→                        borderRadius: 12,
+  1879→                        fontSize: 12,
+  1880→                      }}
+  1881→                      formatter={(value: number) => [`${value} min`, 'Activity']}
+  1882→                    />
+  1883→                    <Bar dataKey="minutes" radius={[8, 8, 0, 0]} maxBarSize={48}>
+  1884→                      {ACTIVITY_DATA.map((entry, i) => (
+  1885→                        <Cell
+  1886→                          key={`cell-${i}`}
+  1887→                          fill={entry.completed ? '#fb923c' : 'rgba(120,120,120,0.2)'}
+  1888→                        />
+  1889→                      ))}
+  1890→                    </Bar>
+  1891→                  </BarChart>
+  1892→                </ResponsiveContainer>
+  1893→              </div>
+  1894→            </CardContent>
+  1895→          </Card>
+  1896→
+  1897→          <Card className="bg-white/60 dark:bg-card/60 backdrop-blur-sm border-orange-200/40 dark:border-orange-900/30">
+  1898→            <CardHeader className="pb-2">
+  1899→              <CardTitle className="text-base">Monthly Summary</CardTitle>
+  1900→              <CardDescription className="text-xs">Last 4 weeks</CardDescription>
+  1901→            </CardHeader>
+  1902→            <CardContent className="space-y-3">
+  1903→              {MONTHLY_SUMMARY.map((w) => {
+  1904→                const max = Math.max(...MONTHLY_SUMMARY.map((x) => x.minutes))
+  1905→                return (
+  1906→                  <div key={w.week}>
+  1907→                    <div className="flex justify-between text-xs mb-1">
+  1908→                      <span className="font-medium">{w.week}</span>
+  1909→                      <span className="text-muted-foreground">{w.workouts} workouts · {w.minutes}m</span>
+  1910→                    </div>
+  1911→                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+  1912→                      <motion.div
+  1913→                        className="h-full bg-gradient-to-r from-orange-500 to-rose-500"
+  1914→                        initial={{ width: 0 }}
+  1915→                        whileInView={{ width: `${(w.minutes / max) * 100}%` }}
+  1916→                        viewport={{ once: true }}
+  1917→                        transition={{ duration: 0.6 }}
+  1918→                      />
+  1919→                    </div>
+  1920→                  </div>
+  1921→                )
+  1922→              })}
+  1923→              <Separator className="my-2" />
+  1924→              <div className="flex justify-between text-sm">
+  1925→                <span className="text-muted-foreground">Monthly total</span>
+  1926→                <span className="font-bold">
+  1927→                  {MONTHLY_SUMMARY.reduce((s, w) => s + w.workouts, 0)} workouts ·{' '}
+  1928→                  {MONTHLY_SUMMARY.reduce((s, w) => s + w.minutes, 0)} min
+  1929→                </span>
+  1930→              </div>
+  1931→            </CardContent>
+  1932→          </Card>
+  1933→        </motion.div>
+  1934→      </motion.section>
+  1935→
+  1936→      {/* ─── 7. Fitness Goals ─── */}
+  1937→      <motion.section variants={containerVariants} initial="hidden" animate="visible">
+  1938→        <motion.div variants={itemVariants} className="flex items-center justify-between mb-3">
+  1939→          <h2 className="text-xl font-semibold flex items-center gap-2">
+  1940→            <Target className="h-5 w-5 text-orange-500" />
+  1941→            Fitness Goals
+  1942→          </h2>
+  1943→        </motion.div>
+  1944→
+  1945→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  1946→          {/* Goals progress */}
+  1947→          <motion.div variants={itemVariants}>
+  1948→            <Card className="bg-white/60 dark:bg-card/60 backdrop-blur-sm border-orange-200/40 dark:border-orange-900/30 h-full">
+  1949→              <CardHeader className="pb-3">
+  1950→                <CardTitle className="text-base">Weekly Targets</CardTitle>
+  1951→                <CardDescription className="text-xs">Set and track your weekly goals</CardDescription>
+  1952→              </CardHeader>
+  1953→              <CardContent className="space-y-5">
+  1954→                {/* Workouts per week */}
+  1955→                <div>
+  1956→                  <div className="flex items-center justify-between mb-1.5">
+  1957→                    <div className="flex items-center gap-2">
+  1958→                      <div className="h-8 w-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+  1959→                        <Dumbbell className="h-4 w-4 text-orange-500" />
+  1960→                      </div>
+  1961→                      <div>
+  1962→                        <p className="text-sm font-medium">Workouts / week</p>
+  1963→                        <p className="text-xs text-muted-foreground">{goals.weeklyWorkouts.current} of {goals.weeklyWorkouts.target} completed</p>
+  1964→                      </div>
+  1965→                    </div>
+  1966→                    <div className="flex items-center gap-1">
+  1967→                      <Button
+  1968→                        size="icon"
+  1969→                        variant="outline"
+  1970→                        className="h-7 w-7"
+  1971→                        onClick={() => setGoals((g) => ({ ...g, weeklyWorkouts: { ...g.weeklyWorkouts, target: Math.max(1, g.weeklyWorkouts.target - 1) } }))}
+  1972→                      >
+  1973→                        <span className="text-xs">−</span>
+  1974→                      </Button>
+  1975→                      <span className="font-semibold text-sm w-6 text-center">{goals.weeklyWorkouts.target}</span>
+  1976→                      <Button
+  1977→                        size="icon"
+  1978→                        variant="outline"
+  1979→                        className="h-7 w-7"
+  1980→                        onClick={() => setGoals((g) => ({ ...g, weeklyWorkouts: { ...g.weeklyWorkouts, target: Math.min(14, g.weeklyWorkouts.target + 1) } }))}
+  1981→                      >
+  1982→                        <Plus className="h-3 w-3" />
+  1983→                      </Button>
+  1984→                    </div>
+  1985→                  </div>
+  1986→                  <Progress value={goalPct(goals.weeklyWorkouts.current, goals.weeklyWorkouts.target)} className="h-2.5 [&>div]:bg-gradient-to-r [&>div]:from-orange-500 [&>div]:to-rose-500" />
+  1987→                  <p className="text-xs text-muted-foreground mt-1 text-right">{goalPct(goals.weeklyWorkouts.current, goals.weeklyWorkouts.target)}%</p>
+  1988→                </div>
+  1989→
+  1990→                {/* Minutes per week */}
+  1991→                <div>
+  1992→                  <div className="flex items-center justify-between mb-1.5">
+  1993→                    <div className="flex items-center gap-2">
+  1994→                      <div className="h-8 w-8 rounded-lg bg-rose-500/15 flex items-center justify-center">
+  1995→                        <Clock className="h-4 w-4 text-rose-500" />
+  1996→                      </div>
+  1997→                      <div>
+  1998→                        <p className="text-sm font-medium">Active minutes / week</p>
+  1999→                        <p className="text-xs text-muted-foreground">{goals.weeklyMinutes.current} of {goals.weeklyMinutes.target} min</p>
+  2000→                      </div>
+
+[showing lines 1-2000 of 2296; use offset=2001 with limit to continue reading]

@@ -1,0 +1,842 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Users,
+     7→  Heart,
+     8→  MessageCircle,
+     9→  Plus,
+    10→  TrendingUp,
+    11→  Trophy,
+    12→  Award,
+    13→  Star,
+    14→  Shield,
+    15→  Eye,
+    16→  EyeOff,
+    17→  Filter,
+    18→  Flame,
+    19→  Target,
+    20→  CheckCircle2,
+    21→  ArrowRight,
+    22→  Crown,
+    23→  Zap,
+    24→  BookOpen,
+    25→  HandHeart,
+    26→  Sparkles,
+    27→  Send,
+    28→  X,
+    29→  ChevronRight,
+    30→  UserCircle,
+    31→  Hash,
+    32→} from 'lucide-react'
+    33→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+    34→import { Badge } from '@/components/ui/badge'
+    35→import { Button } from '@/components/ui/button'
+    36→import { Input } from '@/components/ui/input'
+    37→import { Label } from '@/components/ui/label'
+    38→import { Switch } from '@/components/ui/switch'
+    39→import { Textarea } from '@/components/ui/textarea'
+    40→import { Separator } from '@/components/ui/separator'
+    41→import { ScrollArea } from '@/components/ui/scroll-area'
+    42→import { Progress } from '@/components/ui/progress'
+    43→import {
+    44→  Dialog,
+    45→  DialogContent,
+    46→  DialogDescription,
+    47→  DialogHeader,
+    48→  DialogTitle,
+    49→  DialogTrigger,
+    50→} from '@/components/ui/dialog'
+    51→import {
+    52→  Select,
+    53→  SelectContent,
+    54→  SelectItem,
+    55→  SelectTrigger,
+    56→  SelectValue,
+    57→} from '@/components/ui/select'
+    58→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+    59→
+    60→// ─── Types ────────────────────────────────────────────────────────
+    61→
+    62→type Category = 'General' | 'PCOS' | 'Fertility' | 'Pregnancy' | 'Menopause' | 'Mental Health'
+    63→
+    64→interface Post {
+    65→  id: string
+    66→  username: string
+    67→  title: string
+    68→  content: string
+    69→  category: Category
+    70→  likes: number
+    71→  comments: number
+    72→  timeAgo: string
+    73→  liked: boolean
+    74→}
+    75→
+    76→interface TrendingTopic {
+    77→  id: string
+    78→  topic: string
+    79→  posts: number
+    80→  trending: boolean
+    81→}
+    82→
+    83→interface SupportGroup {
+    84→  id: string
+    85→  name: string
+    86→  description: string
+    87→  members: number
+    88→  icon: React.ElementType
+    89→  color: string
+    90→  joined: boolean
+    91→}
+    92→
+    93→interface Challenge {
+    94→  id: string
+    95→  name: string
+    96→  description: string
+    97→  participants: number
+    98→  progress: number
+    99→  daysLeft: number
+   100→  joined: boolean
+   101→}
+   102→
+   103→interface Badge_ {
+   104→  id: string
+   105→  name: string
+   106→  description: string
+   107→  icon: React.ElementType
+   108→  earned: boolean
+   109→  color: string
+   110→}
+   111→
+   112→// ─── Data ─────────────────────────────────────────────────────────
+   113→
+   114→const categories: Category[] = ['General', 'PCOS', 'Fertility', 'Pregnancy', 'Menopause', 'Mental Health']
+   115→
+   116→const categoryColors: Record<Category, string> = {
+   117→  General: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+   118→  PCOS: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+   119→  Fertility: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+   120→  Pregnancy: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+   121→  Menopause: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+   122→  'Mental Health': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+   123→}
+   124→
+   125→const initialPosts: Post[] = [
+   126→  {
+   127→    id: '1',
+   128→    username: 'Lotus_42',
+   129→    title: 'Just got my PCOS diagnosis — feeling overwhelmed',
+   130→    content: 'Hi everyone, I just got diagnosed with PCOS and I\'m not sure what to expect. My doctor mentioned lifestyle changes but I don\'t know where to start. Any advice from those who\'ve been here?',
+   131→    category: 'PCOS',
+   132→    likes: 24,
+   133→    comments: 18,
+   134→    timeAgo: '2h ago',
+   135→    liked: false,
+   136→  },
+   137→  {
+   138→    id: '2',
+   139→    username: 'Sakhi_88',
+   140→    title: 'My fertility journey — 1 year update',
+   141→    content: 'It\'s been exactly a year since we started trying. We\'ve had our ups and downs but staying hopeful. Sharing my timeline and what helped us cope with the emotional rollercoaster.',
+   142→    category: 'Fertility',
+   143→    likes: 45,
+   144→    comments: 32,
+   145→    timeAgo: '4h ago',
+   146→    liked: true,
+   147→  },
+   148→  {
+   149→    id: '3',
+   150→    username: 'Amber_Sun',
+   151→    title: 'Hot flash tips that actually work!',
+   152→    content: 'After trying everything, I\'ve found a combination that really helps: keeping a small fan at my desk, wearing layers, and drinking cool peppermint tea. What are your go-to strategies?',
+   153→    category: 'Menopause',
+   154→    likes: 67,
+   155→    comments: 41,
+   156→    timeAgo: '6h ago',
+   157→    liked: false,
+   158→  },
+   159→  {
+   160→    id: '4',
+   161→    username: 'River_Moon',
+   162→    title: 'Anxiety during perimenopause is real',
+   163→    content: 'I never expected anxiety to be such a big part of this transition. Some days it feels overwhelming. Looking for support and coping strategies that have worked for others.',
+   164→    category: 'Mental Health',
+   165→    likes: 38,
+   166→    comments: 27,
+   167→    timeAgo: '8h ago',
+   168→    liked: false,
+   169→  },
+   170→  {
+   171→    id: '5',
+   172→    username: 'Jasmine_23',
+   173→    title: 'First trimester essentials — what helped me',
+   174→    content: 'Just hit 12 weeks! Sharing my list of essentials that got me through the first trimester nausea and fatigue. Ginger candies, pregnancy pillow, and lots of naps!',
+   175→    category: 'Pregnancy',
+   176→    likes: 52,
+   177→    comments: 19,
+   178→    timeAgo: '12h ago',
+   179→    liked: true,
+   180→  },
+   181→  {
+   182→    id: '6',
+   183→    username: 'Peony_77',
+   184→    title: 'How do you explain PCOS to family?',
+   185→    content: 'My family doesn\'t really understand PCOS and keeps making comments about my weight. How do you all handle these conversations? I need better ways to explain it without feeling defensive.',
+   186→    category: 'PCOS',
+   187→    likes: 31,
+   188→    comments: 22,
+   189→    timeAgo: '1d ago',
+   190→    liked: false,
+   191→  },
+   192→]
+   193→
+   194→const trendingTopics: TrendingTopic[] = [
+   195→  { id: '1', topic: 'PCOS Diet Plans', posts: 156, trending: true },
+   196→  { id: '2', topic: 'IVF Support Circle', posts: 89, trending: true },
+   197→  { id: '3', topic: 'Menopause & Work', posts: 72, trending: true },
+   198→  { id: '4', topic: 'Morning Sickness Remedies', posts: 64, trending: false },
+   199→  { id: '5', topic: 'HRT Experiences', posts: 58, trending: false },
+   200→  { id: '6', topic: 'Cycle Syncing Tips', posts: 51, trending: false },
+   201→]
+   202→
+   203→const initialSupportGroups: SupportGroup[] = [
+   204→  {
+   205→    id: '1',
+   206→    name: 'PCOS Warriors',
+   207→    description: 'A safe space for women navigating PCOS together',
+   208→    members: 2847,
+   209→    icon: Shield,
+   210→    color: 'from-amber-500 to-orange-500',
+   211→    joined: true,
+   212→  },
+   213→  {
+   214→    id: '2',
+   215→    name: 'Fertility Hope',
+   216→    description: 'Support for every step of your fertility journey',
+   217→    members: 1523,
+   218→    icon: Heart,
+   219→    color: 'from-pink-500 to-rose-500',
+   220→    joined: false,
+   221→  },
+   222→  {
+   223→    id: '3',
+   224→    name: 'Menopause Sisterhood',
+   225→    description: 'Embracing the transition with grace and support',
+   226→    members: 1891,
+   227→    icon: Sparkles,
+   228→    color: 'from-red-500 to-orange-500',
+   229→    joined: false,
+   230→  },
+   231→  {
+   232→    id: '4',
+   233→    name: 'Mindful Mamas',
+   234→    description: 'Mental wellness through pregnancy and beyond',
+   235→    members: 967,
+   236→    icon: BookOpen,
+   237→    color: 'from-teal-500 to-cyan-500',
+   238→    joined: true,
+   239→  },
+   240→  {
+   241→    id: '5',
+   242→    name: 'Cycle Harmony',
+   243→    description: 'Understanding and honoring your cycle',
+   244→    members: 1204,
+   245→    icon: Target,
+   246→    color: 'from-violet-500 to-purple-500',
+   247→    joined: false,
+   248→  },
+   249→]
+   250→
+   251→const initialChallenges: Challenge[] = [
+   252→  {
+   253→    id: '1',
+   254→    name: '7-Day Stress Relief',
+   255→    description: 'Daily mindfulness and breathing exercises for one week',
+   256→    participants: 342,
+   257→    progress: 57,
+   258→    daysLeft: 3,
+   259→    joined: true,
+   260→  },
+   261→  {
+   262→    id: '2',
+   263→    name: 'Walk 30 Minutes Daily',
+   264→    description: 'Build a consistent walking habit for better hormonal health',
+   265→    participants: 518,
+   266→    progress: 40,
+   267→    daysLeft: 9,
+   268→    joined: false,
+   269→  },
+   270→  {
+   271→    id: '3',
+   272→    name: 'Gratitude Journal',
+   273→    description: 'Write 3 things you are grateful for each day',
+   274→    participants: 276,
+   275→    progress: 85,
+   276→    daysLeft: 1,
+   277→    joined: true,
+   278→  },
+   279→]
+   280→
+   281→const userBadges: Badge_[] = [
+   282→  { id: '1', name: 'First Post', description: 'Created your first post', icon: Send, earned: true, color: 'text-sky-500' },
+   283→  { id: '2', name: 'Helpful', description: 'Received 10+ likes on a comment', icon: HandHeart, earned: true, color: 'text-emerald-500' },
+   284→  { id: '3', name: 'Supportive', description: 'Commented on 25+ posts', icon: Heart, earned: true, color: 'text-pink-500' },
+   285→  { id: '4', name: 'Challenger', description: 'Completed a community challenge', icon: Trophy, earned: false, color: 'text-amber-500' },
+   286→  { id: '5', name: 'Rising Star', description: 'Get 50+ likes on a post', icon: Star, earned: false, color: 'text-purple-500' },
+   287→  { id: '6', name: 'Mentor', description: 'Help 100 community members', icon: Crown, earned: false, color: 'text-orange-500' },
+   288→]
+   289→
+   290→// ─── Component ────────────────────────────────────────────────────
+   291→
+   292→export default function CommunityModule() {
+   293→  const [posts, setPosts] = useState<Post[]>(initialPosts)
+   294→  const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All')
+   295→  const [supportGroups, setSupportGroups] = useState<SupportGroup[]>(initialSupportGroups)
+   296→  const [challenges, setChallenges] = useState<Challenge[]>(initialChallenges)
+   297→  const [dialogOpen, setDialogOpen] = useState(false)
+   298→  const [newPost, setNewPost] = useState({
+   299→    title: '',
+   300→    content: '',
+   301→    category: 'General' as Category,
+   302→    anonymous: true,
+   303→  })
+   304→  const [activeTab, setActiveTab] = useState<'feed' | 'groups' | 'challenges'>('feed')
+   305→
+   306→  const supportScore = 320
+   307→  const nextLevel = 500
+   308→  const level = 3
+   309→
+   310→  const filteredPosts = activeCategory === 'All'
+   311→    ? posts
+   312→    : posts.filter(p => p.category === activeCategory)
+   313→
+   314→  const generateAnonName = () => {
+   315→    const flowers = ['Lotus', 'Sakhi', 'Amber', 'River', 'Jasmine', 'Peony', 'Rose', 'Lily', 'Daisy', 'Iris']
+   316→    const flower = flowers[Math.floor(Math.random() * flowers.length)]
+   317→    const num = Math.floor(Math.random() * 100)
+   318→    return `${flower}_${num}`
+   319→  }
+   320→
+   321→  const handleCreatePost = () => {
+   322→    if (!newPost.title.trim() || !newPost.content.trim()) return
+   323→    const post: Post = {
+   324→      id: Date.now().toString(),
+   325→      username: newPost.anonymous ? generateAnonName() : 'You',
+   326→      title: newPost.title,
+   327→      content: newPost.content,
+   328→      category: newPost.category,
+   329→      likes: 0,
+   330→      comments: 0,
+   331→      timeAgo: 'Just now',
+   332→      liked: false,
+   333→    }
+   334→    setPosts([post, ...posts])
+   335→    setNewPost({ title: '', content: '', category: 'General', anonymous: true })
+   336→    setDialogOpen(false)
+   337→  }
+   338→
+   339→  const toggleLike = (postId: string) => {
+   340→    setPosts(prev =>
+   341→      prev.map(p =>
+   342→        p.id === postId
+   343→          ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
+   344→          : p
+   345→      )
+   346→    )
+   347→  }
+   348→
+   349→  const toggleGroup = (groupId: string) => {
+   350→    setSupportGroups(prev =>
+   351→      prev.map(g =>
+   352→        g.id === groupId
+   353→          ? {
+   354→              ...g,
+   355→              joined: !g.joined,
+   356→              members: g.joined ? g.members - 1 : g.members + 1,
+   357→            }
+   358→          : g
+   359→      )
+   360→    )
+   361→  }
+   362→
+   363→  const toggleChallenge = (challengeId: string) => {
+   364→    setChallenges(prev =>
+   365→      prev.map(c =>
+   366→        c.id === challengeId
+   367→          ? {
+   368→              ...c,
+   369→              joined: !c.joined,
+   370→              participants: c.joined ? c.participants - 1 : c.participants + 1,
+   371→            }
+   372→          : c
+   373→      )
+   374→    )
+   375→  }
+   376→
+   377→  return (
+   378→    <div className="space-y-6 max-w-6xl mx-auto">
+   379→      {/* Header */}
+   380→      <motion.div
+   381→        initial={{ opacity: 0, y: -10 }}
+   382→        animate={{ opacity: 1, y: 0 }}
+   383→        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+   384→      >
+   385→        <div>
+   386→          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+   387→            <Users className="h-7 w-7 text-sky-500" />
+   388→            Community
+   389→          </h1>
+   390→          <p className="text-muted-foreground mt-1">Connect, share, and support each other</p>
+   391→        </div>
+   392→        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+   393→          <DialogTrigger asChild>
+   394→            <Button className="bg-sky-500 hover:bg-sky-600 text-white">
+   395→              <Plus className="h-4 w-4 mr-1.5" /> Create Post
+   396→            </Button>
+   397→          </DialogTrigger>
+   398→          <DialogContent className="sm:max-w-lg">
+   399→            <DialogHeader>
+   400→              <DialogTitle>Create a Post</DialogTitle>
+   401→              <DialogDescription>Share your thoughts with the community</DialogDescription>
+   402→            </DialogHeader>
+   403→            <div className="space-y-4 pt-2">
+   404→              <div className="space-y-1.5">
+   405→                <Label className="text-sm">Title</Label>
+   406→                <Input
+   407→                  placeholder="What's on your mind?"
+   408→                  value={newPost.title}
+   409→                  onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
+   410→                />
+   411→              </div>
+   412→              <div className="space-y-1.5">
+   413→                <Label className="text-sm">Content</Label>
+   414→                <Textarea
+   415→                  placeholder="Share your experience, ask a question, or offer support..."
+   416→                  rows={4}
+   417→                  value={newPost.content}
+   418→                  onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+   419→                />
+   420→              </div>
+   421→              <div className="space-y-1.5">
+   422→                <Label className="text-sm">Category</Label>
+   423→                <Select
+   424→                  value={newPost.category}
+   425→                  onValueChange={(v) => setNewPost(prev => ({ ...prev, category: v as Category }))}
+   426→                >
+   427→                  <SelectTrigger>
+   428→                    <SelectValue />
+   429→                  </SelectTrigger>
+   430→                  <SelectContent>
+   431→                    {categories.map(c => (
+   432→                      <SelectItem key={c} value={c}>{c}</SelectItem>
+   433→                    ))}
+   434→                  </SelectContent>
+   435→                </Select>
+   436→              </div>
+   437→              <div className="flex items-center justify-between">
+   438→                <div className="flex items-center gap-2">
+   439→                  {newPost.anonymous ? <EyeOff className="h-4 w-4 text-sky-500" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+   440→                  <Label className="text-sm">Post anonymously</Label>
+   441→                </div>
+   442→                <Switch
+   443→                  checked={newPost.anonymous}
+   444→                  onCheckedChange={(v) => setNewPost(prev => ({ ...prev, anonymous: v }))}
+   445→                />
+   446→              </div>
+   447→              {newPost.anonymous && (
+   448→                <p className="text-xs text-muted-foreground flex items-center gap-1">
+   449→                  <Shield className="h-3 w-3" />
+   450→                  Your username will appear as a random flower name like &quot;Lotus_42&quot;
+   451→                </p>
+   452→              )}
+   453→              <div className="flex justify-end gap-2 pt-2">
+   454→                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+   455→                <Button
+   456→                  onClick={handleCreatePost}
+   457→                  className="bg-sky-500 hover:bg-sky-600 text-white"
+   458→                  disabled={!newPost.title.trim() || !newPost.content.trim()}
+   459→                >
+   460→                  <Send className="h-3.5 w-3.5 mr-1.5" /> Post
+   461→                </Button>
+   462→              </div>
+   463→            </div>
+   464→          </DialogContent>
+   465→        </Dialog>
+   466→      </motion.div>
+   467→
+   468→      {/* Gamification Bar */}
+   469→      <motion.div
+   470→        initial={{ opacity: 0, y: 5 }}
+   471→        animate={{ opacity: 1, y: 0 }}
+   472→        transition={{ delay: 0.05 }}
+   473→      >
+   474→        <Card className="border-sky-200 dark:border-sky-900/50 bg-gradient-to-r from-sky-50/80 to-blue-50/80 dark:from-sky-950/20 dark:to-blue-950/20">
+   475→          <CardContent className="py-4">
+   476→            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+   477→              <div className="flex items-center gap-3">
+   478→                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+   479→                  {level}
+   480→                </div>
+   481→                <div>
+   482→                  <p className="font-semibold text-sm">Level {level} — Supporter</p>
+   483→                  <p className="text-xs text-muted-foreground">{supportScore} / {nextLevel} points to Level 4</p>
+   484→                </div>
+   485→              </div>
+   486→              <div className="flex-1 w-full sm:w-auto">
+   487→                <Progress value={(supportScore / nextLevel) * 100} className="h-2.5" />
+   488→              </div>
+   489→              <div className="flex items-center gap-1.5">
+   490→                {userBadges.filter(b => b.earned).map(badge => {
+   491→                  const Icon = badge.icon
+   492→                  return (
+   493→                    <div
+   494→                      key={badge.id}
+   495→                      className="h-8 w-8 rounded-full bg-white dark:bg-card border border-sky-200 dark:border-sky-800 flex items-center justify-center shadow-sm"
+   496→                      title={`${badge.name}: ${badge.description}`}
+   497→                    >
+   498→                      <Icon className={`h-4 w-4 ${badge.color}`} />
+   499→                    </div>
+   500→                  )
+   501→                })}
+   502→                <div className="h-8 w-8 rounded-full bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center">
+   503→                  <span className="text-[10px] text-muted-foreground font-medium">+{userBadges.filter(b => !b.earned).length}</span>
+   504→                </div>
+   505→              </div>
+   506→            </div>
+   507→          </CardContent>
+   508→        </Card>
+   509→      </motion.div>
+   510→
+   511→      {/* Tab Navigation */}
+   512→      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
+   513→        {[
+   514→          { key: 'feed' as const, label: 'Feed', icon: MessageCircle },
+   515→          { key: 'groups' as const, label: 'Groups', icon: Users },
+   516→          { key: 'challenges' as const, label: 'Challenges', icon: Trophy },
+   517→        ].map(tab => (
+   518→          <Button
+   519→            key={tab.key}
+   520→            size="sm"
+   521→            variant={activeTab === tab.key ? 'default' : 'ghost'}
+   522→            className={`text-xs px-4 ${activeTab === tab.key ? 'bg-sky-500 hover:bg-sky-600 text-white' : ''}`}
+   523→            onClick={() => setActiveTab(tab.key)}
+   524→          >
+   525→            <tab.icon className="h-3.5 w-3.5 mr-1.5" />
+   526→            {tab.label}
+   527→          </Button>
+   528→        ))}
+   529→      </div>
+   530→
+   531→      <AnimatePresence mode="wait">
+   532→        {activeTab === 'feed' && (
+   533→          <motion.div
+   534→            key="feed"
+   535→            initial={{ opacity: 0, y: 10 }}
+   536→            animate={{ opacity: 1, y: 0 }}
+   537→            exit={{ opacity: 0, y: -10 }}
+   538→            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+   539→          >
+   540→            {/* Feed Column */}
+   541→            <div className="lg:col-span-2 space-y-4">
+   542→              {/* Category Filters */}
+   543→              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+   544→                <Button
+   545→                  size="sm"
+   546→                  variant={activeCategory === 'All' ? 'default' : 'outline'}
+   547→                  className={`text-xs shrink-0 ${activeCategory === 'All' ? 'bg-sky-500 hover:bg-sky-600 text-white' : ''}`}
+   548→                  onClick={() => setActiveCategory('All')}
+   549→                >
+   550→                  <Filter className="h-3 w-3 mr-1" /> All
+   551→                </Button>
+   552→                {categories.map(cat => (
+   553→                  <Button
+   554→                    key={cat}
+   555→                    size="sm"
+   556→                    variant={activeCategory === cat ? 'default' : 'outline'}
+   557→                    className={`text-xs shrink-0 ${activeCategory === cat ? 'bg-sky-500 hover:bg-sky-600 text-white' : ''}`}
+   558→                    onClick={() => setActiveCategory(cat)}
+   559→                  >
+   560→                    <Hash className="h-3 w-3 mr-1" />
+   561→                    {cat}
+   562→                  </Button>
+   563→                ))}
+   564→              </div>
+   565→
+   566→              {/* Posts */}
+   567→              <ScrollArea className="max-h-[600px]">
+   568→                <div className="space-y-3">
+   569→                  {filteredPosts.map((post, idx) => (
+   570→                    <motion.div
+   571→                      key={post.id}
+   572→                      initial={{ opacity: 0, y: 10 }}
+   573→                      animate={{ opacity: 1, y: 0 }}
+   574→                      transition={{ delay: idx * 0.04 }}
+   575→                    >
+   576→                      <Card className="hover:shadow-md transition-shadow">
+   577→                        <CardContent className="py-4">
+   578→                          <div className="flex items-start gap-3">
+   579→                            <Avatar className="h-9 w-9 shrink-0">
+   580→                              <AvatarFallback className="bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300 text-xs font-semibold">
+   581→                                {post.username.split('_')[0][0]}{post.username.split('_')[1]?.[0] || ''}
+   582→                              </AvatarFallback>
+   583→                            </Avatar>
+   584→                            <div className="flex-1 min-w-0">
+   585→                              <div className="flex items-center gap-2 flex-wrap">
+   586→                                <span className="text-sm font-semibold">{post.username}</span>
+   587→                                <Badge
+   588→                                  variant="secondary"
+   589→                                  className={`text-[10px] border-0 ${categoryColors[post.category]}`}
+   590→                                >
+   591→                                  {post.category}
+   592→                                </Badge>
+   593→                                <span className="text-[10px] text-muted-foreground">{post.timeAgo}</span>
+   594→                              </div>
+   595→                              <h3 className="font-semibold text-sm mt-1 leading-snug">{post.title}</h3>
+   596→                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{post.content}</p>
+   597→                              <div className="flex items-center gap-4 mt-3">
+   598→                                <button
+   599→                                  onClick={() => toggleLike(post.id)}
+   600→                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors"
+   601→                                >
+   602→                                  <Heart
+   603→                                    className={`h-3.5 w-3.5 ${post.liked ? 'fill-sky-500 text-sky-500' : ''}`}
+   604→                                  />
+   605→                                  {post.likes}
+   606→                                </button>
+   607→                                <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors">
+   608→                                  <MessageCircle className="h-3.5 w-3.5" />
+   609→                                  {post.comments}
+   610→                                </button>
+   611→                              </div>
+   612→                            </div>
+   613→                          </div>
+   614→                        </CardContent>
+   615→                      </Card>
+   616→                    </motion.div>
+   617→                  ))}
+   618→                </div>
+   619→              </ScrollArea>
+   620→            </div>
+   621→
+   622→            {/* Sidebar */}
+   623→            <div className="space-y-4">
+   624→              {/* Trending Topics */}
+   625→              <Card>
+   626→                <CardHeader>
+   627→                  <CardTitle className="text-base flex items-center gap-2">
+   628→                    <TrendingUp className="h-4 w-4 text-sky-500" />
+   629→                    Trending Topics
+   630→                  </CardTitle>
+   631→                </CardHeader>
+   632→                <CardContent>
+   633→                  <div className="space-y-2.5">
+   634→                    {trendingTopics.map((topic, idx) => (
+   635→                      <motion.div
+   636→                        key={topic.id}
+   637→                        initial={{ opacity: 0, x: 10 }}
+   638→                        animate={{ opacity: 1, x: 0 }}
+   639→                        transition={{ delay: 0.1 + idx * 0.04 }}
+   640→                        className="flex items-center justify-between group cursor-pointer"
+   641→                      >
+   642→                        <div className="flex items-center gap-2">
+   643→                          <span className="text-xs font-semibold text-muted-foreground w-5">{idx + 1}</span>
+   644→                          <div>
+   645→                            <p className="text-sm font-medium group-hover:text-sky-500 transition-colors">{topic.topic}</p>
+   646→                            <p className="text-[10px] text-muted-foreground">{topic.posts} posts</p>
+   647→                          </div>
+   648→                        </div>
+   649→                        {topic.trending && (
+   650→                          <Flame className="h-3.5 w-3.5 text-orange-500" />
+   651→                        )}
+   652→                      </motion.div>
+   653→                    ))}
+   654→                  </div>
+   655→                </CardContent>
+   656→              </Card>
+   657→
+   658→              {/* Badges */}
+   659→              <Card>
+   660→                <CardHeader>
+   661→                  <CardTitle className="text-base flex items-center gap-2">
+   662→                    <Award className="h-4 w-4 text-sky-500" />
+   663→                    Your Badges
+   664→                  </CardTitle>
+   665→                </CardHeader>
+   666→                <CardContent>
+   667→                  <div className="grid grid-cols-3 gap-2">
+   668→                    {userBadges.map(badge => {
+   669→                      const Icon = badge.icon
+   670→                      return (
+   671→                        <div
+   672→                          key={badge.id}
+   673→                          className={`flex flex-col items-center gap-1.5 p-2 rounded-lg border ${
+   674→                            badge.earned
+   675→                              ? 'border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/20'
+   676→                              : 'border-dashed border-muted-foreground/20 opacity-50'
+   677→                          }`}
+   678→                          title={badge.description}
+   679→                        >
+   680→                          <Icon className={`h-5 w-5 ${badge.earned ? badge.color : 'text-muted-foreground'}`} />
+   681→                          <span className="text-[9px] text-center font-medium leading-tight">{badge.name}</span>
+   682→                        </div>
+   683→                      )
+   684→                    })}
+   685→                  </div>
+   686→                </CardContent>
+   687→              </Card>
+   688→            </div>
+   689→          </motion.div>
+   690→        )}
+   691→
+   692→        {activeTab === 'groups' && (
+   693→          <motion.div
+   694→            key="groups"
+   695→            initial={{ opacity: 0, y: 10 }}
+   696→            animate={{ opacity: 1, y: 0 }}
+   697→            exit={{ opacity: 0, y: -10 }}
+   698→          >
+   699→            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   700→              {supportGroups.map((group, idx) => {
+   701→                const Icon = group.icon
+   702→                return (
+   703→                  <motion.div
+   704→                    key={group.id}
+   705→                    initial={{ opacity: 0, y: 10 }}
+   706→                    animate={{ opacity: 1, y: 0 }}
+   707→                    transition={{ delay: idx * 0.06 }}
+   708→                  >
+   709→                    <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+   710→                      <CardHeader>
+   711→                        <div className="flex items-start gap-3">
+   712→                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${group.color} shadow-lg`}>
+   713→                            <Icon className="h-5 w-5 text-white" />
+   714→                          </div>
+   715→                          <div className="flex-1">
+   716→                            <CardTitle className="text-sm">{group.name}</CardTitle>
+   717→                            <CardDescription className="text-xs mt-0.5">{group.description}</CardDescription>
+   718→                          </div>
+   719→                        </div>
+   720→                      </CardHeader>
+   721→                      <CardContent className="mt-auto">
+   722→                        <div className="flex items-center justify-between">
+   723→                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+   724→                            <UserCircle className="h-3.5 w-3.5" />
+   725→                            {group.members.toLocaleString()} members
+   726→                          </div>
+   727→                          <Button
+   728→                            size="sm"
+   729→                            variant={group.joined ? 'outline' : 'default'}
+   730→                            className={`text-xs h-8 ${
+   731→                              group.joined
+   732→                                ? 'border-sky-200 text-sky-600 dark:border-sky-800 dark:text-sky-400'
+   733→                                : 'bg-sky-500 hover:bg-sky-600 text-white'
+   734→                            }`}
+   735→                            onClick={() => toggleGroup(group.id)}
+   736→                          >
+   737→                            {group.joined ? (
+   738→                              <>
+   739→                                <CheckCircle2 className="h-3 w-3 mr-1" /> Joined
+   740→                              </>
+   741→                            ) : (
+   742→                              <>
+   743→                                <Plus className="h-3 w-3 mr-1" /> Join
+   744→                              </>
+   745→                            )}
+   746→                          </Button>
+   747→                        </div>
+   748→                      </CardContent>
+   749→                    </Card>
+   750→                  </motion.div>
+   751→                )
+   752→              })}
+   753→            </div>
+   754→          </motion.div>
+   755→        )}
+   756→
+   757→        {activeTab === 'challenges' && (
+   758→          <motion.div
+   759→            key="challenges"
+   760→            initial={{ opacity: 0, y: 10 }}
+   761→            animate={{ opacity: 1, y: 0 }}
+   762→            exit={{ opacity: 0, y: -10 }}
+   763→          >
+   764→            <div className="space-y-4">
+   765→              {challenges.map((challenge, idx) => (
+   766→                <motion.div
+   767→                  key={challenge.id}
+   768→                  initial={{ opacity: 0, y: 10 }}
+   769→                  animate={{ opacity: 1, y: 0 }}
+   770→                  transition={{ delay: idx * 0.06 }}
+   771→                >
+   772→                  <Card className="hover:shadow-md transition-shadow">
+   773→                    <CardContent className="py-4">
+   774→                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+   775→                        <div className="flex items-start gap-3 flex-1">
+   776→                          <div className={`p-2 rounded-xl ${
+   777→                            challenge.joined
+   778→                              ? 'bg-gradient-to-br from-sky-500 to-blue-600'
+   779→                              : 'bg-muted'
+   780→                          }`}>
+   781→                            <Trophy className={`h-5 w-5 ${challenge.joined ? 'text-white' : 'text-muted-foreground'}`} />
+   782→                          </div>
+   783→                          <div className="flex-1">
+   784→                            <div className="flex items-center gap-2 flex-wrap">
+   785→                              <h3 className="font-semibold text-sm">{challenge.name}</h3>
+   786→                              <Badge variant="secondary" className="text-[10px] border-0 bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+   787→                                <Zap className="h-2.5 w-2.5 mr-0.5" /> Active
+   788→                              </Badge>
+   789→                            </div>
+   790→                            <p className="text-xs text-muted-foreground mt-0.5">{challenge.description}</p>
+   791→                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+   792→                              <span className="flex items-center gap-1">
+   793→                                <Users className="h-3 w-3" />
+   794→                                {challenge.participants} participants
+   795→                              </span>
+   796→                              <span className="flex items-center gap-1">
+   797→                                <Target className="h-3 w-3" />
+   798→                                {challenge.daysLeft} days left
+   799→                              </span>
+   800→                            </div>
+   801→                          </div>
+   802→                        </div>
+   803→                        <div className="sm:w-48 space-y-2">
+   804→                          <div className="flex items-center justify-between text-xs">
+   805→                            <span className="text-muted-foreground">Progress</span>
+   806→                            <span className="font-semibold text-sky-500">{challenge.progress}%</span>
+   807→                          </div>
+   808→                          <Progress value={challenge.progress} className="h-2" />
+   809→                          <Button
+   810→                            size="sm"
+   811→                            variant={challenge.joined ? 'outline' : 'default'}
+   812→                            className={`w-full text-xs h-8 ${
+   813→                              challenge.joined
+   814→                                ? 'border-sky-200 text-sky-600 dark:border-sky-800 dark:text-sky-400'
+   815→                                : 'bg-sky-500 hover:bg-sky-600 text-white'
+   816→                            }`}
+   817→                            onClick={() => toggleChallenge(challenge.id)}
+   818→                          >
+   819→                            {challenge.joined ? (
+   820→                              <>
+   821→                                <CheckCircle2 className="h-3 w-3 mr-1" /> Joined
+   822→                              </>
+   823→                            ) : (
+   824→                              <>
+   825→                                <ArrowRight className="h-3 w-3 mr-1" /> Join Challenge
+   826→                              </>
+   827→                            )}
+   828→                          </Button>
+   829→                        </div>
+   830→                      </div>
+   831→                    </CardContent>
+   832→                  </Card>
+   833→                </motion.div>
+   834→              ))}
+   835→            </div>
+   836→          </motion.div>
+   837→        )}
+   838→      </AnimatePresence>
+   839→    </div>
+   840→  )
+   841→}
+   842→

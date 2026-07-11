@@ -1,0 +1,1040 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { Button } from '@/components/ui/button'
+     6→import { Input } from '@/components/ui/input'
+     7→import {
+     8→  X,
+     9→  Lock,
+    10→  Shield,
+    11→  Loader2,
+    12→  Check,
+    13→  ArrowLeft,
+    14→  Eye,
+    15→  EyeOff,
+    16→  Sparkles,
+    17→  Copy,
+    18→  Crown,
+    19→  Zap,
+    20→  CheckCircle2,
+    21→  ShieldCheck,
+    22→} from 'lucide-react'
+    23→import { toast } from 'sonner'
+    24→import { cn } from '@/lib/utils'
+    25→
+    26→// ─── Brand constants ─────────────────────────────────────────────────────────
+    27→// PayPal's official brand colors — required for authentic PayPal UX.
+    28→const PAYPAL_BLUE = '#003087'
+    29→const PAYPAL_YELLOW = '#ffc439'
+    30→const PAYPAL_YELLOW_HOVER = '#f0b419'
+    31→const PAYPAL_LIGHT_BLUE = '#009cde'
+    32→const GST_RATE = 0.18
+    33→
+    34→// ─── Types ───────────────────────────────────────────────────────────────────
+    35→
+    36→/** Structural subset of the Plan interface from premium.tsx — accepts the full Plan via TS structural typing. */
+    37→interface PaypalPlan {
+    38→  id: 'free' | 'premium' | 'plus'
+    39→  name: string
+    40→  monthlyPrice: number
+    41→  yearlyPrice: number
+    42→}
+    43→
+    44→type BillingCycle = 'monthly' | 'yearly'
+    45→type Step = 'login' | 'review' | 'processing' | 'success'
+    46→type PaymentMethodId = 'visa' | 'mastercard' | 'balance'
+    47→
+    48→interface Receipt {
+    49→  transactionId: string
+    50→  merchant: string
+    51→  planId: 'premium' | 'plus'
+    52→  planName: string
+    53→  billingCycle: BillingCycle
+    54→  subtotal: number
+    55→  gst: number
+    56→  total: number
+    57→  currency: string
+    58→  paymentMethod: {
+    59→    type: 'card' | 'balance'
+    60→    email?: string
+    61→    last4?: string
+    62→    brand?: string
+    63→  }
+    64→  buyerEmail?: string
+    65→  buyerName?: string | null
+    66→  timestamp: string
+    67→  status: 'COMPLETED'
+    68→  note: string
+    69→}
+    70→
+    71→interface PaypalCheckoutModalProps {
+    72→  plan: PaypalPlan
+    73→  billingCycle: BillingCycle
+    74→  onClose: () => void
+    75→  onSuccess: () => void
+    76→}
+    77→
+    78→// ─── Helpers ─────────────────────────────────────────────────────────────────
+    79→
+    80→function formatINR(n: number): string {
+    81→  return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    82→}
+    83→
+    84→function round2(n: number): number {
+    85→  return Math.round(n * 100) / 100
+    86→}
+    87→
+    88→// ─── PayPal Logo (wordmark) ──────────────────────────────────────────────────
+    89→
+    90→function PayPalLogo({
+    91→  variant = 'color',
+    92→  className,
+    93→}: {
+    94→  variant?: 'color' | 'white'
+    95→  className?: string
+    96→}) {
+    97→  const payColor = variant === 'white' ? '#ffffff' : PAYPAL_LIGHT_BLUE
+    98→  const palColor = variant === 'white' ? '#ffffff' : PAYPAL_BLUE
+    99→  return (
+   100→    <svg
+   101→      viewBox="0 0 96 26"
+   102→      className={className}
+   103→      role="img"
+   104→      aria-label="PayPal"
+   105→      preserveAspectRatio="xMidYMid meet"
+   106→    >
+   107→      <text
+   108→        x="0"
+   109→        y="21"
+   110→        fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
+   111→        fontStyle="italic"
+   112→        fontWeight={800}
+   113→        fontSize="25"
+   114→        letterSpacing="-1.2"
+   115→      >
+   116→        <tspan fill={payColor}>Pay</tspan>
+   117→        <tspan fill={palColor}>Pal</tspan>
+   118→      </text>
+   119→    </svg>
+   120→  )
+   121→}
+   122→
+   123→// ─── Card brand marks ────────────────────────────────────────────────────────
+   124→
+   125→function VisaMark({ className }: { className?: string }) {
+   126→  return (
+   127→    <div
+   128→      className={cn(
+   129→        'flex h-6 w-10 items-center justify-center rounded bg-[#1a1f71] text-white',
+   130→        className,
+   131→      )}
+   132→    >
+   133→      <span className="text-[9px] font-bold italic tracking-tight">VISA</span>
+   134→    </div>
+   135→  )
+   136→}
+   137→
+   138→function MastercardMark({ className }: { className?: string }) {
+   139→  return (
+   140→    <div
+   141→      className={cn(
+   142→        'relative flex h-6 w-10 items-center justify-center rounded bg-white',
+   143→        className,
+   144→      )}
+   145→    >
+   146→      <span className="absolute left-1.5 h-4 w-4 rounded-full bg-[#eb001b]" />
+   147→      <span className="absolute right-1.5 h-4 w-4 rounded-full bg-[#f79e1b] mix-blend-multiply" />
+   148→    </div>
+   149→  )
+   150→}
+   151→
+   152→function PaypalBalanceMark({ className }: { className?: string }) {
+   153→  return (
+   154→    <div
+   155→      className={cn(
+   156→        'flex h-6 w-10 items-center justify-center rounded bg-gradient-to-br from-[#009cde] to-[#003087] text-white',
+   157→        className,
+   158→      )}
+   159→    >
+   160→      <span className="text-[9px] font-extrabold italic tracking-tight">P</span>
+   161→    </div>
+   162→  )
+   163→}
+   164→
+   165→// ─── Norton Secured seal ─────────────────────────────────────────────────────
+   166→
+   167→function NortonSeal() {
+   168→  return (
+   169→    <div className="flex items-center gap-1.5">
+   170→      <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-[#ffd200] text-[#1a1a1a]">
+   171→        <span className="text-[11px] font-black italic leading-none">N</span>
+   172→      </div>
+   173→      <span className="text-[10px] leading-tight text-gray-500">
+   174→        Norton <span className="font-semibold text-gray-600">Secured</span>
+   175→      </span>
+   176→    </div>
+   177→  )
+   178→}
+   179→
+   180→// ─── Confetti burst (success step) ───────────────────────────────────────────
+   181→
+   182→interface ConfettiParticle {
+   183→  id: number
+   184→  x: number
+   185→  y: number
+   186→  color: string
+   187→  size: number
+   188→  delay: number
+   189→  rotate: number
+   190→}
+   191→
+   192→function ConfettiBurst() {
+   193→  const particles = useMemo<ConfettiParticle[]>(() => {
+   194→    const colors = ['#f59e0b', '#fbbf24', '#fcd34d', '#10b981', '#34d399', '#ffffff', '#f472b6']
+   195→    return Array.from({ length: 22 }, (_, i) => {
+   196→      const angle = (i / 22) * Math.PI * 2 + (Math.random() - 0.5) * 0.5
+   197→      const distance = 70 + Math.random() * 80
+   198→      return {
+   199→        id: i,
+   200→        x: Math.cos(angle) * distance,
+   201→        y: Math.sin(angle) * distance - 20, // bias upward toward checkmark
+   202→        color: colors[i % colors.length],
+   203→        size: 4 + Math.random() * 5,
+   204→        delay: Math.random() * 0.18,
+   205→        rotate: (Math.random() - 0.5) * 540,
+   206→      }
+   207→    })
+   208→  }, [])
+   209→
+   210→  return (
+   211→    <div className="pointer-events-none absolute inset-x-0 top-10 flex justify-center">
+   212→      <div className="relative h-0 w-0">
+   213→        {particles.map((p) => (
+   214→          <motion.div
+   215→            key={p.id}
+   216→            className="absolute rounded-full"
+   217→            style={{
+   218→              width: p.size,
+   219→              height: p.size,
+   220→              backgroundColor: p.color,
+   221→            }}
+   222→            initial={{ x: 0, y: 0, opacity: 0, scale: 0, rotate: 0 }}
+   223→            animate={{
+   224→              x: p.x,
+   225→              y: p.y,
+   226→              opacity: [0, 1, 1, 0],
+   227→              scale: [0, 1, 0.9, 0.6],
+   228→              rotate: p.rotate,
+   229→            }}
+   230→            transition={{
+   231→              duration: 1.6,
+   232→              delay: p.delay,
+   233→              ease: 'easeOut',
+   234→              times: [0, 0.15, 0.6, 1],
+   235→            }}
+   236→          />
+   237→        ))}
+   238→      </div>
+   239→    </div>
+   240→  )
+   241→}
+   242→
+   243→// ─── Animated green checkmark ────────────────────────────────────────────────
+   244→
+   245→function AnimatedCheck() {
+   246→  return (
+   247→    <div className="relative flex h-24 w-24 items-center justify-center">
+   248→      {/* Soft glow */}
+   249→      <motion.div
+   250→        initial={{ scale: 0.6, opacity: 0 }}
+   251→        animate={{ scale: 1, opacity: 1 }}
+   252→        transition={{ duration: 0.5, ease: 'easeOut' }}
+   253→        className="absolute inset-0 rounded-full bg-emerald-100"
+   254→      />
+   255→      <motion.div
+   256→        initial={{ scale: 0.6, opacity: 0 }}
+   257→        animate={{ scale: [0.6, 1.15, 1], opacity: 1 }}
+   258→        transition={{ duration: 0.55, ease: 'easeOut' }}
+   259→        className="absolute inset-0 rounded-full bg-emerald-500/15"
+   260→      />
+   261→      <svg viewBox="0 0 52 52" className="relative h-20 w-20">
+   262→        <motion.circle
+   263→          cx="26"
+   264→          cy="26"
+   265→          r="24"
+   266→          fill="none"
+   267→          stroke="#10b981"
+   268→          strokeWidth="2.5"
+   269→          initial={{ pathLength: 0 }}
+   270→          animate={{ pathLength: 1 }}
+   271→          transition={{ duration: 0.5, ease: 'easeOut' }}
+   272→        />
+   273→        <motion.path
+   274→          d="M14 27l8 8 16-16"
+   275→          fill="none"
+   276→          stroke="#10b981"
+   277→          strokeWidth="4.5"
+   278→          strokeLinecap="round"
+   279→          strokeLinejoin="round"
+   280→          initial={{ pathLength: 0 }}
+   281→          animate={{ pathLength: 1 }}
+   282→          transition={{ duration: 0.4, delay: 0.35, ease: 'easeOut' }}
+   283→        />
+   284→      </svg>
+   285→    </div>
+   286→  )
+   287→}
+   288→
+   289→// ─── Main Modal ──────────────────────────────────────────────────────────────
+   290→
+   291→export default function PaypalCheckoutModal({
+   292→  plan,
+   293→  billingCycle,
+   294→  onClose,
+   295→  onSuccess,
+   296→}: PaypalCheckoutModalProps) {
+   297→  const [step, setStep] = useState<Step>('login')
+   298→  const [email, setEmail] = useState('')
+   299→  const [password, setPassword] = useState('')
+   300→  const [showPassword, setShowPassword] = useState(false)
+   301→  const [emailError, setEmailError] = useState('')
+   302→  const [passwordError, setPasswordError] = useState('')
+   303→  const [loggingIn, setLoggingIn] = useState(false)
+   304→  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('visa')
+   305→  const [paying, setPaying] = useState(false)
+   306→  const [transactionId, setTransactionId] = useState('')
+   307→  const [receipt, setReceipt] = useState<Receipt | null>(null)
+   308→  const [copied, setCopied] = useState(false)
+   309→
+   310→  // ─── Pricing (GST 18%) ─────────────────────────────────────────────────────
+   311→  const basePrice = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
+   312→  const subtotal = round2(basePrice)
+   313→  const gst = round2(subtotal * GST_RATE)
+   314→  const total = round2(subtotal + gst)
+   315→
+   316→  // ─── Body scroll lock ──────────────────────────────────────────────────────
+   317→  useEffect(() => {
+   318→    document.body.style.overflow = 'hidden'
+   319→    return () => {
+   320→      document.body.style.overflow = ''
+   321→    }
+   322→  }, [])
+   323→
+   324→  // ─── Escape key (disabled during processing) ───────────────────────────────
+   325→  useEffect(() => {
+   326→    const onKey = (e: KeyboardEvent) => {
+   327→      if (e.key !== 'Escape') return
+   328→      if (step === 'processing') return
+   329→      if (step === 'success') {
+   330→        // In success, any close should grant premium (payment succeeded)
+   331→        onSuccess()
+   332→        return
+   333→      }
+   334→      onClose()
+   335→    }
+   336→    window.addEventListener('keydown', onKey)
+   337→    return () => window.removeEventListener('keydown', onKey)
+   338→  }, [step, onClose, onSuccess])
+   339→
+   340→  // ─── Close handlers ────────────────────────────────────────────────────────
+   341→  const handleBackdropClick = () => {
+   342→    // Click-outside disabled during processing AND success
+   343→    if (step === 'processing' || step === 'success') return
+   344→    onClose()
+   345→  }
+   346→
+   347→  const handleCloseButton = () => {
+   348→    if (step === 'processing') return
+   349→    if (step === 'success') {
+   350→      onSuccess()
+   351→      return
+   352→    }
+   353→    onClose()
+   354→  }
+   355→
+   356→  // ─── Step 1: Login ─────────────────────────────────────────────────────────
+   357→  const handleLogin = () => {
+   358→    const trimmed = email.trim().toLowerCase()
+   359→    let hasError = false
+   360→    if (!trimmed) {
+   361→      setEmailError('Enter your PayPal email')
+   362→      hasError = true
+   363→    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+   364→      setEmailError('Enter a valid email address')
+   365→      hasError = true
+   366→    } else {
+   367→      setEmailError('')
+   368→    }
+   369→    if (!password) {
+   370→      setPasswordError('Enter your PayPal password')
+   371→      hasError = true
+   372→    } else if (password.length < 4) {
+   373→      setPasswordError('Password is too short')
+   374→      hasError = true
+   375→    } else {
+   376→      setPasswordError('')
+   377→    }
+   378→    if (hasError) return
+   379→
+   380→    setLoggingIn(true)
+   381→    // Simulate PayPal authentication round-trip
+   382→    setTimeout(() => {
+   383→      setLoggingIn(false)
+   384→      setStep('review')
+   385→    }, 900)
+   386→  }
+   387→
+   388→  // ─── Step 2 → 3 → 4: Pay ───────────────────────────────────────────────────
+   389→  const handlePay = async () => {
+   390→    setPaying(true)
+   391→    setStep('processing')
+   392→    try {
+   393→      const pm =
+   394→        paymentMethod === 'balance'
+   395→          ? {
+   396→              type: 'balance' as const,
+   397→              email: email.trim().toLowerCase() || undefined,
+   398→            }
+   399→          : {
+   400→              type: 'card' as const,
+   401→              last4: '4242',
+   402→              brand: paymentMethod === 'visa' ? 'Visa' : 'Mastercard',
+   403→            }
+   404→
+   405→      const res = await fetch('/api/payment/paypal', {
+   406→        method: 'POST',
+   407→        headers: { 'Content-Type': 'application/json' },
+   408→        body: JSON.stringify({
+   409→          planId: plan.id,
+   410→          billingCycle,
+   411→          paymentMethod: pm,
+   412→        }),
+   413→      })
+   414→      const data = await res.json().catch(() => ({}))
+   415→      if (!res.ok || !data.ok) {
+   416→        throw new Error(data.error || 'Payment was declined. Please try a different method.')
+   417→      }
+   418→
+   419→      setTransactionId(data.transactionId)
+   420→      setReceipt(data.receipt as Receipt)
+   421→      setStep('success')
+   422→      toast.success('Welcome to Premium! 🎉', {
+   423→        description: `You're now on the ${plan.name} plan. Transaction ID: ${data.transactionId}`,
+   424→      })
+   425→    } catch (err) {
+   426→      toast.error('Payment could not be completed', {
+   427→        description: err instanceof Error ? err.message : 'Please try again.',
+   428→      })
+   429→      setStep('review')
+   430→    } finally {
+   431→      setPaying(false)
+   432→    }
+   433→  }
+   434→
+   435→  const handleCopyTransactionId = async () => {
+   436→    try {
+   437→      await navigator.clipboard.writeText(transactionId)
+   438→      setCopied(true)
+   439→      toast.success('Transaction ID copied')
+   440→      setTimeout(() => setCopied(false), 1800)
+   441→    } catch {
+   442→      toast.error('Could not copy to clipboard')
+   443→    }
+   444→  }
+   445→
+   446→  const handleContinue = () => {
+   447→    onSuccess()
+   448→  }
+   449→
+   450→  const canClose = step === 'login' || step === 'review' || step === 'success'
+   451→
+   452→  return (
+   453→    <AnimatePresence>
+   454→      <motion.div
+   455→        initial={{ opacity: 0 }}
+   456→        animate={{ opacity: 1 }}
+   457→        exit={{ opacity: 0 }}
+   458→        transition={{ duration: 0.2 }}
+   459→        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/55 backdrop-blur-md"
+   460→        onClick={handleBackdropClick}
+   461→      >
+   462→        <motion.div
+   463→          initial={{ opacity: 0, scale: 0.95, y: 16 }}
+   464→          animate={{ opacity: 1, scale: 1, y: 0 }}
+   465→          exit={{ opacity: 0, scale: 0.95, y: 16 }}
+   466→          transition={{ duration: 0.28, ease: 'easeOut' }}
+   467→          onClick={(e) => e.stopPropagation()}
+   468→          className="relative flex w-full max-w-[440px] max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+   469→          role="dialog"
+   470→          aria-modal="true"
+   471→          aria-labelledby="paypal-modal-title"
+   472→        >
+   473→          {/* ─── PayPal Blue Header ─────────────────────────────────────────── */}
+   474→          <div
+   475→            className="relative flex shrink-0 items-center justify-between px-5 py-3.5"
+   476→            style={{ backgroundColor: PAYPAL_BLUE }}
+   477→          >
+   478→            <div className="flex items-center gap-2.5">
+   479→              <PayPalLogo variant="white" className="h-5 w-auto" />
+   480→              <span className="text-xs font-medium text-white/70">|</span>
+   481→              <span className="text-xs font-medium tracking-wide text-white/90">Checkout</span>
+   482→            </div>
+   483→            <div className="flex items-center gap-2">
+   484→              <span className="hidden items-center gap-1 text-[10px] font-medium text-white/70 sm:flex">
+   485→                <Lock className="h-3 w-3" /> Secure
+   486→              </span>
+   487→              {canClose && (
+   488→                <button
+   489→                  onClick={handleCloseButton}
+   490→                  className="rounded-full p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+   491→                  aria-label="Close"
+   492→                >
+   493→                  <X className="h-4 w-4" />
+   494→                </button>
+   495→              )}
+   496→            </div>
+   497→          </div>
+   498→
+   499→          {/* ─── Body (scrollable) ──────────────────────────────────────────── */}
+   500→          <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
+   501→            <AnimatePresence mode="wait">
+   502→              {/* ─── Step 1: Login ─────────────────────────────────────────── */}
+   503→              {step === 'login' && (
+   504→                <motion.div
+   505→                  key="login"
+   506→                  initial={{ opacity: 0, x: 12 }}
+   507→                  animate={{ opacity: 1, x: 0 }}
+   508→                  exit={{ opacity: 0, x: -12 }}
+   509→                  transition={{ duration: 0.22 }}
+   510→                  className="px-6 py-6"
+   511→                >
+   512→                  <h2
+   513→                    id="paypal-modal-title"
+   514→                    className="text-[22px] font-semibold leading-tight text-[#2c2e2f]"
+   515→                  >
+   516→                    Log in to your PayPal
+   517→                  </h2>
+   518→                  <p className="mt-1 text-sm text-gray-500">
+   519→                    to continue to <span className="font-medium text-[#0070ba]">Aaranya</span>
+   520→                  </p>
+   521→
+   522→                  <div className="mt-5 space-y-4">
+   523→                    <div>
+   524→                      <label
+   525→                        htmlFor="pp-email"
+   526→                        className="mb-1 block text-xs font-semibold text-[#2c2e2f]"
+   527→                      >
+   528→                        Email
+   529→                      </label>
+   530→                      <Input
+   531→                        id="pp-email"
+   532→                        type="email"
+   533→                        autoComplete="email"
+   534→                        autoFocus
+   535→                        value={email}
+   536→                        onChange={(e) => {
+   537→                          setEmail(e.target.value)
+   538→                          if (emailError) setEmailError('')
+   539→                        }}
+   540→                        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   541→                        placeholder="you@example.com"
+   542→                        className="h-11 rounded-md border-gray-300 text-sm focus-visible:ring-[#0070ba] focus-visible:border-[#0070ba]"
+   543→                      />
+   544→                      {emailError && (
+   545→                        <p className="mt-1 text-xs text-red-600">{emailError}</p>
+   546→                      )}
+   547→                    </div>
+   548→
+   549→                    <div>
+   550→                      <label
+   551→                        htmlFor="pp-password"
+   552→                        className="mb-1 block text-xs font-semibold text-[#2c2e2f]"
+   553→                      >
+   554→                        Password
+   555→                      </label>
+   556→                      <div className="relative">
+   557→                        <Input
+   558→                          id="pp-password"
+   559→                          type={showPassword ? 'text' : 'password'}
+   560→                          autoComplete="current-password"
+   561→                          value={password}
+   562→                          onChange={(e) => {
+   563→                            setPassword(e.target.value)
+   564→                            if (passwordError) setPasswordError('')
+   565→                          }}
+   566→                          onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+   567→                          placeholder="••••••••"
+   568→                          className="h-11 rounded-md border-gray-300 pr-10 text-sm focus-visible:ring-[#0070ba] focus-visible:border-[#0070ba]"
+   569→                        />
+   570→                        <button
+   571→                          type="button"
+   572→                          onClick={() => setShowPassword((v) => !v)}
+   573→                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-600"
+   574→                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+   575→                        >
+   576→                          {showPassword ? (
+   577→                            <EyeOff className="h-4 w-4" />
+   578→                          ) : (
+   579→                            <Eye className="h-4 w-4" />
+   580→                          )}
+   581→                        </button>
+   582→                      </div>
+   583→                      {passwordError && (
+   584→                        <p className="mt-1 text-xs text-red-600">{passwordError}</p>
+   585→                      )}
+   586→                    </div>
+   587→
+   588→                    <button
+   589→                      type="button"
+   590→                      onClick={() => toast.info('Password recovery is disabled in this sandbox demo.')}
+   591→                      className="text-xs font-medium text-[#0070ba] hover:underline"
+   592→                    >
+   593→                      Forgot password?
+   594→                    </button>
+   595→
+   596→                    <Button
+   597→                      type="button"
+   598→                      onClick={handleLogin}
+   599→                      disabled={loggingIn}
+   600→                      className="h-11 w-full rounded-full text-sm font-semibold text-[#2c2e2f] shadow-sm transition-colors disabled:opacity-70"
+   601→                      style={{
+   602→                        backgroundColor: PAYPAL_YELLOW,
+   603→                      }}
+   604→                      onMouseEnter={(e) => {
+   605→                        if (!loggingIn) e.currentTarget.style.backgroundColor = PAYPAL_YELLOW_HOVER
+   606→                      }}
+   607→                      onMouseLeave={(e) => {
+   608→                        e.currentTarget.style.backgroundColor = PAYPAL_YELLOW
+   609→                      }}
+   610→                    >
+   611→                      {loggingIn ? (
+   612→                        <>
+   613→                          <Loader2 className="h-4 w-4 animate-spin" />
+   614→                          Logging in…
+   615→                        </>
+   616→                      ) : (
+   617→                        'Log In'
+   618→                      )}
+   619→                    </Button>
+   620→                  </div>
+   621→
+   622→                  {/* Footer links */}
+   623→                  <div className="mt-5 flex items-center justify-center gap-4 border-t border-gray-100 pt-4 text-xs">
+   624→                    <button
+   625→                      type="button"
+   626→                      onClick={() => toast.info('Sign Up is disabled in this sandbox demo.')}
+   627→                      className="font-medium text-[#0070ba] hover:underline"
+   628→                    >
+   629→                      Sign Up
+   630→                    </button>
+   631→                    <span className="text-gray-300">|</span>
+   632→                    <button
+   633→                      type="button"
+   634→                      onClick={() => toast.info('PayPal fees are not applicable in this sandbox.')}
+   635→                      className="font-medium text-[#0070ba] hover:underline"
+   636→                    >
+   637→                      Fees
+   638→                    </button>
+   639→                  </div>
+   640→
+   641→                  {/* Secure note */}
+   642→                  <div className="mt-4 flex items-start gap-2 rounded-lg bg-[#f7f9fa] p-3">
+   643→                    <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0070ba]" />
+   644→                    <p className="text-[11px] leading-relaxed text-gray-500">
+   645→                      This is a secure PayPal checkout. <span className="font-medium text-gray-700">Aaranya never sees your password.</span>
+   646→                    </p>
+   647→                  </div>
+   648→                </motion.div>
+   649→              )}
+   650→
+   651→              {/* ─── Step 2: Review & Pay ──────────────────────────────────── */}
+   652→              {step === 'review' && (
+   653→                <motion.div
+   654→                  key="review"
+   655→                  initial={{ opacity: 0, x: 12 }}
+   656→                  animate={{ opacity: 1, x: 0 }}
+   657→                  exit={{ opacity: 0, x: -12 }}
+   658→                  transition={{ duration: 0.22 }}
+   659→                  className="px-6 py-5"
+   660→                >
+   661→                  {/* Back link */}
+   662→                  <button
+   663→                    onClick={() => setStep('login')}
+   664→                    className="mb-3 flex items-center gap-1 text-xs font-medium text-[#0070ba] hover:underline"
+   665→                  >
+   666→                    <ArrowLeft className="h-3 w-3" /> Change account
+   667→                  </button>
+   668→
+   669→                  <h2
+   670→                    id="paypal-modal-title"
+   671→                    className="text-xl font-semibold leading-tight text-[#2c2e2f]"
+   672→                  >
+   673→                    Review your payment
+   674→                  </h2>
+   675→
+   676→                  {/* Merchant */}
+   677→                  <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+   678→                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-base font-bold text-white">
+   679→                      A
+   680→                    </div>
+   681→                    <div className="flex-1 min-w-0">
+   682→                      <p className="text-sm font-semibold text-[#2c2e2f]">Aaranya Health</p>
+   683→                      <p className="truncate text-xs text-gray-500">{email.trim().toLowerCase() || 'PayPal account'}</p>
+   684→                    </div>
+   685→                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-500" />
+   686→                  </div>
+   687→
+   688→                  {/* Order summary */}
+   689→                  <div className="mt-4 rounded-lg border border-gray-200 bg-[#fbfcfd] p-4">
+   690→                    <div className="mb-3 flex items-center justify-between">
+   691→                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+   692→                        Order summary
+   693→                      </span>
+   694→                      <span className="text-[10px] font-medium text-gray-400">
+   695→                        {billingCycle === 'monthly' ? 'Billed monthly' : 'Billed annually'}
+   696→                      </span>
+   697→                    </div>
+   698→
+   699→                    <div className="flex items-start justify-between gap-3">
+   700→                      <div className="min-w-0">
+   701→                        <p className="text-sm font-semibold text-[#2c2e2f]">{plan.name}</p>
+   702→                        <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+   703→                          <Crown className="h-3 w-3 text-amber-500" />
+   704→                          Premium subscription · {billingCycle === 'monthly' ? '1 month' : '12 months'}
+   705→                        </p>
+   706→                      </div>
+   707→                      <span className="shrink-0 text-sm font-medium text-[#2c2e2f]">
+   708→                        ₹{formatINR(subtotal)}
+   709→                      </span>
+   710→                    </div>
+   711→
+   712→                    <div className="mt-3 space-y-1.5 border-t border-gray-200 pt-3 text-xs">
+   713→                      <div className="flex justify-between">
+   714→                        <span className="text-gray-500">Subtotal</span>
+   715→                        <span className="font-medium text-[#2c2e2f]">₹{formatINR(subtotal)}</span>
+   716→                      </div>
+   717→                      <div className="flex justify-between">
+   718→                        <span className="text-gray-500">GST (18%)</span>
+   719→                        <span className="font-medium text-[#2c2e2f]">₹{formatINR(gst)}</span>
+   720→                      </div>
+   721→                      <div className="mt-2 flex items-baseline justify-between border-t border-gray-200 pt-2">
+   722→                        <span className="text-sm font-semibold text-[#2c2e2f]">Total</span>
+   723→                        <span className="text-lg font-bold text-[#2c2e2f]">
+   724→                          ₹{formatINR(total)}
+   725→                        </span>
+   726→                      </div>
+   727→                    </div>
+   728→                  </div>
+   729→
+   730→                  {/* Payment method */}
+   731→                  <div className="mt-4">
+   732→                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+   733→                      Payment method
+   734→                    </p>
+   735→                    <div className="space-y-2">
+   736→                      <PaymentOption
+   737→                        selected={paymentMethod === 'visa'}
+   738→                        onSelect={() => setPaymentMethod('visa')}
+   739→                        mark={<VisaMark />}
+   740→                        title="Visa"
+   741→                        subtitle="Credit card ending in 4242"
+   742→                        badge="Default"
+   743→                      />
+   744→                      <PaymentOption
+   745→                        selected={paymentMethod === 'mastercard'}
+   746→                        onSelect={() => setPaymentMethod('mastercard')}
+   747→                        mark={<MastercardMark />}
+   748→                        title="Mastercard"
+   749→                        subtitle="Debit card ending in 4242"
+   750→                      />
+   751→                      <PaymentOption
+   752→                        selected={paymentMethod === 'balance'}
+   753→                        onSelect={() => setPaymentMethod('balance')}
+   754→                        mark={<PaypalBalanceMark />}
+   755→                        title="PayPal Balance"
+   756→                        subtitle="₹15,000.00 available"
+   757→                      />
+   758→                    </div>
+   759→                  </div>
+   760→
+   761→                  {/* Digital delivery */}
+   762→                  <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-[#f7f9fa] p-3">
+   763→                    <Zap className="h-4 w-4 shrink-0 text-[#0070ba]" />
+   764→                    <div className="flex-1">
+   765→                      <p className="text-xs font-semibold text-[#2c2e2f]">
+   766→                        Digital delivery
+   767→                      </p>
+   768→                      <p className="text-[11px] text-gray-500">Instant access after payment</p>
+   769→                    </div>
+   770→                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+   771→                  </div>
+   772→
+   773→                  {/* Pay button */}
+   774→                  <Button
+   775→                    type="button"
+   776→                    onClick={handlePay}
+   777→                    disabled={paying}
+   778→                    className="mt-5 h-12 w-full rounded-full text-sm font-bold text-[#2c2e2f] shadow-sm transition-colors disabled:opacity-70"
+   779→                    style={{ backgroundColor: PAYPAL_YELLOW }}
+   780→                    onMouseEnter={(e) => {
+   781→                      if (!paying) e.currentTarget.style.backgroundColor = PAYPAL_YELLOW_HOVER
+   782→                    }}
+   783→                    onMouseLeave={(e) => {
+   784→                      e.currentTarget.style.backgroundColor = PAYPAL_YELLOW
+   785→                    }}
+   786→                  >
+   787→                    {paying ? (
+   788→                      <>
+   789→                        <Loader2 className="h-4 w-4 animate-spin" />
+   790→                        Processing…
+   791→                      </>
+   792→                    ) : (
+   793→                      <>
+   794→                        <Lock className="h-4 w-4" />
+   795→                        Pay ₹{formatINR(total)} Now
+   796→                      </>
+   797→                    )}
+   798→                  </Button>
+   799→
+   800→                  {/* Buyer protection row */}
+   801→                  <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+   802→                    <NortonSeal />
+   803→                    <span className="flex items-center gap-1 text-[10px] text-gray-500">
+   804→                      <Shield className="h-3 w-3 text-[#0070ba]" />
+   805→                      <span>
+   806→                        <span className="font-semibold text-gray-600">PayPal Buyer Protection</span> eligible
+   807→                      </span>
+   808→                    </span>
+   809→                  </div>
+   810→                </motion.div>
+   811→              )}
+   812→
+   813→              {/* ─── Step 3: Processing ────────────────────────────────────── */}
+   814→              {step === 'processing' && (
+   815→                <motion.div
+   816→                  key="processing"
+   817→                  initial={{ opacity: 0 }}
+   818→                  animate={{ opacity: 1 }}
+   819→                  exit={{ opacity: 0 }}
+   820→                  transition={{ duration: 0.25 }}
+   821→                  className="flex flex-col items-center justify-center px-6 py-16"
+   822→                >
+   823→                  <div className="relative flex h-16 w-16 items-center justify-center">
+   824→                    <motion.div
+   825→                      className="absolute inset-0 rounded-full"
+   826→                      style={{ border: '3px solid #e6e9ec' }}
+   827→                    />
+   828→                    <motion.div
+   829→                      className="absolute inset-0 rounded-full"
+   830→                      style={{
+   831→                        border: `3px solid ${PAYPAL_BLUE}`,
+   832→                        borderTopColor: 'transparent',
+   833→                      }}
+   834→                      animate={{ rotate: 360 }}
+   835→                      transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+   836→                    />
+   837→                    <PayPalLogo variant="color" className="h-5 w-auto" />
+   838→                  </div>
+   839→                  <p className="mt-6 text-sm font-semibold text-[#2c2e2f]">
+   840→                    Processing your payment securely…
+   841→                  </p>
+   842→                  <p className="mt-1 text-xs text-gray-500">
+   843→                    Do not close this window. This will only take a moment.
+   844→                  </p>
+   845→                  <div className="mt-4 flex items-center gap-1.5 text-[11px] text-gray-400">
+   846→                    <Lock className="h-3 w-3" />
+   847→                    <span>256-bit encrypted connection</span>
+   848→                  </div>
+   849→                </motion.div>
+   850→              )}
+   851→
+   852→              {/* ─── Step 4: Success ───────────────────────────────────────── */}
+   853→              {step === 'success' && (
+   854→                <motion.div
+   855→                  key="success"
+   856→                  initial={{ opacity: 0, scale: 0.98 }}
+   857→                  animate={{ opacity: 1, scale: 1 }}
+   858→                  exit={{ opacity: 0 }}
+   859→                  transition={{ duration: 0.3 }}
+   860→                  className="relative overflow-hidden px-6 py-8 text-center"
+   861→                >
+   862→                  <ConfettiBurst />
+   863→
+   864→                  <div className="relative flex flex-col items-center">
+   865→                    <AnimatedCheck />
+   866→
+   867→                    <motion.h2
+   868→                      initial={{ opacity: 0, y: 8 }}
+   869→                      animate={{ opacity: 1, y: 0 }}
+   870→                      transition={{ delay: 0.5, duration: 0.3 }}
+   871→                      className="mt-5 text-2xl font-bold text-[#2c2e2f]"
+   872→                    >
+   873→                      Payment Successful!
+   874→                    </motion.h2>
+   875→
+   876→                    <motion.div
+   877→                      initial={{ opacity: 0, y: 8 }}
+   878→                      animate={{ opacity: 1, y: 0 }}
+   879→                      transition={{ delay: 0.6, duration: 0.3 }}
+   880→                      className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-sm font-semibold text-white shadow-md"
+   881→                    >
+   882→                      <Sparkles className="h-3.5 w-3.5" />
+   883→                      You&apos;re now {plan.name}! 🎉
+   884→                    </motion.div>
+   885→
+   886→                    {/* Transaction details */}
+   887→                    <motion.div
+   888→                      initial={{ opacity: 0, y: 8 }}
+   889→                      animate={{ opacity: 1, y: 0 }}
+   890→                      transition={{ delay: 0.7, duration: 0.3 }}
+   891→                      className="mt-6 w-full rounded-xl border border-gray-200 bg-[#fbfcfd] p-4 text-left"
+   892→                    >
+   893→                      <div className="flex items-center justify-between">
+   894→                        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+   895→                          Amount paid
+   896→                        </span>
+   897→                        <span className="text-sm font-bold text-[#2c2e2f]">
+   898→                          ₹{formatINR(total)}
+   899→                        </span>
+   900→                      </div>
+   901→                      <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+   902→                        <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+   903→                          Transaction ID
+   904→                        </span>
+   905→                        <button
+   906→                          onClick={handleCopyTransactionId}
+   907→                          className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold text-[#0070ba] transition-colors hover:bg-[#0070ba]/5"
+   908→                          title="Copy transaction ID"
+   909→                        >
+   910→                          {transactionId}
+   911→                          {copied ? (
+   912→                            <Check className="h-3 w-3 text-emerald-500" />
+   913→                          ) : (
+   914→                            <Copy className="h-3 w-3" />
+   915→                          )}
+   916→                        </button>
+   917→                      </div>
+   918→                      {receipt && (
+   919→                        <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+   920→                          <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+   921→                            Paid via
+   922→                          </span>
+   923→                          <span className="text-xs font-medium text-[#2c2e2f]">
+   924→                            {receipt.paymentMethod.type === 'balance'
+   925→                              ? 'PayPal Balance'
+   926→                              : `${receipt.paymentMethod.brand} •••• ${receipt.paymentMethod.last4}`}
+   927→                          </span>
+   928→                        </div>
+   929→                      )}
+   930→                    </motion.div>
+   931→
+   932→                    <motion.div
+   933→                      initial={{ opacity: 0 }}
+   934→                      animate={{ opacity: 1 }}
+   935→                      transition={{ delay: 0.85, duration: 0.3 }}
+   936→                      className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-gray-500"
+   937→                    >
+   938→                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+   939→                      <span>A receipt has been sent to your email</span>
+   940→                    </motion.div>
+   941→
+   942→                    <motion.div
+   943→                      initial={{ opacity: 0, y: 8 }}
+   944→                      animate={{ opacity: 1, y: 0 }}
+   945→                      transition={{ delay: 0.95, duration: 0.3 }}
+   946→                      className="mt-6 w-full"
+   947→                    >
+   948→                      <Button
+   949→                        type="button"
+   950→                        onClick={handleContinue}
+   951→                        className="h-12 w-full rounded-full text-sm font-bold text-[#2c2e2f] shadow-sm transition-colors"
+   952→                        style={{ backgroundColor: PAYPAL_YELLOW }}
+   953→                        onMouseEnter={(e) => {
+   954→                          e.currentTarget.style.backgroundColor = PAYPAL_YELLOW_HOVER
+   955→                        }}
+   956→                        onMouseLeave={(e) => {
+   957→                          e.currentTarget.style.backgroundColor = PAYPAL_YELLOW
+   958→                        }}
+   959→                      >
+   960→                        <Crown className="h-4 w-4" />
+   961→                        Continue to Dashboard
+   962→                      </Button>
+   963→                      <p className="mt-3 text-[11px] text-gray-400">
+   964→                        You can access all {plan.name} features immediately.
+   965→                      </p>
+   966→                    </motion.div>
+   967→                  </div>
+   968→                </motion.div>
+   969→              )}
+   970→            </AnimatePresence>
+   971→          </div>
+   972→
+   973→          {/* ─── Footer (hidden during processing/success) ─────────────────── */}
+   974→          {(step === 'login' || step === 'review') && (
+   975→            <div className="flex shrink-0 items-center justify-between border-t border-gray-100 bg-[#f7f9fa] px-6 py-2.5 text-[10px] text-gray-500">
+   976→              <span className="flex items-center gap-1.5">
+   977→                <Lock className="h-3 w-3" />
+   978→                PayPal Secure Checkout
+   979→              </span>
+   980→              <span>© {new Date().getFullYear()} PayPal · Aaranya</span>
+   981→            </div>
+   982→          )}
+   983→        </motion.div>
+   984→      </motion.div>
+   985→    </AnimatePresence>
+   986→  )
+   987→}
+   988→
+   989→// ─── Payment option row ──────────────────────────────────────────────────────
+   990→
+   991→function PaymentOption({
+   992→  selected,
+   993→  onSelect,
+   994→  mark,
+   995→  title,
+   996→  subtitle,
+   997→  badge,
+   998→}: {
+   999→  selected: boolean
+  1000→  onSelect: () => void
+  1001→  mark: React.ReactNode
+  1002→  title: string
+  1003→  subtitle: string
+  1004→  badge?: string
+  1005→}) {
+  1006→  return (
+  1007→    <button
+  1008→      type="button"
+  1009→      onClick={onSelect}
+  1010→      className={cn(
+  1011→        'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all',
+  1012→        selected
+  1013→          ? 'border-[#0070ba] bg-[#0070ba]/5 ring-1 ring-[#0070ba]/30'
+  1014→          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50',
+  1015→      )}
+  1016→    >
+  1017→      <div className="shrink-0">{mark}</div>
+  1018→      <div className="flex-1 min-w-0">
+  1019→        <div className="flex items-center gap-2">
+  1020→          <p className="text-sm font-semibold text-[#2c2e2f]">{title}</p>
+  1021→          {badge && (
+  1022→            <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">
+  1023→              {badge}
+  1024→            </span>
+  1025→          )}
+  1026→        </div>
+  1027→        <p className="mt-0.5 truncate text-xs text-gray-500">{subtitle}</p>
+  1028→      </div>
+  1029→      <div
+  1030→        className={cn(
+  1031→          'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+  1032→          selected ? 'border-[#0070ba] bg-[#0070ba]' : 'border-gray-300',
+  1033→        )}
+  1034→      >
+  1035→        {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+  1036→      </div>
+  1037→    </button>
+  1038→  )
+  1039→}
+  1040→

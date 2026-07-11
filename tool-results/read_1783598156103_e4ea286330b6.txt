@@ -1,0 +1,763 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  Users,
+     7→  Heart,
+     8→  MessageCircle,
+     9→  Plus,
+    10→  TrendingUp,
+    11→  Trophy,
+    12→  Award,
+    13→  Star,
+    14→  Shield,
+    15→  Eye,
+    16→  EyeOff,
+    17→  Filter,
+    18→  Flame,
+    19→  Target,
+    20→  CheckCircle2,
+    21→  ArrowRight,
+    22→  Crown,
+    23→  Zap,
+    24→  BookOpen,
+    25→  HandHeart,
+    26→  Sparkles,
+    27→  Send,
+    28→  X,
+    29→  ChevronRight,
+    30→  UserCircle,
+    31→  Hash,
+    32→} from 'lucide-react'
+    33→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+    34→import { Badge } from '@/components/ui/badge'
+    35→import { Button } from '@/components/ui/button'
+    36→import { Input } from '@/components/ui/input'
+    37→import { Label } from '@/components/ui/label'
+    38→import { Switch } from '@/components/ui/switch'
+    39→import { Textarea } from '@/components/ui/textarea'
+    40→import { Separator } from '@/components/ui/separator'
+    41→import { ScrollArea } from '@/components/ui/scroll-area'
+    42→import { Progress } from '@/components/ui/progress'
+    43→import {
+    44→  Dialog,
+    45→  DialogContent,
+    46→  DialogDescription,
+    47→  DialogHeader,
+    48→  DialogTitle,
+    49→  DialogTrigger,
+    50→} from '@/components/ui/dialog'
+    51→import {
+    52→  Select,
+    53→  SelectContent,
+    54→  SelectItem,
+    55→  SelectTrigger,
+    56→  SelectValue,
+    57→} from '@/components/ui/select'
+    58→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+    59→
+    60→// ─── Types ────────────────────────────────────────────────────────
+    61→
+    62→type Category = 'General' | 'PCOS' | 'Fertility' | 'Pregnancy' | 'Menopause' | 'Mental Health'
+    63→
+    64→interface Post {
+    65→  id: string
+    66→  username: string
+    67→  title: string
+    68→  content: string
+    69→  category: Category
+    70→  likes: number
+    71→  comments: number
+    72→  timeAgo: string
+    73→  liked: boolean
+    74→}
+    75→
+    76→interface TrendingTopic {
+    77→  id: string
+    78→  topic: string
+    79→  posts: number
+    80→  trending: boolean
+    81→}
+    82→
+    83→interface SupportGroup {
+    84→  id: string
+    85→  name: string
+    86→  description: string
+    87→  members: number
+    88→  icon: React.ElementType
+    89→  color: string
+    90→  joined: boolean
+    91→}
+    92→
+    93→interface Challenge {
+    94→  id: string
+    95→  name: string
+    96→  description: string
+    97→  participants: number
+    98→  progress: number
+    99→  daysLeft: number
+   100→  joined: boolean
+   101→}
+   102→
+   103→interface Badge_ {
+   104→  id: string
+   105→  name: string
+   106→  description: string
+   107→  icon: React.ElementType
+   108→  earned: boolean
+   109→  color: string
+   110→}
+   111→
+   112→// ─── Data ─────────────────────────────────────────────────────────
+   113→// NOTE: Demo / placeholder entries were removed so brand-new users start with
+   114→// empty states. The arrays below are intentionally empty. As real community
+   115→// content arrives (user-generated posts, server-side challenges, earned
+   116→// badges), populate them from the API / store instead of hardcoding here.
+   117→
+   118→const categories: Category[] = ['General', 'PCOS', 'Fertility', 'Pregnancy', 'Menopause', 'Mental Health']
+   119→
+   120→const categoryColors: Record<Category, string> = {
+   121→  General: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+   122→  PCOS: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+   123→  Fertility: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+   124→  Pregnancy: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+   125→  Menopause: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+   126→  'Mental Health': 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+   127→}
+   128→
+   129→// Empty arrays — no demo posts, groups, challenges, or pre-earned badges.
+   130→const initialPosts: Post[] = []
+   131→const trendingTopics: TrendingTopic[] = []
+   132→const initialSupportGroups: SupportGroup[] = []
+   133→const initialChallenges: Challenge[] = []
+   134→const userBadges: Badge_[] = [
+   135→  { id: '1', name: 'First Post', description: 'Created your first post', icon: Send, earned: false, color: 'text-sky-500' },
+   136→  { id: '2', name: 'Helpful', description: 'Received 10+ likes on a comment', icon: HandHeart, earned: false, color: 'text-emerald-500' },
+   137→  { id: '3', name: 'Supportive', description: 'Commented on 25+ posts', icon: Heart, earned: false, color: 'text-pink-500' },
+   138→  { id: '4', name: 'Challenger', description: 'Completed a community challenge', icon: Trophy, earned: false, color: 'text-amber-500' },
+   139→  { id: '5', name: 'Rising Star', description: 'Get 50+ likes on a post', icon: Star, earned: false, color: 'text-purple-500' },
+   140→  { id: '6', name: 'Mentor', description: 'Help 100 community members', icon: Crown, earned: false, color: 'text-orange-500' },
+   141→]
+   142→
+   143→// ─── Component ────────────────────────────────────────────────────
+   144→
+   145→export default function CommunityModule() {
+   146→  const [posts, setPosts] = useState<Post[]>(initialPosts)
+   147→  const [activeCategory, setActiveCategory] = useState<Category | 'All'>('All')
+   148→  const [supportGroups, setSupportGroups] = useState<SupportGroup[]>(initialSupportGroups)
+   149→  const [challenges, setChallenges] = useState<Challenge[]>(initialChallenges)
+   150→  const [dialogOpen, setDialogOpen] = useState(false)
+   151→  const [newPost, setNewPost] = useState({
+   152→    title: '',
+   153→    content: '',
+   154→    category: 'General' as Category,
+   155→    anonymous: true,
+   156→  })
+   157→  const [activeTab, setActiveTab] = useState<'feed' | 'groups' | 'challenges'>('feed')
+   158→
+   159→  // A brand-new user starts at Level 1 with 0 support points and no progress
+   160→  // toward the next level. These values are derived from real community
+   161→  // activity (posts, likes, comments) once that data exists — not hardcoded.
+   162→  const supportScore = 0
+   163→  const nextLevel = 100
+   164→  const level = 1
+   165→
+   166→  const filteredPosts = activeCategory === 'All'
+   167→    ? posts
+   168→    : posts.filter(p => p.category === activeCategory)
+   169→
+   170→  const generateAnonName = () => {
+   171→    const flowers = ['Lotus', 'Sakhi', 'Amber', 'River', 'Jasmine', 'Peony', 'Rose', 'Lily', 'Daisy', 'Iris']
+   172→    const flower = flowers[Math.floor(Math.random() * flowers.length)]
+   173→    const num = Math.floor(Math.random() * 100)
+   174→    return `${flower}_${num}`
+   175→  }
+   176→
+   177→  const handleCreatePost = () => {
+   178→    if (!newPost.title.trim() || !newPost.content.trim()) return
+   179→    const post: Post = {
+   180→      id: Date.now().toString(),
+   181→      username: newPost.anonymous ? generateAnonName() : 'You',
+   182→      title: newPost.title,
+   183→      content: newPost.content,
+   184→      category: newPost.category,
+   185→      likes: 0,
+   186→      comments: 0,
+   187→      timeAgo: 'Just now',
+   188→      liked: false,
+   189→    }
+   190→    setPosts([post, ...posts])
+   191→    setNewPost({ title: '', content: '', category: 'General', anonymous: true })
+   192→    setDialogOpen(false)
+   193→  }
+   194→
+   195→  const toggleLike = (postId: string) => {
+   196→    setPosts(prev =>
+   197→      prev.map(p =>
+   198→        p.id === postId
+   199→          ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
+   200→          : p
+   201→      )
+   202→    )
+   203→  }
+   204→
+   205→  const toggleGroup = (groupId: string) => {
+   206→    setSupportGroups(prev =>
+   207→      prev.map(g =>
+   208→        g.id === groupId
+   209→          ? {
+   210→              ...g,
+   211→              joined: !g.joined,
+   212→              members: g.joined ? g.members - 1 : g.members + 1,
+   213→            }
+   214→          : g
+   215→      )
+   216→    )
+   217→  }
+   218→
+   219→  const toggleChallenge = (challengeId: string) => {
+   220→    setChallenges(prev =>
+   221→      prev.map(c =>
+   222→        c.id === challengeId
+   223→          ? {
+   224→              ...c,
+   225→              joined: !c.joined,
+   226→              participants: c.joined ? c.participants - 1 : c.participants + 1,
+   227→            }
+   228→          : c
+   229→      )
+   230→    )
+   231→  }
+   232→
+   233→  return (
+   234→    <div className="space-y-6 max-w-6xl mx-auto">
+   235→      {/* Header */}
+   236→      <motion.div
+   237→        initial={{ opacity: 0, y: -10 }}
+   238→        animate={{ opacity: 1, y: 0 }}
+   239→        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+   240→      >
+   241→        <div>
+   242→          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+   243→            <Users className="h-7 w-7 text-sky-500" />
+   244→            Community
+   245→          </h1>
+   246→          <p className="text-muted-foreground mt-1">Connect, share, and support each other</p>
+   247→        </div>
+   248→        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+   249→          <DialogTrigger asChild>
+   250→            <Button className="bg-sky-500 hover:bg-sky-600 text-white">
+   251→              <Plus className="h-4 w-4 mr-1.5" /> Create Post
+   252→            </Button>
+   253→          </DialogTrigger>
+   254→          <DialogContent className="sm:max-w-lg">
+   255→            <DialogHeader>
+   256→              <DialogTitle>Create a Post</DialogTitle>
+   257→              <DialogDescription>Share your thoughts with the community</DialogDescription>
+   258→            </DialogHeader>
+   259→            <div className="space-y-4 pt-2">
+   260→              <div className="space-y-1.5">
+   261→                <Label className="text-sm">Title</Label>
+   262→                <Input
+   263→                  placeholder="What's on your mind?"
+   264→                  value={newPost.title}
+   265→                  onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
+   266→                />
+   267→              </div>
+   268→              <div className="space-y-1.5">
+   269→                <Label className="text-sm">Content</Label>
+   270→                <Textarea
+   271→                  placeholder="Share your experience, ask a question, or offer support..."
+   272→                  rows={4}
+   273→                  value={newPost.content}
+   274→                  onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+   275→                />
+   276→              </div>
+   277→              <div className="space-y-1.5">
+   278→                <Label className="text-sm">Category</Label>
+   279→                <Select
+   280→                  value={newPost.category}
+   281→                  onValueChange={(v) => setNewPost(prev => ({ ...prev, category: v as Category }))}
+   282→                >
+   283→                  <SelectTrigger>
+   284→                    <SelectValue />
+   285→                  </SelectTrigger>
+   286→                  <SelectContent>
+   287→                    {categories.map(c => (
+   288→                      <SelectItem key={c} value={c}>{c}</SelectItem>
+   289→                    ))}
+   290→                  </SelectContent>
+   291→                </Select>
+   292→              </div>
+   293→              <div className="flex items-center justify-between">
+   294→                <div className="flex items-center gap-2">
+   295→                  {newPost.anonymous ? <EyeOff className="h-4 w-4 text-sky-500" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+   296→                  <Label className="text-sm">Post anonymously</Label>
+   297→                </div>
+   298→                <Switch
+   299→                  checked={newPost.anonymous}
+   300→                  onCheckedChange={(v) => setNewPost(prev => ({ ...prev, anonymous: v }))}
+   301→                />
+   302→              </div>
+   303→              {newPost.anonymous && (
+   304→                <p className="text-xs text-muted-foreground flex items-center gap-1">
+   305→                  <Shield className="h-3 w-3" />
+   306→                  Your username will appear as a random flower name like &quot;Lotus_42&quot;
+   307→                </p>
+   308→              )}
+   309→              <div className="flex justify-end gap-2 pt-2">
+   310→                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+   311→                <Button
+   312→                  onClick={handleCreatePost}
+   313→                  className="bg-sky-500 hover:bg-sky-600 text-white"
+   314→                  disabled={!newPost.title.trim() || !newPost.content.trim()}
+   315→                >
+   316→                  <Send className="h-3.5 w-3.5 mr-1.5" /> Post
+   317→                </Button>
+   318→              </div>
+   319→            </div>
+   320→          </DialogContent>
+   321→        </Dialog>
+   322→      </motion.div>
+   323→
+   324→      {/* Gamification Bar */}
+   325→      <motion.div
+   326→        initial={{ opacity: 0, y: 5 }}
+   327→        animate={{ opacity: 1, y: 0 }}
+   328→        transition={{ delay: 0.05 }}
+   329→      >
+   330→        <Card className="border-sky-200 dark:border-sky-900/50 bg-gradient-to-r from-sky-50/80 to-blue-50/80 dark:from-sky-950/20 dark:to-blue-950/20">
+   331→          <CardContent className="py-4">
+   332→            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+   333→              <div className="flex items-center gap-3">
+   334→                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+   335→                  {level}
+   336→                </div>
+   337→                <div>
+   338→                  <p className="font-semibold text-sm">Level {level} — Newcomer</p>
+   339→                  <p className="text-xs text-muted-foreground">{supportScore} / {nextLevel} points to Level {level + 1}</p>
+   340→                </div>
+   341→              </div>
+   342→              <div className="flex-1 w-full sm:w-auto">
+   343→                <Progress value={(supportScore / nextLevel) * 100} className="h-2.5" />
+   344→              </div>
+   345→              <div className="flex items-center gap-1.5">
+   346→                {userBadges.filter(b => b.earned).map(badge => {
+   347→                  const Icon = badge.icon
+   348→                  return (
+   349→                    <div
+   350→                      key={badge.id}
+   351→                      className="h-8 w-8 rounded-full bg-white dark:bg-card border border-sky-200 dark:border-sky-800 flex items-center justify-center shadow-sm"
+   352→                      title={`${badge.name}: ${badge.description}`}
+   353→                    >
+   354→                      <Icon className={`h-4 w-4 ${badge.color}`} />
+   355→                    </div>
+   356→                  )
+   357→                })}
+   358→                <div className="h-8 w-8 rounded-full bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center">
+   359→                  <span className="text-[10px] text-muted-foreground font-medium">+{userBadges.filter(b => !b.earned).length}</span>
+   360→                </div>
+   361→              </div>
+   362→            </div>
+   363→          </CardContent>
+   364→        </Card>
+   365→      </motion.div>
+   366→
+   367→      {/* Tab Navigation */}
+   368→      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
+   369→        {[
+   370→          { key: 'feed' as const, label: 'Feed', icon: MessageCircle },
+   371→          { key: 'groups' as const, label: 'Groups', icon: Users },
+   372→          { key: 'challenges' as const, label: 'Challenges', icon: Trophy },
+   373→        ].map(tab => (
+   374→          <Button
+   375→            key={tab.key}
+   376→            size="sm"
+   377→            variant={activeTab === tab.key ? 'default' : 'ghost'}
+   378→            className={`text-xs px-4 ${activeTab === tab.key ? 'bg-sky-500 hover:bg-sky-600 text-white' : ''}`}
+   379→            onClick={() => setActiveTab(tab.key)}
+   380→          >
+   381→            <tab.icon className="h-3.5 w-3.5 mr-1.5" />
+   382→            {tab.label}
+   383→          </Button>
+   384→        ))}
+   385→      </div>
+   386→
+   387→      <AnimatePresence mode="wait">
+   388→        {activeTab === 'feed' && (
+   389→          <motion.div
+   390→            key="feed"
+   391→            initial={{ opacity: 0, y: 10 }}
+   392→            animate={{ opacity: 1, y: 0 }}
+   393→            exit={{ opacity: 0, y: -10 }}
+   394→            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+   395→          >
+   396→            {/* Feed Column */}
+   397→            <div className="lg:col-span-2 space-y-4">
+   398→              {/* Category Filters */}
+   399→              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+   400→                <Button
+   401→                  size="sm"
+   402→                  variant={activeCategory === 'All' ? 'default' : 'outline'}
+   403→                  className={`text-xs shrink-0 ${activeCategory === 'All' ? 'bg-sky-500 hover:bg-sky-600 text-white' : ''}`}
+   404→                  onClick={() => setActiveCategory('All')}
+   405→                >
+   406→                  <Filter className="h-3 w-3 mr-1" /> All
+   407→                </Button>
+   408→                {categories.map(cat => (
+   409→                  <Button
+   410→                    key={cat}
+   411→                    size="sm"
+   412→                    variant={activeCategory === cat ? 'default' : 'outline'}
+   413→                    className={`text-xs shrink-0 ${activeCategory === cat ? 'bg-sky-500 hover:bg-sky-600 text-white' : ''}`}
+   414→                    onClick={() => setActiveCategory(cat)}
+   415→                  >
+   416→                    <Hash className="h-3 w-3 mr-1" />
+   417→                    {cat}
+   418→                  </Button>
+   419→                ))}
+   420→              </div>
+   421→
+   422→              {/* Posts */}
+   423→              {filteredPosts.length === 0 ? (
+   424→                <Card className="border-dashed border-sky-200 dark:border-sky-900/50">
+   425→                  <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+   426→                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 dark:bg-sky-950/40 mb-3">
+   427→                      <MessageCircle className="h-6 w-6 text-sky-500" />
+   428→                    </div>
+   429→                    <p className="text-sm font-medium text-foreground">Be the first to post</p>
+   430→                    <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   431→                      Share a question, story, or encouragement. The community grows when you take the first step.
+   432→                    </p>
+   433→                    <Button
+   434→                      size="sm"
+   435→                      className="mt-4 bg-sky-500 hover:bg-sky-600 text-white"
+   436→                      onClick={() => setDialogOpen(true)}
+   437→                    >
+   438→                      <Plus className="h-3.5 w-3.5 mr-1.5" /> Create the first post
+   439→                    </Button>
+   440→                  </CardContent>
+   441→                </Card>
+   442→              ) : (
+   443→                <ScrollArea className="max-h-[600px]">
+   444→                  <div className="space-y-3">
+   445→                    {filteredPosts.map((post, idx) => (
+   446→                      <motion.div
+   447→                        key={post.id}
+   448→                        initial={{ opacity: 0, y: 10 }}
+   449→                        animate={{ opacity: 1, y: 0 }}
+   450→                        transition={{ delay: idx * 0.04 }}
+   451→                      >
+   452→                        <Card className="hover:shadow-md transition-shadow">
+   453→                          <CardContent className="py-4">
+   454→                            <div className="flex items-start gap-3">
+   455→                              <Avatar className="h-9 w-9 shrink-0">
+   456→                                <AvatarFallback className="bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-300 text-xs font-semibold">
+   457→                                  {post.username.split('_')[0][0]}{post.username.split('_')[1]?.[0] || ''}
+   458→                                </AvatarFallback>
+   459→                              </Avatar>
+   460→                              <div className="flex-1 min-w-0">
+   461→                                <div className="flex items-center gap-2 flex-wrap">
+   462→                                  <span className="text-sm font-semibold">{post.username}</span>
+   463→                                  <Badge
+   464→                                    variant="secondary"
+   465→                                    className={`text-[10px] border-0 ${categoryColors[post.category]}`}
+   466→                                  >
+   467→                                    {post.category}
+   468→                                  </Badge>
+   469→                                  <span className="text-[10px] text-muted-foreground">{post.timeAgo}</span>
+   470→                                </div>
+   471→                                <h3 className="font-semibold text-sm mt-1 leading-snug">{post.title}</h3>
+   472→                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{post.content}</p>
+   473→                                <div className="flex items-center gap-4 mt-3">
+   474→                                  <button
+   475→                                    onClick={() => toggleLike(post.id)}
+   476→                                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors"
+   477→                                  >
+   478→                                    <Heart
+   479→                                      className={`h-3.5 w-3.5 ${post.liked ? 'fill-sky-500 text-sky-500' : ''}`}
+   480→                                    />
+   481→                                    {post.likes}
+   482→                                  </button>
+   483→                                  <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors">
+   484→                                    <MessageCircle className="h-3.5 w-3.5" />
+   485→                                    {post.comments}
+   486→                                  </button>
+   487→                                </div>
+   488→                              </div>
+   489→                            </div>
+   490→                          </CardContent>
+   491→                        </Card>
+   492→                      </motion.div>
+   493→                    ))}
+   494→                  </div>
+   495→                </ScrollArea>
+   496→              )}
+   497→            </div>
+   498→
+   499→            {/* Sidebar */}
+   500→            <div className="space-y-4">
+   501→              {/* Trending Topics */}
+   502→              <Card>
+   503→                <CardHeader>
+   504→                  <CardTitle className="text-base flex items-center gap-2">
+   505→                    <TrendingUp className="h-4 w-4 text-sky-500" />
+   506→                    Trending Topics
+   507→                  </CardTitle>
+   508→                </CardHeader>
+   509→                <CardContent>
+   510→                  {trendingTopics.length === 0 ? (
+   511→                    <div className="py-3 text-center">
+   512→                      <p className="text-xs text-muted-foreground">
+   513→                        No trending topics yet. As the community grows, popular topics will appear here.
+   514→                      </p>
+   515→                    </div>
+   516→                  ) : (
+   517→                    <div className="space-y-2.5">
+   518→                      {trendingTopics.map((topic, idx) => (
+   519→                        <motion.div
+   520→                          key={topic.id}
+   521→                          initial={{ opacity: 0, x: 10 }}
+   522→                          animate={{ opacity: 1, x: 0 }}
+   523→                          transition={{ delay: 0.1 + idx * 0.04 }}
+   524→                          className="flex items-center justify-between group cursor-pointer"
+   525→                        >
+   526→                          <div className="flex items-center gap-2">
+   527→                            <span className="text-xs font-semibold text-muted-foreground w-5">{idx + 1}</span>
+   528→                            <div>
+   529→                              <p className="text-sm font-medium group-hover:text-sky-500 transition-colors">{topic.topic}</p>
+   530→                              <p className="text-[10px] text-muted-foreground">{topic.posts} posts</p>
+   531→                            </div>
+   532→                          </div>
+   533→                          {topic.trending && (
+   534→                            <Flame className="h-3.5 w-3.5 text-orange-500" />
+   535→                          )}
+   536→                        </motion.div>
+   537→                      ))}
+   538→                    </div>
+   539→                  )}
+   540→                </CardContent>
+   541→              </Card>
+   542→
+   543→              {/* Badges */}
+   544→              <Card>
+   545→                <CardHeader>
+   546→                  <CardTitle className="text-base flex items-center gap-2">
+   547→                    <Award className="h-4 w-4 text-sky-500" />
+   548→                    Your Badges
+   549→                  </CardTitle>
+   550→                </CardHeader>
+   551→                <CardContent>
+   552→                  <div className="grid grid-cols-3 gap-2">
+   553→                    {userBadges.map(badge => {
+   554→                      const Icon = badge.icon
+   555→                      return (
+   556→                        <div
+   557→                          key={badge.id}
+   558→                          className={`flex flex-col items-center gap-1.5 p-2 rounded-lg border ${
+   559→                            badge.earned
+   560→                              ? 'border-sky-200 bg-sky-50/50 dark:border-sky-800 dark:bg-sky-950/20'
+   561→                              : 'border-dashed border-muted-foreground/20 opacity-50'
+   562→                          }`}
+   563→                          title={badge.description}
+   564→                        >
+   565→                          <Icon className={`h-5 w-5 ${badge.earned ? badge.color : 'text-muted-foreground'}`} />
+   566→                          <span className="text-[9px] text-center font-medium leading-tight">{badge.name}</span>
+   567→                        </div>
+   568→                      )
+   569→                    })}
+   570→                  </div>
+   571→                </CardContent>
+   572→              </Card>
+   573→            </div>
+   574→          </motion.div>
+   575→        )}
+   576→
+   577→        {activeTab === 'groups' && (
+   578→          <motion.div
+   579→            key="groups"
+   580→            initial={{ opacity: 0, y: 10 }}
+   581→            animate={{ opacity: 1, y: 0 }}
+   582→            exit={{ opacity: 0, y: -10 }}
+   583→          >
+   584→            {supportGroups.length === 0 ? (
+   585→              <Card className="border-dashed border-sky-200 dark:border-sky-900/50">
+   586→                <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+   587→                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 dark:bg-sky-950/40 mb-3">
+   588→                    <Users className="h-6 w-6 text-sky-500" />
+   589→                  </div>
+   590→                  <p className="text-sm font-medium text-foreground">No support groups yet</p>
+   591→                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   592→                    Support groups will appear here as they become available. In the meantime, head to the feed to connect with the community.
+   593→                  </p>
+   594→                  <Button
+   595→                    size="sm"
+   596→                    variant="outline"
+   597→                    className="mt-4 border-sky-200 text-sky-600 dark:border-sky-800 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/30"
+   598→                    onClick={() => setActiveTab('feed')}
+   599→                  >
+   600→                    Browse the feed
+   601→                  </Button>
+   602→                </CardContent>
+   603→              </Card>
+   604→            ) : (
+   605→              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   606→                {supportGroups.map((group, idx) => {
+   607→                  const Icon = group.icon
+   608→                  return (
+   609→                    <motion.div
+   610→                      key={group.id}
+   611→                      initial={{ opacity: 0, y: 10 }}
+   612→                      animate={{ opacity: 1, y: 0 }}
+   613→                      transition={{ delay: idx * 0.06 }}
+   614→                    >
+   615→                      <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+   616→                        <CardHeader>
+   617→                          <div className="flex items-start gap-3">
+   618→                            <div className={`p-2.5 rounded-xl bg-gradient-to-br ${group.color} shadow-lg`}>
+   619→                              <Icon className="h-5 w-5 text-white" />
+   620→                            </div>
+   621→                            <div className="flex-1">
+   622→                              <CardTitle className="text-sm">{group.name}</CardTitle>
+   623→                              <CardDescription className="text-xs mt-0.5">{group.description}</CardDescription>
+   624→                            </div>
+   625→                          </div>
+   626→                        </CardHeader>
+   627→                        <CardContent className="mt-auto">
+   628→                          <div className="flex items-center justify-between">
+   629→                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+   630→                              <UserCircle className="h-3.5 w-3.5" />
+   631→                              {group.members.toLocaleString()} members
+   632→                            </div>
+   633→                            <Button
+   634→                              size="sm"
+   635→                              variant={group.joined ? 'outline' : 'default'}
+   636→                              className={`text-xs h-8 ${
+   637→                                group.joined
+   638→                                  ? 'border-sky-200 text-sky-600 dark:border-sky-800 dark:text-sky-400'
+   639→                                  : 'bg-sky-500 hover:bg-sky-600 text-white'
+   640→                              }`}
+   641→                              onClick={() => toggleGroup(group.id)}
+   642→                            >
+   643→                              {group.joined ? (
+   644→                                <>
+   645→                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Joined
+   646→                                </>
+   647→                              ) : (
+   648→                                <>
+   649→                                  <Plus className="h-3 w-3 mr-1" /> Join
+   650→                                </>
+   651→                              )}
+   652→                            </Button>
+   653→                          </div>
+   654→                        </CardContent>
+   655→                      </Card>
+   656→                    </motion.div>
+   657→                  )
+   658→                })}
+   659→              </div>
+   660→            )}
+   661→          </motion.div>
+   662→        )}
+   663→
+   664→        {activeTab === 'challenges' && (
+   665→          <motion.div
+   666→            key="challenges"
+   667→            initial={{ opacity: 0, y: 10 }}
+   668→            animate={{ opacity: 1, y: 0 }}
+   669→            exit={{ opacity: 0, y: -10 }}
+   670→          >
+   671→            {challenges.length === 0 ? (
+   672→              <Card className="border-dashed border-sky-200 dark:border-sky-900/50">
+   673→                <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+   674→                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 dark:bg-sky-950/40 mb-3">
+   675→                    <Trophy className="h-6 w-6 text-sky-500" />
+   676→                  </div>
+   677→                  <p className="text-sm font-medium text-foreground">No challenges yet</p>
+   678→                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+   679→                    Community challenges will appear here when they launch. Check back soon for goals you can join.
+   680→                  </p>
+   681→                </CardContent>
+   682→              </Card>
+   683→            ) : (
+   684→              <div className="space-y-4">
+   685→                {challenges.map((challenge, idx) => (
+   686→                  <motion.div
+   687→                    key={challenge.id}
+   688→                    initial={{ opacity: 0, y: 10 }}
+   689→                    animate={{ opacity: 1, y: 0 }}
+   690→                    transition={{ delay: idx * 0.06 }}
+   691→                  >
+   692→                    <Card className="hover:shadow-md transition-shadow">
+   693→                      <CardContent className="py-4">
+   694→                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+   695→                          <div className="flex items-start gap-3 flex-1">
+   696→                            <div className={`p-2 rounded-xl ${
+   697→                              challenge.joined
+   698→                                ? 'bg-gradient-to-br from-sky-500 to-blue-600'
+   699→                                : 'bg-muted'
+   700→                            }`}>
+   701→                              <Trophy className={`h-5 w-5 ${challenge.joined ? 'text-white' : 'text-muted-foreground'}`} />
+   702→                            </div>
+   703→                            <div className="flex-1">
+   704→                              <div className="flex items-center gap-2 flex-wrap">
+   705→                                <h3 className="font-semibold text-sm">{challenge.name}</h3>
+   706→                                <Badge variant="secondary" className="text-[10px] border-0 bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+   707→                                  <Zap className="h-2.5 w-2.5 mr-0.5" /> Active
+   708→                                </Badge>
+   709→                              </div>
+   710→                              <p className="text-xs text-muted-foreground mt-0.5">{challenge.description}</p>
+   711→                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+   712→                                <span className="flex items-center gap-1">
+   713→                                  <Users className="h-3 w-3" />
+   714→                                  {challenge.participants} participants
+   715→                                </span>
+   716→                                <span className="flex items-center gap-1">
+   717→                                  <Target className="h-3 w-3" />
+   718→                                  {challenge.daysLeft} days left
+   719→                                </span>
+   720→                              </div>
+   721→                            </div>
+   722→                          </div>
+   723→                          <div className="sm:w-48 space-y-2">
+   724→                            <div className="flex items-center justify-between text-xs">
+   725→                              <span className="text-muted-foreground">Progress</span>
+   726→                              <span className="font-semibold text-sky-500">{challenge.progress}%</span>
+   727→                            </div>
+   728→                            <Progress value={challenge.progress} className="h-2" />
+   729→                            <Button
+   730→                              size="sm"
+   731→                              variant={challenge.joined ? 'outline' : 'default'}
+   732→                              className={`w-full text-xs h-8 ${
+   733→                                challenge.joined
+   734→                                  ? 'border-sky-200 text-sky-600 dark:border-sky-800 dark:text-sky-400'
+   735→                                  : 'bg-sky-500 hover:bg-sky-600 text-white'
+   736→                              }`}
+   737→                              onClick={() => toggleChallenge(challenge.id)}
+   738→                            >
+   739→                              {challenge.joined ? (
+   740→                              <>
+   741→                                <CheckCircle2 className="h-3 w-3 mr-1" /> Joined
+   742→                              </>
+   743→                            ) : (
+   744→                              <>
+   745→                                <ArrowRight className="h-3 w-3 mr-1" /> Join Challenge
+   746→                              </>
+   747→                            )}
+   748→                          </Button>
+   749→                        </div>
+   750→                      </div>
+   751→                    </CardContent>
+   752→                  </Card>
+   753→                </motion.div>
+   754→              ))}
+   755→              </div>
+   756→            )}
+   757→          </motion.div>
+   758→        )}
+   759→      </AnimatePresence>
+   760→    </div>
+   761→  )
+   762→}
+   763→

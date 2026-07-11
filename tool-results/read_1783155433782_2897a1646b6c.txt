@@ -1,0 +1,1257 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  addDays,
+     7→  differenceInDays,
+     8→  format,
+     9→  startOfMonth,
+    10→  endOfMonth,
+    11→  startOfWeek,
+    12→  endOfWeek,
+    13→  isSameMonth,
+    14→  isSameDay,
+    15→  subMonths,
+    16→  addMonths,
+    17→} from 'date-fns'
+    18→import {
+    19→  Droplets,
+    20→  Heart,
+    21→  Brain,
+    22→  Sparkles,
+    23→  CalendarDays,
+    24→  TrendingUp,
+    25→  ChevronLeft,
+    26→  ChevronRight,
+    27→  Activity,
+    28→  Moon,
+    29→  Sun,
+    30→  Thermometer,
+    31→  Zap,
+    32→  CircleDot,
+    33→  Clock,
+    34→  FileText,
+    35→  Plus,
+    36→  Check,
+    37→} from 'lucide-react'
+    38→import {
+    39→  Card,
+    40→  CardContent,
+    41→  CardDescription,
+    42→  CardHeader,
+    43→  CardTitle,
+    44→} from '@/components/ui/card'
+    45→import { Badge } from '@/components/ui/badge'
+    46→import { Button } from '@/components/ui/button'
+    47→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    48→import {
+    49→  Table,
+    50→  TableBody,
+    51→  TableCell,
+    52→  TableHead,
+    53→  TableHeader,
+    54→  TableRow,
+    55→} from '@/components/ui/table'
+    56→import { Progress } from '@/components/ui/progress'
+    57→import { Input } from '@/components/ui/input'
+    58→import { Label } from '@/components/ui/label'
+    59→import { Textarea } from '@/components/ui/textarea'
+    60→import {
+    61→  Dialog,
+    62→  DialogContent,
+    63→  DialogDescription,
+    64→  DialogHeader,
+    65→  DialogTitle,
+    66→  DialogTrigger,
+    67→} from '@/components/ui/dialog'
+    68→import { Separator } from '@/components/ui/separator'
+    69→import {
+    70→  PieChart,
+    71→  Pie,
+    72→  Cell,
+    73→  ResponsiveContainer,
+    74→  Tooltip,
+    75→} from 'recharts'
+    76→
+    77→// ─── Mock Data ────────────────────────────────────────────────────────
+    78→
+    79→const CYCLE_LENGTH = 28
+    80→const CURRENT_CYCLE_DAY = 14
+    81→const PERIOD_LENGTH = 5
+    82→
+    83→const cycleStart = new Date(2026, 2, 4) // March 4, 2026
+    84→const today = addDays(cycleStart, CURRENT_CYCLE_DAY - 1) // March 17, 2026
+    85→
+    86→interface CyclePhase {
+    87→  name: string
+    88→  startDay: number
+    89→  endDay: number
+    90→  color: string
+    91→  bgColor: string
+    92→  lightColor: string
+    93→  description: string
+    94→  hormones: { estrogen: number; progesterone: number; lh: number; fsh: number }
+    95→  icon: React.ReactNode
+    96→}
+    97→
+    98→const phases: CyclePhase[] = [
+    99→  {
+   100→    name: 'Menstrual',
+   101→    startDay: 1,
+   102→    endDay: 5,
+   103→    color: '#e11d48',
+   104→    bgColor: 'rgba(225, 29, 72, 0.15)',
+   105→    lightColor: '#fecdd3',
+   106→    description: 'Uterine lining sheds. Estrogen and progesterone are at their lowest.',
+   107→    hormones: { estrogen: 15, progesterone: 5, lh: 10, fsh: 20 },
+   108→    icon: <Droplets className="h-4 w-4" />,
+   109→  },
+   110→  {
+   111→    name: 'Follicular',
+   112→    startDay: 6,
+   113→    endDay: 12,
+   114→    color: '#ec4899',
+   115→    bgColor: 'rgba(236, 72, 153, 0.15)',
+   116→    lightColor: '#fbcfe8',
+   117→    description: 'Estrogen rises as follicles develop. Energy and mood improve.',
+   118→    hormones: { estrogen: 65, progesterone: 15, lh: 20, fsh: 50 },
+   119→    icon: <Sparkles className="h-4 w-4" />,
+   120→  },
+   121→  {
+   122→    name: 'Ovulation',
+   123→    startDay: 13,
+   124→    endDay: 15,
+   125→    color: '#f97316',
+   126→    bgColor: 'rgba(249, 115, 22, 0.15)',
+   127→    lightColor: '#fed7aa',
+   128→    description: 'LH surges, egg is released. Peak fertility window.',
+   129→    hormones: { estrogen: 90, progesterone: 25, lh: 95, fsh: 40 },
+   130→    icon: <Sun className="h-4 w-4" />,
+   131→  },
+   132→  {
+   133→    name: 'Luteal',
+   134→    startDay: 16,
+   135→    endDay: 28,
+   136→    color: '#a855f7',
+   137→    bgColor: 'rgba(168, 85, 247, 0.15)',
+   138→    lightColor: '#e9d5ff',
+   139→    description: 'Progesterone peaks. PMS symptoms may appear.',
+   140→    hormones: { estrogen: 45, progesterone: 80, lh: 10, fsh: 10 },
+   141→    icon: <Moon className="h-4 w-4" />,
+   142→  },
+   143→]
+   144→
+   145→interface SymptomItem {
+   146→  id: string
+   147→  label: string
+   148→  icon: React.ReactNode
+   149→}
+   150→
+   151→const symptoms: SymptomItem[] = [
+   152→  { id: 'cramps', label: 'Cramps', icon: <Zap className="h-4 w-4" /> },
+   153→  { id: 'headache', label: 'Headache', icon: <Brain className="h-4 w-4" /> },
+   154→  { id: 'bloating', label: 'Bloating', icon: <Droplets className="h-4 w-4" /> },
+   155→  { id: 'acne', label: 'Acne', icon: <CircleDot className="h-4 w-4" /> },
+   156→  { id: 'fatigue', label: 'Fatigue', icon: <Moon className="h-4 w-4" /> },
+   157→  { id: 'backache', label: 'Backache', icon: <Activity className="h-4 w-4" /> },
+   158→  { id: 'nausea', label: 'Nausea', icon: <Thermometer className="h-4 w-4" /> },
+   159→  { id: 'breast_tenderness', label: 'Breast Tenderness', icon: <Heart className="h-4 w-4" /> },
+   160→]
+   161→
+   162→interface HistoricalCycle {
+   163→  id: number
+   164→  startDate: Date
+   165→  endDate: Date
+   166→  length: number
+   167→  periodLength: number
+   168→  flow: string
+   169→}
+   170→
+   171→const historicalCycles: HistoricalCycle[] = [
+   172→  { id: 1, startDate: new Date(2026, 2, 4), endDate: new Date(2026, 2, 8), length: 28, periodLength: 5, flow: 'Medium' },
+   173→  { id: 2, startDate: new Date(2026, 1, 4), endDate: new Date(2026, 1, 9), length: 29, periodLength: 6, flow: 'Heavy' },
+   174→  { id: 3, startDate: new Date(2026, 0, 6), endDate: new Date(2026, 0, 10), length: 27, periodLength: 5, flow: 'Medium' },
+   175→  { id: 4, startDate: new Date(2025, 11, 10), endDate: new Date(2025, 11, 14), length: 28, periodLength: 5, flow: 'Light' },
+   176→  { id: 5, startDate: new Date(2025, 10, 12), endDate: new Date(2025, 10, 16), length: 30, periodLength: 5, flow: 'Medium' },
+   177→  { id: 6, startDate: new Date(2025, 9, 13), endDate: new Date(2025, 9, 17), length: 27, periodLength: 5, flow: 'Medium' },
+   178→]
+   179→
+   180→// ─── Helper Functions ─────────────────────────────────────────────────
+   181→
+   182→function getCurrentPhase(day: number): CyclePhase {
+   183→  return phases.find(p => day >= p.startDay && day <= p.endDay) || phases[0]
+   184→}
+   185→
+   186→function getPhaseForDate(date: Date): CyclePhase | null {
+   187→  const dayDiff = differenceInDays(date, cycleStart) + 1
+   188→  const cycleDay = ((dayDiff - 1) % CYCLE_LENGTH) + 1
+   189→  if (cycleDay < 1) return null
+   190→  return phases.find(p => cycleDay >= p.startDay && cycleDay <= p.endDay) || null
+   191→}
+   192→
+   193→function isPeriodDay(date: Date): boolean {
+   194→  const dayDiff = differenceInDays(date, cycleStart) + 1
+   195→  const cycleDay = ((dayDiff - 1) % CYCLE_LENGTH) + 1
+   196→  return cycleDay >= 1 && cycleDay <= PERIOD_LENGTH
+   197→}
+   198→
+   199→function isOvulationDay(date: Date): boolean {
+   200→  const dayDiff = differenceInDays(date, cycleStart) + 1
+   201→  const cycleDay = ((dayDiff - 1) % CYCLE_LENGTH) + 1
+   202→  return cycleDay === 14
+   203→}
+   204→
+   205→function isFertileWindow(date: Date): boolean {
+   206→  const dayDiff = differenceInDays(date, cycleStart) + 1
+   207→  const cycleDay = ((dayDiff - 1) % CYCLE_LENGTH) + 1
+   208→  return cycleDay >= 10 && cycleDay <= 16
+   209→}
+   210→
+   211→function isPredictedPeriod(date: Date): boolean {
+   212→  const nextPeriodStart = addDays(cycleStart, CYCLE_LENGTH)
+   213→  const dayDiff = differenceInDays(date, nextPeriodStart)
+   214→  return dayDiff >= 0 && dayDiff < PERIOD_LENGTH
+   215→}
+   216→
+   217→// ─── Sub-Components ───────────────────────────────────────────────────
+   218→
+   219→function CycleWheel() {
+   220→  const currentPhase = getCurrentPhase(CURRENT_CYCLE_DAY)
+   221→
+   222→  const wheelData = phases.map(phase => ({
+   223→    name: phase.name,
+   224→    value: phase.endDay - phase.startDay + 1,
+   225→    color: phase.color,
+   226→    lightColor: phase.lightColor,
+   227→  }))
+   228→
+   229→  const totalAngle = 360
+   230→  const anglePerDay = totalAngle / CYCLE_LENGTH
+   231→  const currentAngle = (CURRENT_CYCLE_DAY - 0.5) * anglePerDay
+   232→
+   233→  return (
+   234→    <motion.div
+   235→      initial={{ opacity: 0, scale: 0.9 }}
+   236→      animate={{ opacity: 1, scale: 1 }}
+   237→      transition={{ duration: 0.6, ease: 'easeOut' }}
+   238→      className="flex flex-col items-center"
+   239→    >
+   240→      <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px]">
+   241→        {/* SVG indicator line */}
+   242→        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 400">
+   243→          {/* Glow filter */}
+   244→          <defs>
+   245→            <filter id="glow">
+   246→              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+   247→              <feMerge>
+   248→                <feMergeNode in="coloredBlur" />
+   249→                <feMergeNode in="SourceGraphic" />
+   250→              </feMerge>
+   251→            </filter>
+   252→            <filter id="innerGlow">
+   253→              <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+   254→              <feMerge>
+   255→                <feMergeNode in="coloredBlur" />
+   256→                <feMergeNode in="SourceGraphic" />
+   257→              </feMerge>
+   258→            </filter>
+   259→          </defs>
+   260→
+   261→          {/* Outer decorative ring */}
+   262→          <circle cx="200" cy="200" r="195" fill="none" stroke="rgba(244,114,182,0.1)" strokeWidth="1" />
+   263→
+   264→          {/* Current position indicator - outer glow */}
+   265→          <circle
+   266→            cx="200"
+   267→            cy="200"
+   268→            r="170"
+   269→            fill="none"
+   270→            stroke={currentPhase.color}
+   271→            strokeWidth="4"
+   272→            strokeDasharray="8 345"
+   273→            strokeDashoffset={-(currentAngle / 360) * 2 * Math.PI * 170 + 2}
+   274→            strokeLinecap="round"
+   275→            filter="url(#glow)"
+   276→            opacity="0.8"
+   277→          />
+   278→        </svg>
+   279→
+   280→        {/* Recharts PieChart */}
+   281→        <div className="absolute inset-0">
+   282→          <ResponsiveContainer width="100%" height="100%">
+   283→            <PieChart>
+   284→              <Pie
+   285→                data={wheelData}
+   286→                cx="50%"
+   287→                cy="50%"
+   288→                innerRadius="55%"
+   289→                outerRadius="78%"
+   290→                startAngle={90}
+   291→                endAngle={-270}
+   292→                dataKey="value"
+   293→                stroke="none"
+   294→                cornerRadius={4}
+   295→                paddingAngle={2}
+   296→              >
+   297→                {wheelData.map((entry, index) => (
+   298→                  <Cell
+   299→                    key={`cell-${index}`}
+   300→                    fill={entry.color}
+   301→                    opacity={
+   302→                      phases[index].name === currentPhase.name ? 1 : 0.5
+   303→                    }
+   304→                  />
+   305→                ))}
+   306→              </Pie>
+   307→              <Tooltip
+   308→                content={({ active, payload }) => {
+   309→                  if (active && payload && payload.length) {
+   310→                    const data = payload[0].payload
+   311→                    const phase = phases.find(p => p.name === data.name)
+   312→                    return (
+   313→                      <div className="rounded-xl bg-white/90 backdrop-blur-md border border-pink-100 px-3 py-2 shadow-lg">
+   314→                        <p className="font-semibold text-sm" style={{ color: phase?.color }}>{data.name}</p>
+   315→                        <p className="text-xs text-muted-foreground">
+   316→                          Days {phase?.startDay}–{phase?.endDay}
+   317→                        </p>
+   318→                      </div>
+   319→                    )
+   320→                  }
+   321→                  return null
+   322→                }}
+   323→              />
+   324→            </PieChart>
+   325→          </ResponsiveContainer>
+   326→        </div>
+   327→
+   328→        {/* Center content */}
+   329→        <div className="absolute inset-0 flex flex-col items-center justify-center">
+   330→          <motion.div
+   331→            initial={{ opacity: 0, y: 10 }}
+   332→            animate={{ opacity: 1, y: 0 }}
+   333→            transition={{ delay: 0.3, duration: 0.5 }}
+   334→            className="text-center"
+   335→          >
+   336→            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">
+   337→              Cycle Day
+   338→            </p>
+   339→            <motion.p
+   340→              key={CURRENT_CYCLE_DAY}
+   341→              initial={{ scale: 0.5, opacity: 0 }}
+   342→              animate={{ scale: 1, opacity: 1 }}
+   343→              transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
+   344→              className="text-5xl sm:text-6xl font-bold"
+   345→              style={{ color: currentPhase.color }}
+   346→            >
+   347→              {CURRENT_CYCLE_DAY}
+   348→            </motion.p>
+   349→            <Badge
+   350→              className="mt-2 px-3 py-1 text-xs font-medium border-0"
+   351→              style={{
+   352→                backgroundColor: currentPhase.bgColor,
+   353→                color: currentPhase.color,
+   354→              }}
+   355→            >
+   356→              {currentPhase.icon}
+   357→              <span className="ml-1">{currentPhase.name} Phase</span>
+   358→            </Badge>
+   359→          </motion.div>
+   360→        </div>
+   361→
+   362→        {/* Animated position dot */}
+   363→        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 400">
+   364→          <circle
+   365→            cx={
+   366→              200 +
+   367→              155 * Math.cos(((currentAngle - 90) * Math.PI) / 180)
+   368→            }
+   369→            cy={
+   370→              200 +
+   371→              155 * Math.sin(((currentAngle - 90) * Math.PI) / 180)
+   372→            }
+   373→            r="8"
+   374→            fill="white"
+   375→            stroke={currentPhase.color}
+   376→            strokeWidth="3"
+   377→            filter="url(#glow)"
+   378→          />
+   379→        </svg>
+   380→      </div>
+   381→
+   382→      {/* Phase legend */}
+   383→      <div className="flex flex-wrap justify-center gap-3 mt-4">
+   384→        {phases.map(phase => (
+   385→          <motion.div
+   386→            key={phase.name}
+   387→            whileHover={{ scale: 1.05 }}
+   388→            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+   389→              phase.name === currentPhase.name
+   390→                ? 'shadow-md'
+   391→                : 'opacity-60'
+   392→            }`}
+   393→            style={{
+   394→              backgroundColor: phase.bgColor,
+   395→              color: phase.color,
+   396→              border: `1px solid ${phase.name === currentPhase.name ? phase.color : 'transparent'}`,
+   397→            }}
+   398→          >
+   399→            {phase.icon}
+   400→            <span>{phase.name}</span>
+   401→            <span className="opacity-70">D{phase.startDay}–D{phase.endDay}</span>
+   402→          </motion.div>
+   403→        ))}
+   404→      </div>
+   405→    </motion.div>
+   406→  )
+   407→}
+   408→
+   409→// ─── Calendar View ────────────────────────────────────────────────────
+   410→
+   411→function CycleCalendar() {
+   412→  const [currentMonth, setCurrentMonth] = useState(startOfMonth(today))
+   413→
+   414→  const monthStart = startOfMonth(currentMonth)
+   415→  const monthEnd = endOfMonth(currentMonth)
+   416→  const calStart = startOfWeek(monthStart, { weekStartsOn: 0 })
+   417→  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
+   418→
+   419→  const days: Date[] = []
+   420→  let day = calStart
+   421→  while (day <= calEnd) {
+   422→    days.push(day)
+   423→    day = addDays(day, 1)
+   424→  }
+   425→
+   426→  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+   427→
+   428→  return (
+   429→    <motion.div
+   430→      initial={{ opacity: 0, y: 20 }}
+   431→      animate={{ opacity: 1, y: 0 }}
+   432→      transition={{ duration: 0.5 }}
+   433→    >
+   434→      {/* Calendar header */}
+   435→      <div className="flex items-center justify-between mb-4">
+   436→        <Button
+   437→          variant="ghost"
+   438→          size="icon"
+   439→          onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
+   440→          className="h-8 w-8"
+   441→        >
+   442→          <ChevronLeft className="h-4 w-4" />
+   443→        </Button>
+   444→        <h3 className="text-sm font-semibold">
+   445→          {format(currentMonth, 'MMMM yyyy')}
+   446→        </h3>
+   447→        <Button
+   448→          variant="ghost"
+   449→          size="icon"
+   450→          onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
+   451→          className="h-8 w-8"
+   452→        >
+   453→          <ChevronRight className="h-4 w-4" />
+   454→        </Button>
+   455→      </div>
+   456→
+   457→      {/* Weekday headers */}
+   458→      <div className="grid grid-cols-7 gap-1 mb-1">
+   459→        {weekDays.map(wd => (
+   460→          <div
+   461→            key={wd}
+   462→            className="text-center text-xs font-medium text-muted-foreground py-1"
+   463→          >
+   464→            {wd}
+   465→          </div>
+   466→        ))}
+   467→      </div>
+   468→
+   469→      {/* Calendar grid */}
+   470→      <div className="grid grid-cols-7 gap-1">
+   471→        {days.map((d, i) => {
+   472→          const inMonth = isSameMonth(d, currentMonth)
+   473→          const periodDay = isPeriodDay(d)
+   474→          const ovDay = isOvulationDay(d)
+   475→          const fertile = isFertileWindow(d)
+   476→          const predicted = isPredictedPeriod(d)
+   477→          const isToday = isSameDay(d, today)
+   478→          const phase = getPhaseForDate(d)
+   479→
+   480→          let bgClass = ''
+   481→          let textClass = ''
+   482→          let dotColor = ''
+   483→          let label = ''
+   484→
+   485→          if (!inMonth) {
+   486→            textClass = 'text-muted-foreground opacity-30'
+   487→          } else if (periodDay) {
+   488→            bgClass = 'bg-rose-500/20'
+   489→            textClass = 'text-rose-700 dark:text-rose-300 font-semibold'
+   490→            dotColor = '#e11d48'
+   491→            label = '🩸'
+   492→          } else if (ovDay) {
+   493→            bgClass = 'bg-orange-400/20'
+   494→            textClass = 'text-orange-700 dark:text-orange-300 font-semibold'
+   495→            dotColor = '#f97316'
+   496→            label = '🥚'
+   497→          } else if (fertile) {
+   498→            bgClass = 'bg-orange-300/10'
+   499→            textClass = 'text-orange-600 dark:text-orange-400'
+   500→            dotColor = '#fb923c'
+   501→          } else if (predicted) {
+   502→            bgClass = 'bg-rose-300/10'
+   503→            textClass = 'text-rose-500 dark:text-rose-400'
+   504→            dotColor = '#fb7185'
+   505→            label = '✦'
+   506→          }
+   507→
+   508→          return (
+   509→            <motion.div
+   510→              key={i}
+   511→              whileHover={{ scale: 1.1 }}
+   512→              className={`
+   513→                relative flex flex-col items-center justify-center
+   514→                h-9 sm:h-10 rounded-lg text-xs transition-all cursor-default
+   515→                ${bgClass} ${textClass}
+   516→                ${isToday ? 'ring-2 ring-rose-400 ring-offset-1 ring-offset-white dark:ring-offset-gray-950' : ''}
+   517→              `}
+   518→            >
+   519→              <span>{format(d, 'd')}</span>
+   520→              {dotColor && (
+   521→                <div
+   522→                  className="absolute bottom-0.5 w-1 h-1 rounded-full"
+   523→                  style={{ backgroundColor: dotColor }}
+   524→                />
+   525→              )}
+   526→              {label && (
+   527→                <span className="absolute -top-0.5 -right-0.5 text-[8px] leading-none">
+   528→                  {label}
+   529→                </span>
+   530→              )}
+   531→            </motion.div>
+   532→          )
+   533→        })}
+   534→      </div>
+   535→
+   536→      {/* Legend */}
+   537→      <div className="flex flex-wrap gap-3 mt-4 text-xs">
+   538→        <div className="flex items-center gap-1.5">
+   539→          <div className="w-3 h-3 rounded bg-rose-500/20 border border-rose-400/40" />
+   540→          <span className="text-muted-foreground">Period</span>
+   541→        </div>
+   542→        <div className="flex items-center gap-1.5">
+   543→          <div className="w-3 h-3 rounded bg-orange-400/20 border border-orange-400/40" />
+   544→          <span className="text-muted-foreground">Ovulation</span>
+   545→        </div>
+   546→        <div className="flex items-center gap-1.5">
+   547→          <div className="w-3 h-3 rounded bg-orange-300/10 border border-orange-300/30" />
+   548→          <span className="text-muted-foreground">Fertile Window</span>
+   549→        </div>
+   550→        <div className="flex items-center gap-1.5">
+   551→          <div className="w-3 h-3 rounded bg-rose-300/10 border border-rose-300/30" />
+   552→          <span className="text-muted-foreground">Predicted Period</span>
+   553→        </div>
+   554→      </div>
+   555→    </motion.div>
+   556→  )
+   557→}
+   558→
+   559→// ─── Cycle Timeline ───────────────────────────────────────────────────
+   560→
+   561→function CycleTimeline() {
+   562→  const currentPhase = getCurrentPhase(CURRENT_CYCLE_DAY)
+   563→
+   564→  return (
+   565→    <motion.div
+   566→      initial={{ opacity: 0, y: 20 }}
+   567→      animate={{ opacity: 1, y: 0 }}
+   568→      transition={{ duration: 0.5, delay: 0.1 }}
+   569→      className="space-y-4"
+   570→    >
+   571→      {/* Timeline bar */}
+   572→      <div className="relative">
+   573→        <div className="flex h-3 rounded-full overflow-hidden">
+   574→          {phases.map(phase => {
+   575→            const widthPct = ((phase.endDay - phase.startDay + 1) / CYCLE_LENGTH) * 100
+   576→            const isActive = phase.name === currentPhase.name
+   577→            return (
+   578→              <motion.div
+   579→                key={phase.name}
+   580→                initial={{ scaleX: 0 }}
+   581→                animate={{ scaleX: 1 }}
+   582→                transition={{ duration: 0.6, ease: 'easeOut' }}
+   583→                style={{
+   584→                  width: `${widthPct}%`,
+   585→                  backgroundColor: phase.color,
+   586→                  opacity: isActive ? 1 : 0.4,
+   587→                  transformOrigin: 'left',
+   588→                }}
+   589→                className="h-full first:rounded-l-full last:rounded-r-full relative"
+   590→              />
+   591→            )
+   592→          })}
+   593→        </div>
+   594→
+   595→        {/* Current day marker */}
+   596→        <motion.div
+   597→          initial={{ opacity: 0, scale: 0 }}
+   598→          animate={{ opacity: 1, scale: 1 }}
+   599→          transition={{ delay: 0.5, type: 'spring' }}
+   600→          className="absolute top-1/2 -translate-y-1/2"
+   601→          style={{ left: `${((CURRENT_CYCLE_DAY - 0.5) / CYCLE_LENGTH) * 100}%` }}
+   602→        >
+   603→          <div className="w-5 h-5 rounded-full bg-white border-2 shadow-md -translate-x-1/2"
+   604→            style={{ borderColor: currentPhase.color }}
+   605→          >
+   606→            <div
+   607→              className="w-2 h-2 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+   608→              style={{ backgroundColor: currentPhase.color }}
+   609→            />
+   610→          </div>
+   611→        </motion.div>
+   612→      </div>
+   613→
+   614→      {/* Phase cards */}
+   615→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+   616→        {phases.map(phase => {
+   617→          const isActive = phase.name === currentPhase.name
+   618→          return (
+   619→            <motion.div
+   620→              key={phase.name}
+   621→              whileHover={{ y: -2 }}
+   622→              className={`relative rounded-xl p-3 border transition-all ${
+   623→                isActive
+   624→                  ? 'shadow-lg'
+   625→                  : 'opacity-60 hover:opacity-80'
+   626→              }`}
+   627→              style={{
+   628→                backgroundColor: phase.bgColor,
+   629→                borderColor: isActive ? phase.color : 'transparent',
+   630→              }}
+   631→            >
+   632→              {isActive && (
+   633→                <Badge
+   634→                  className="absolute -top-2 right-2 text-[10px] px-2 border-0"
+   635→                  style={{ backgroundColor: phase.color, color: 'white' }}
+   636→                >
+   637→                  Current
+   638→                </Badge>
+   639→              )}
+   640→              <div className="flex items-center gap-2 mb-2">
+   641→                <div
+   642→                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+   643→                  style={{ backgroundColor: phase.color, color: 'white' }}
+   644→                >
+   645→                  {phase.icon}
+   646→                </div>
+   647→                <div>
+   648→                  <p className="font-semibold text-sm" style={{ color: phase.color }}>
+   649→                    {phase.name}
+   650→                  </p>
+   651→                  <p className="text-[10px] text-muted-foreground">
+   652→                    Days {phase.startDay}–{phase.endDay}
+   653→                  </p>
+   654→                </div>
+   655→              </div>
+   656→              <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+   657→                {phase.description}
+   658→              </p>
+   659→              {/* Hormone bars */}
+   660→              <div className="space-y-1.5">
+   661→                <HormoneBar label="Estrogen" value={phase.hormones.estrogen} color="#ec4899" />
+   662→                <HormoneBar label="Progesterone" value={phase.hormones.progesterone} color="#a855f7" />
+   663→                <HormoneBar label="LH" value={phase.hormones.lh} color="#f97316" />
+   664→                <HormoneBar label="FSH" value={phase.hormones.fsh} color="#06b6d4" />
+   665→              </div>
+   666→            </motion.div>
+   667→          )
+   668→        })}
+   669→      </div>
+   670→    </motion.div>
+   671→  )
+   672→}
+   673→
+   674→function HormoneBar({
+   675→  label,
+   676→  value,
+   677→  color,
+   678→}: {
+   679→  label: string
+   680→  value: number
+   681→  color: string
+   682→}) {
+   683→  return (
+   684→    <div className="flex items-center gap-2">
+   685→      <span className="text-[10px] w-20 text-muted-foreground shrink-0">{label}</span>
+   686→      <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
+   687→        <motion.div
+   688→          initial={{ width: 0 }}
+   689→          animate={{ width: `${value}%` }}
+   690→          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+   691→          className="h-full rounded-full"
+   692→          style={{ backgroundColor: color }}
+   693→        />
+   694→      </div>
+   695→      <span className="text-[10px] w-6 text-right text-muted-foreground">{value}</span>
+   696→    </div>
+   697→  )
+   698→}
+   699→
+   700→// ─── Log Period ───────────────────────────────────────────────────────
+   701→
+   702→function LogPeriodSection() {
+   703→  const [flowIntensity, setFlowIntensity] = useState<string>('medium')
+   704→  const [startDate, setStartDate] = useState(format(today, 'yyyy-MM-dd'))
+   705→  const [duration, setDuration] = useState('5')
+   706→  const [notes, setNotes] = useState('')
+   707→  const [logged, setLogged] = useState(false)
+   708→
+   709→  const flowOptions = [
+   710→    { value: 'light', label: 'Light', icon: <Droplets className="h-3 w-3" />, color: '#f9a8d4' },
+   711→    { value: 'medium', label: 'Medium', icon: <Droplets className="h-4 w-4" />, color: '#ec4899' },
+   712→    { value: 'heavy', label: 'Heavy', icon: <Droplets className="h-5 w-5" />, color: '#be185d' },
+   713→  ]
+   714→
+   715→  const handleLog = () => {
+   716→    setLogged(true)
+   717→    setTimeout(() => setLogged(false), 3000)
+   718→  }
+   719→
+   720→  return (
+   721→    <motion.div
+   722→      initial={{ opacity: 0, y: 20 }}
+   723→      animate={{ opacity: 1, y: 0 }}
+   724→      transition={{ duration: 0.5, delay: 0.15 }}
+   725→      className="space-y-5"
+   726→    >
+   727→      {/* Quick log buttons */}
+   728→      <div>
+   729→        <Label className="text-xs font-medium text-muted-foreground mb-2 block">
+   730→          Quick Log
+   731→        </Label>
+   732→        <div className="flex flex-wrap gap-2">
+   733→          <Dialog>
+   734→            <DialogTrigger asChild>
+   735→              <Button
+   736→                variant="outline"
+   737→                size="sm"
+   738→                className="gap-1.5 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+   739→              >
+   740→                <Plus className="h-3.5 w-3.5" />
+   741→                Start Period Today
+   742→              </Button>
+   743→            </DialogTrigger>
+   744→            <DialogContent className="sm:max-w-md">
+   745→              <DialogHeader>
+   746→                <DialogTitle className="text-rose-600">Log Period Start</DialogTitle>
+   747→                <DialogDescription>
+   748→                  Record that your period started today ({format(today, 'MMM d, yyyy')}).
+   749→                </DialogDescription>
+   750→              </DialogHeader>
+   751→              <div className="space-y-3 py-2">
+   752→                <p className="text-sm text-muted-foreground">
+   753→                  This will update your cycle tracking and predictions. Your cycle day will reset to Day 1.
+   754→                </p>
+   755→                <Button className="w-full bg-rose-500 hover:bg-rose-600 text-white">
+   756→                  <Check className="h-4 w-4 mr-2" />
+   757→                  Confirm Period Started
+   758→                </Button>
+   759→              </div>
+   760→            </DialogContent>
+   761→          </Dialog>
+   762→          <Button
+   763→            variant="outline"
+   764→            size="sm"
+   765→            className="gap-1.5 border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+   766→          >
+   767→            <CircleDot className="h-3.5 w-3.5" />
+   768→            Log Spotting
+   769→          </Button>
+   770→        </div>
+   771→      </div>
+   772→
+   773→      <Separator />
+   774→
+   775→      {/* Detailed logging form */}
+   776→      <div className="space-y-4">
+   777→        <div className="grid grid-cols-2 gap-4">
+   778→          <div className="space-y-1.5">
+   779→            <Label className="text-xs font-medium text-muted-foreground">Start Date</Label>
+   780→            <Input
+   781→              type="date"
+   782→              value={startDate}
+   783→              onChange={e => setStartDate(e.target.value)}
+   784→              className="h-9 text-sm"
+   785→            />
+   786→          </div>
+   787→          <div className="space-y-1.5">
+   788→            <Label className="text-xs font-medium text-muted-foreground">Duration (days)</Label>
+   789→            <Input
+   790→              type="number"
+   791→              min="1"
+   792→              max="14"
+   793→              value={duration}
+   794→              onChange={e => setDuration(e.target.value)}
+   795→              className="h-9 text-sm"
+   796→            />
+   797→          </div>
+   798→        </div>
+   799→
+   800→        {/* Flow intensity */}
+   801→        <div className="space-y-1.5">
+   802→          <Label className="text-xs font-medium text-muted-foreground">Flow Intensity</Label>
+   803→          <div className="flex gap-2">
+   804→            {flowOptions.map(opt => (
+   805→              <motion.button
+   806→                key={opt.value}
+   807→                whileHover={{ scale: 1.05 }}
+   808→                whileTap={{ scale: 0.95 }}
+   809→                onClick={() => setFlowIntensity(opt.value)}
+   810→                className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all ${
+   811→                  flowIntensity === opt.value
+   812→                    ? 'shadow-md'
+   813→                    : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'
+   814→                }`}
+   815→                style={{
+   816→                  borderColor: flowIntensity === opt.value ? opt.color : undefined,
+   817→                  backgroundColor:
+   818→                    flowIntensity === opt.value ? `${opt.color}20` : undefined,
+   819→                }}
+   820→              >
+   821→                <span style={{ color: opt.color }}>{opt.icon}</span>
+   822→                <span className="text-xs font-medium">{opt.label}</span>
+   823→              </motion.button>
+   824→            ))}
+   825→          </div>
+   826→        </div>
+   827→
+   828→        {/* Notes */}
+   829→        <div className="space-y-1.5">
+   830→          <Label className="text-xs font-medium text-muted-foreground">Notes</Label>
+   831→          <Textarea
+   832→            value={notes}
+   833→            onChange={e => setNotes(e.target.value)}
+   834→            placeholder="Any additional notes about your period..."
+   835→            className="min-h-[60px] text-sm resize-none"
+   836→          />
+   837→        </div>
+   838→
+   839→        <Button
+   840→          onClick={handleLog}
+   841→          className="w-full bg-rose-500 hover:bg-rose-600 text-white"
+   842→        >
+   843→          {logged ? (
+   844→            <>
+   845→              <Check className="h-4 w-4 mr-2" />
+   846→              Logged Successfully!
+   847→            </>
+   848→          ) : (
+   849→            <>
+   850→              <FileText className="h-4 w-4 mr-2" />
+   851→              Log Period
+   852→            </>
+   853→          )}
+   854→        </Button>
+   855→      </div>
+   856→    </motion.div>
+   857→  )
+   858→}
+   859→
+   860→// ─── Symptom Quick Log ────────────────────────────────────────────────
+   861→
+   862→function SymptomQuickLog() {
+   863→  const [selectedSymptoms, setSelectedSymptoms] = useState<Record<string, number>>({})
+   864→
+   865→  const toggleSymptom = (id: string) => {
+   866→    setSelectedSymptoms(prev => {
+   867→      const next = { ...prev }
+   868→      if (next[id]) {
+   869→        delete next[id]
+   870→      } else {
+   871→        next[id] = 3 // default severity
+   872→      }
+   873→      return next
+   874→    })
+   875→  }
+   876→
+   877→  const setSeverity = (id: string, level: number) => {
+   878→    setSelectedSymptoms(prev => ({ ...prev, [id]: level }))
+   879→  }
+   880→
+   881→  return (
+   882→    <motion.div
+   883→      initial={{ opacity: 0, y: 20 }}
+   884→      animate={{ opacity: 1, y: 0 }}
+   885→      transition={{ duration: 0.5, delay: 0.2 }}
+   886→      className="space-y-4"
+   887→    >
+   888→      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+   889→        {symptoms.map(symptom => {
+   890→          const isSelected = symptom.id in selectedSymptoms
+   891→          const severity = selectedSymptoms[symptom.id] || 0
+   892→          return (
+   893→            <motion.div
+   894→              key={symptom.id}
+   895→              whileHover={{ scale: 1.02 }}
+   896→              whileTap={{ scale: 0.98 }}
+   897→            >
+   898→              <button
+   899→                onClick={() => toggleSymptom(symptom.id)}
+   900→                className={`w-full flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
+   901→                  isSelected
+   902→                    ? 'border-rose-400 bg-rose-50/80 dark:bg-rose-950/30 shadow-sm'
+   903→                    : 'border-transparent bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'
+   904→                }`}
+   905→              >
+   906→                <span className={`${isSelected ? 'text-rose-500' : 'text-muted-foreground'}`}>
+   907→                  {symptom.icon}
+   908→                </span>
+   909→                <span
+   910→                  className={`text-xs font-medium ${
+   911→                    isSelected ? 'text-rose-700 dark:text-rose-300' : 'text-muted-foreground'
+   912→                  }`}
+   913→                >
+   914→                  {symptom.label}
+   915→                </span>
+   916→                {isSelected && (
+   917→                  <motion.div
+   918→                    initial={{ opacity: 0, height: 0 }}
+   919→                    animate={{ opacity: 1, height: 'auto' }}
+   920→                    className="w-full"
+   921→                  >
+   922→                    <div className="flex justify-center gap-1 mt-1">
+   923→                      {[1, 2, 3, 4, 5].map(level => (
+   924→                        <button
+   925→                          key={level}
+   926→                          onClick={e => {
+   927→                            e.stopPropagation()
+   928→                            setSeverity(symptom.id, level)
+   929→                          }}
+   930→                          className={`w-4 h-4 rounded-full border-2 transition-all ${
+   931→                            level <= severity
+   932→                              ? 'border-rose-400 bg-rose-400'
+   933→                              : 'border-gray-300 dark:border-gray-600'
+   934→                          }`}
+   935→                        />
+   936→                      ))}
+   937→                    </div>
+   938→                    <p className="text-[10px] text-muted-foreground mt-0.5">
+   939→                      {severity <= 1 ? 'Mild' : severity <= 3 ? 'Moderate' : 'Severe'}
+   940→                    </p>
+   941→                  </motion.div>
+   942→                )}
+   943→              </button>
+   944→            </motion.div>
+   945→          )
+   946→        })}
+   947→      </div>
+   948→
+   949→      {Object.keys(selectedSymptoms).length > 0 && (
+   950→        <motion.div
+   951→          initial={{ opacity: 0, y: 10 }}
+   952→          animate={{ opacity: 1, y: 0 }}
+   953→          className="flex items-center justify-between p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200"
+   954→        >
+   955→          <p className="text-xs text-rose-700 dark:text-rose-300">
+   956→            {Object.keys(selectedSymptoms).length} symptom{Object.keys(selectedSymptoms).length > 1 ? 's' : ''} selected
+   957→          </p>
+   958→          <Button size="sm" className="h-7 bg-rose-500 hover:bg-rose-600 text-white text-xs">
+   959→            <Check className="h-3 w-3 mr-1" />
+   960→            Save Symptoms
+   961→          </Button>
+   962→        </motion.div>
+   963→      )}
+   964→    </motion.div>
+   965→  )
+   966→}
+   967→
+   968→// ─── Period Predictions ───────────────────────────────────────────────
+   969→
+   970→function PeriodPredictions() {
+   971→  const nextPeriodStart = addDays(cycleStart, CYCLE_LENGTH)
+   972→  const daysUntilNext = differenceInDays(nextPeriodStart, today)
+   973→  const avgCycleLength = 28
+   974→  const avgPeriodLength = 5
+   975→  const confidence = 87
+   976→
+   977→  return (
+   978→    <motion.div
+   979→      initial={{ opacity: 0, y: 20 }}
+   980→      animate={{ opacity: 1, y: 0 }}
+   981→      transition={{ duration: 0.5, delay: 0.25 }}
+   982→      className="space-y-4"
+   983→    >
+   984→      {/* Next period countdown */}
+   985→      <div className="text-center p-4 rounded-xl bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30 border border-rose-100 dark:border-rose-900/40">
+   986→        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+   987→          Next Period In
+   988→        </p>
+   989→        <motion.p
+   990→          initial={{ scale: 0.5 }}
+   991→          animate={{ scale: 1 }}
+   992→          transition={{ type: 'spring', stiffness: 200, delay: 0.3 }}
+   993→          className="text-4xl font-bold text-rose-600"
+   994→        >
+   995→          {daysUntilNext}
+   996→        </motion.p>
+   997→        <p className="text-sm text-muted-foreground">days</p>
+   998→        <p className="text-xs text-rose-500 font-medium mt-1">
+   999→          {format(nextPeriodStart, 'EEEE, MMMM d')}
+  1000→        </p>
+  1001→      </div>
+  1002→
+  1003→      {/* Prediction stats */}
+  1004→      <div className="grid grid-cols-3 gap-2">
+  1005→        <div className="text-center p-3 rounded-xl bg-black/5 dark:bg-white/5">
+  1006→          <CalendarDays className="h-4 w-4 mx-auto mb-1 text-rose-500" />
+  1007→          <p className="text-lg font-bold text-rose-600">{avgCycleLength}</p>
+  1008→          <p className="text-[10px] text-muted-foreground">Cycle Length</p>
+  1009→        </div>
+  1010→        <div className="text-center p-3 rounded-xl bg-black/5 dark:bg-white/5">
+  1011→          <Droplets className="h-4 w-4 mx-auto mb-1 text-pink-500" />
+  1012→          <p className="text-lg font-bold text-pink-600">{avgPeriodLength}</p>
+  1013→          <p className="text-[10px] text-muted-foreground">Period Length</p>
+  1014→        </div>
+  1015→        <div className="text-center p-3 rounded-xl bg-black/5 dark:bg-white/5">
+  1016→          <TrendingUp className="h-4 w-4 mx-auto mb-1 text-emerald-500" />
+  1017→          <p className="text-lg font-bold text-emerald-600">{confidence}%</p>
+  1018→          <p className="text-[10px] text-muted-foreground">Confidence</p>
+  1019→        </div>
+  1020→      </div>
+  1021→
+  1022→      {/* Confidence bar */}
+  1023→      <div className="space-y-1.5">
+  1024→        <div className="flex items-center justify-between">
+  1025→          <span className="text-xs text-muted-foreground">Prediction Confidence</span>
+  1026→          <span className="text-xs font-medium text-emerald-600">{confidence}%</span>
+  1027→        </div>
+  1028→        <Progress value={confidence} className="h-2 [&>div]:bg-gradient-to-r [&>div]:from-rose-400 [&>div]:to-emerald-400" />
+  1029→        <p className="text-[10px] text-muted-foreground">
+  1030→          Based on {historicalCycles.length} tracked cycles
+  1031→        </p>
+  1032→      </div>
+  1033→    </motion.div>
+  1034→  )
+  1035→}
+  1036→
+  1037→// ─── Historical Cycles Table ──────────────────────────────────────────
+  1038→
+  1039→function HistoricalCyclesTable() {
+  1040→  return (
+  1041→    <motion.div
+  1042→      initial={{ opacity: 0, y: 20 }}
+  1043→      animate={{ opacity: 1, y: 0 }}
+  1044→      transition={{ duration: 0.5, delay: 0.3 }}
+  1045→    >
+  1046→      <div className="max-h-64 overflow-y-auto custom-scrollbar">
+  1047→        <Table>
+  1048→          <TableHeader>
+  1049→            <TableRow>
+  1050→              <TableHead className="text-xs">Start Date</TableHead>
+  1051→              <TableHead className="text-xs">End Date</TableHead>
+  1052→              <TableHead className="text-xs text-center">Period</TableHead>
+  1053→              <TableHead className="text-xs text-center">Cycle</TableHead>
+  1054→              <TableHead className="text-xs">Flow</TableHead>
+  1055→            </TableRow>
+  1056→          </TableHeader>
+  1057→          <TableBody>
+  1058→            {historicalCycles.map(cycle => (
+  1059→              <TableRow key={cycle.id}>
+  1060→                <TableCell className="text-xs font-medium">
+  1061→                  {format(cycle.startDate, 'MMM d, yy')}
+  1062→                </TableCell>
+  1063→                <TableCell className="text-xs text-muted-foreground">
+  1064→                  {format(cycle.endDate, 'MMM d, yy')}
+  1065→                </TableCell>
+  1066→                <TableCell className="text-xs text-center">
+  1067→                  <Badge variant="outline" className="text-[10px] px-1.5 border-rose-200 text-rose-600">
+  1068→                    {cycle.periodLength}d
+  1069→                  </Badge>
+  1070→                </TableCell>
+  1071→                <TableCell className="text-xs text-center">
+  1072→                  <Badge variant="outline" className="text-[10px] px-1.5">
+  1073→                    {cycle.length}d
+  1074→                  </Badge>
+  1075→                </TableCell>
+  1076→                <TableCell className="text-xs">
+  1077→                  <span
+  1078→                    className={`inline-flex items-center gap-1 ${
+  1079→                      cycle.flow === 'Heavy'
+  1080→                        ? 'text-rose-600'
+  1081→                        : cycle.flow === 'Medium'
+  1082→                        ? 'text-pink-500'
+  1083→                        : 'text-pink-400'
+  1084→                    }`}
+  1085→                  >
+  1086→                    <Droplets className="h-3 w-3" />
+  1087→                    {cycle.flow}
+  1088→                  </span>
+  1089→                </TableCell>
+  1090→              </TableRow>
+  1091→            ))}
+  1092→          </TableBody>
+  1093→        </Table>
+  1094→      </div>
+  1095→    </motion.div>
+  1096→  )
+  1097→}
+  1098→
+  1099→// ─── Main Component ───────────────────────────────────────────────────
+  1100→
+  1101→export default function PeriodModule() {
+  1102→  return (
+  1103→    <div className="w-full space-y-6 pb-4">
+  1104→      {/* Hero: Cycle Wheel */}
+  1105→      <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg overflow-hidden">
+  1106→        <CardHeader className="pb-2">
+  1107→          <div className="flex items-center justify-between">
+  1108→            <div>
+  1109→              <CardTitle className="text-lg font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+  1110→                <Droplets className="h-5 w-5" />
+  1111→                Cycle Tracker
+  1112→              </CardTitle>
+  1113→              <CardDescription className="text-xs">
+  1114→                {format(today, 'EEEE, MMMM d, yyyy')} — Day {CURRENT_CYCLE_DAY} of {CYCLE_LENGTH}
+  1115→              </CardDescription>
+  1116→            </div>
+  1117→            <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border-0">
+  1118→              <Clock className="h-3 w-3 mr-1" />
+  1119→              {CYCLE_LENGTH - CURRENT_CYCLE_DAY} days left
+  1120→            </Badge>
+  1121→          </div>
+  1122→        </CardHeader>
+  1123→        <CardContent className="flex justify-center pt-2 pb-6">
+  1124→          <CycleWheel />
+  1125→        </CardContent>
+  1126→      </Card>
+  1127→
+  1128→      {/* Main content tabs */}
+  1129→      <Tabs defaultValue="calendar" className="w-full">
+  1130→        <TabsList className="w-full grid grid-cols-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl h-10">
+  1131→          <TabsTrigger value="calendar" className="text-xs gap-1 data-[state=active]:bg-rose-100 data-[state=active]:text-rose-700">
+  1132→            <CalendarDays className="h-3.5 w-3.5" />
+  1133→            <span className="hidden sm:inline">Calendar</span>
+  1134→          </TabsTrigger>
+  1135→          <TabsTrigger value="timeline" className="text-xs gap-1 data-[state=active]:bg-rose-100 data-[state=active]:text-rose-700">
+  1136→            <Activity className="h-3.5 w-3.5" />
+  1137→            <span className="hidden sm:inline">Timeline</span>
+  1138→          </TabsTrigger>
+  1139→          <TabsTrigger value="log" className="text-xs gap-1 data-[state=active]:bg-rose-100 data-[state=active]:text-rose-700">
+  1140→            <FileText className="h-3.5 w-3.5" />
+  1141→            <span className="hidden sm:inline">Log</span>
+  1142→          </TabsTrigger>
+  1143→          <TabsTrigger value="symptoms" className="text-xs gap-1 data-[state=active]:bg-rose-100 data-[state=active]:text-rose-700">
+  1144→            <Heart className="h-3.5 w-3.5" />
+  1145→            <span className="hidden sm:inline">Symptoms</span>
+  1146→          </TabsTrigger>
+  1147→        </TabsList>
+  1148→
+  1149→        {/* Calendar Tab */}
+  1150→        <TabsContent value="calendar">
+  1151→          <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1152→            <CardHeader className="pb-2">
+  1153→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+  1154→                <CalendarDays className="h-4 w-4 text-rose-500" />
+  1155→                Cycle Calendar
+  1156→              </CardTitle>
+  1157→              <CardDescription className="text-xs">
+  1158→                Track your period, ovulation, and fertile window
+  1159→              </CardDescription>
+  1160→            </CardHeader>
+  1161→            <CardContent>
+  1162→              <CycleCalendar />
+  1163→            </CardContent>
+  1164→          </Card>
+  1165→        </TabsContent>
+  1166→
+  1167→        {/* Timeline Tab */}
+  1168→        <TabsContent value="timeline">
+  1169→          <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1170→            <CardHeader className="pb-2">
+  1171→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+  1172→                <Activity className="h-4 w-4 text-rose-500" />
+  1173→                Cycle Timeline
+  1174→              </CardTitle>
+  1175→              <CardDescription className="text-xs">
+  1176→                Your cycle phases and hormone levels
+  1177→              </CardDescription>
+  1178→            </CardHeader>
+  1179→            <CardContent>
+  1180→              <CycleTimeline />
+  1181→            </CardContent>
+  1182→          </Card>
+  1183→        </TabsContent>
+  1184→
+  1185→        {/* Log Tab */}
+  1186→        <TabsContent value="log">
+  1187→          <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1188→            <CardHeader className="pb-2">
+  1189→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+  1190→                <FileText className="h-4 w-4 text-rose-500" />
+  1191→                Log Period
+  1192→              </CardTitle>
+  1193→              <CardDescription className="text-xs">
+  1194→                Record your period details
+  1195→              </CardDescription>
+  1196→            </CardHeader>
+  1197→            <CardContent>
+  1198→              <LogPeriodSection />
+  1199→            </CardContent>
+  1200→          </Card>
+  1201→        </TabsContent>
+  1202→
+  1203→        {/* Symptoms Tab */}
+  1204→        <TabsContent value="symptoms">
+  1205→          <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1206→            <CardHeader className="pb-2">
+  1207→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+  1208→                <Heart className="h-4 w-4 text-rose-500" />
+  1209→                Symptom Quick Log
+  1210→              </CardTitle>
+  1211→              <CardDescription className="text-xs">
+  1212→                Tap symptoms you are experiencing and rate their severity
+  1213→              </CardDescription>
+  1214→            </CardHeader>
+  1215→            <CardContent>
+  1216→              <SymptomQuickLog />
+  1217→            </CardContent>
+  1218→          </Card>
+  1219→        </TabsContent>
+  1220→      </Tabs>
+  1221→
+  1222→      {/* Bottom row: Predictions + History */}
+  1223→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  1224→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1225→          <CardHeader className="pb-2">
+  1226→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+  1227→              <TrendingUp className="h-4 w-4 text-rose-500" />
+  1228→              Period Predictions
+  1229→            </CardTitle>
+  1230→            <CardDescription className="text-xs">
+  1231→              AI-powered cycle forecasting
+  1232→            </CardDescription>
+  1233→          </CardHeader>
+  1234→          <CardContent>
+  1235→            <PeriodPredictions />
+  1236→          </CardContent>
+  1237→        </Card>
+  1238→
+  1239→        <Card className="border-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl shadow-lg">
+  1240→          <CardHeader className="pb-2">
+  1241→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+  1242→              <Clock className="h-4 w-4 text-rose-500" />
+  1243→              Cycle History
+  1244→            </CardTitle>
+  1245→            <CardDescription className="text-xs">
+  1246→              Your recent cycle records
+  1247→            </CardDescription>
+  1248→          </CardHeader>
+  1249→          <CardContent className="px-2">
+  1250→            <HistoricalCyclesTable />
+  1251→          </CardContent>
+  1252→        </Card>
+  1253→      </div>
+  1254→    </div>
+  1255→  )
+  1256→}
+  1257→

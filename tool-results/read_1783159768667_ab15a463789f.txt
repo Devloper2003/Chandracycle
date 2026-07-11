@@ -1,0 +1,1149 @@
+     1→'use client'
+     2→
+     3→import React, { useEffect, useMemo, useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  HeartPulse,
+     7→  Smile,
+     8→  Check,
+     9→  Save,
+    10→  Droplets,
+    11→  Moon,
+    12→  Zap,
+    13→  TrendingUp,
+    14→  Brain,
+    15→  Activity,
+    16→  Sparkles,
+    17→  AlertCircle,
+    18→  Loader2,
+    19→} from 'lucide-react'
+    20→import {
+    21→  Card,
+    22→  CardContent,
+    23→  CardDescription,
+    24→  CardHeader,
+    25→  CardTitle,
+    26→} from '@/components/ui/card'
+    27→import { Badge } from '@/components/ui/badge'
+    28→import { Button } from '@/components/ui/button'
+    29→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    30→import { Slider } from '@/components/ui/slider'
+    31→import { Checkbox } from '@/components/ui/checkbox'
+    32→import { Input } from '@/components/ui/input'
+    33→import { Label } from '@/components/ui/label'
+    34→import { Textarea } from '@/components/ui/textarea'
+    35→import { Progress } from '@/components/ui/progress'
+    36→import { Separator } from '@/components/ui/separator'
+    37→import { Skeleton } from '@/components/ui/skeleton'
+    38→import { toast } from 'sonner'
+    39→import {
+    40→  AreaChart,
+    41→  Area,
+    42→  BarChart,
+    43→  Bar,
+    44→  XAxis,
+    45→  YAxis,
+    46→  CartesianGrid,
+    47→  Tooltip as RechartsTooltip,
+    48→  ResponsiveContainer,
+    49→  Legend,
+    50→  Cell as RechartsCell,
+    51→} from 'recharts'
+    52→import { useAppStore } from '@/lib/store'
+    53→
+    54→// ─── Types ────────────────────────────────────────────────────────────────────
+    55→
+    56→type MoodType = 'happy' | 'calm' | 'anxious' | 'sad' | 'irritable' | 'energetic' | 'tired' | 'neutral'
+    57→
+    58→interface MoodOption {
+    59→  id: MoodType
+    60→  emoji: string
+    61→  label: string
+    62→  color: string
+    63→  score: number
+    64→}
+    65→
+    66→interface SymptomOption {
+    67→  id: string
+    68→  label: string
+    69→  icon: string
+    70→}
+    71→
+    72→type Severity = 'mild' | 'moderate' | 'severe'
+    73→
+    74→interface SymptomState {
+    75→  checked: boolean
+    76→  severity: Severity
+    77→}
+    78→
+    79→interface SymptomEntry {
+    80→  id: string
+    81→  date: string
+    82→  category: string
+    83→  severity: number
+    84→  notes?: string | null
+    85→}
+    86→
+    87→interface MoodEntry {
+    88→  id: string
+    89→  date: string
+    90→  mood: string
+    91→  energy: number
+    92→  stress: number
+    93→  notes?: string | null
+    94→}
+    95→
+    96→// ─── Constants ────────────────────────────────────────────────────────────────
+    97→
+    98→const MOOD_OPTIONS: MoodOption[] = [
+    99→  { id: 'happy', emoji: '😊', label: 'Happy', color: 'bg-yellow-100 border-yellow-400 text-yellow-700', score: 5 },
+   100→  { id: 'calm', emoji: '😌', label: 'Calm', color: 'bg-green-100 border-green-400 text-green-700', score: 4 },
+   101→  { id: 'anxious', emoji: '😰', label: 'Anxious', color: 'bg-orange-100 border-orange-400 text-orange-700', score: 2 },
+   102→  { id: 'sad', emoji: '😢', label: 'Sad', color: 'bg-blue-100 border-blue-400 text-blue-700', score: 1 },
+   103→  { id: 'irritable', emoji: '😤', label: 'Irritable', color: 'bg-red-100 border-red-400 text-red-700', score: 1 },
+   104→  { id: 'energetic', emoji: '⚡', label: 'Energetic', color: 'bg-amber-100 border-amber-400 text-amber-700', score: 5 },
+   105→  { id: 'tired', emoji: '😴', label: 'Tired', color: 'bg-purple-100 border-purple-400 text-purple-700', score: 2 },
+   106→  { id: 'neutral', emoji: '😐', label: 'Neutral', color: 'bg-gray-100 border-gray-400 text-gray-700', score: 3 },
+   107→]
+   108→
+   109→const SYMPTOM_OPTIONS: SymptomOption[] = [
+   110→  { id: 'cramps', label: 'Cramps', icon: '🩹' },
+   111→  { id: 'headache', label: 'Headache', icon: '🤕' },
+   112→  { id: 'bloating', label: 'Bloating', icon: '🫧' },
+   113→  { id: 'acne', label: 'Acne', icon: '💅' },
+   114→  { id: 'fatigue', label: 'Fatigue', icon: '😴' },
+   115→  { id: 'backache', label: 'Backache', icon: '🦴' },
+   116→  { id: 'nausea', label: 'Nausea', icon: '🤢' },
+   117→  { id: 'breast_tenderness', label: 'Breast Tenderness', icon: '💗' },
+   118→  { id: 'dizziness', label: 'Dizziness', icon: '💫' },
+   119→  { id: 'insomnia', label: 'Insomnia', icon: '🌙' },
+   120→]
+   121→
+   122→const ENERGY_EMOJIS = ['😴', '😪', '😐', '😊', '⚡']
+   123→const STRESS_COLORS = ['bg-green-500', 'bg-lime-500', 'bg-yellow-500', 'bg-orange-500', 'bg-red-500']
+   124→const STRESS_LABELS = ['Very Low', 'Low', 'Moderate', 'High', 'Very High']
+   125→
+   126→const SEVERITY_TO_INT: Record<Severity, number> = { mild: 1, moderate: 3, severe: 5 }
+   127→
+   128→const SYMPTOM_BAR_COLORS = [
+   129→  '#f472b6', '#fb7185', '#e879f9', '#f9a8d4', '#fda4af',
+   130→  '#fecdd3', '#fbcfe8', '#e9d5ff', '#ddd6fe', '#f5d0fe',
+   131→]
+   132→
+   133→const AI_INSIGHTS = [
+   134→  {
+   135→    id: 1,
+   136→    title: 'Headache & Period Correlation',
+   137→    description: 'Your headaches tend to occur 2 days before your period starts. This is likely related to dropping estrogen levels.',
+   138→    confidence: 87,
+   139→    severity: 'moderate' as const,
+   140→    icon: '🧠',
+   141→  },
+   142→  {
+   143→    id: 2,
+   144→    title: 'Fatigue Pattern Detected',
+   145→    description: 'Your energy levels consistently dip during the luteal phase (days 21-28). Consider increasing iron-rich foods during this time.',
+   146→    confidence: 79,
+   147→    severity: 'mild' as const,
+   148→    icon: '⚡',
+   149→  },
+   150→  {
+   151→    id: 3,
+   152→    title: 'Bloating & Diet Link',
+   153→    description: 'Your bloating symptoms are 40% more frequent on days when you report high salt intake. Reducing sodium may help.',
+   154→    confidence: 72,
+   155→    severity: 'moderate' as const,
+   156→    icon: '🫧',
+   157→  },
+   158→  {
+   159→    id: 4,
+   160→    title: 'Mood & Sleep Connection',
+   161→    description: 'When you sleep less than 6 hours, your mood scores drop by an average of 1.8 points. Prioritizing sleep could significantly improve wellbeing.',
+   162→    confidence: 91,
+   163→    severity: 'high' as const,
+   164→    icon: '🌙',
+   165→  },
+   166→]
+   167→
+   168→// ─── Helpers ──────────────────────────────────────────────────────────────────
+   169→
+   170→function authHeaders(): HeadersInit {
+   171→  if (typeof window === 'undefined') return {}
+   172→  const token = localStorage.getItem('aaranya-token')
+   173→  return token ? { Authorization: `Bearer ${token}` } : {}
+   174→}
+   175→
+   176→function buildMoodHistoryData(moodEntries: MoodEntry[]) {
+   177→  // Build last 30 days bucket
+   178→  const today = new Date()
+   179→  today.setHours(0, 0, 0, 0)
+   180→  const buckets: Array<{ date: string; dateStr: string; mood: number; energy: number }> = []
+   181→  for (let i = 29; i >= 0; i--) {
+   182→    const d = new Date(today)
+   183→    d.setDate(today.getDate() - i)
+   184→    buckets.push({
+   185→      date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+   186→      dateStr: d.toISOString().split('T')[0],
+   187→      mood: 0,
+   188→      energy: 0,
+   189→    })
+   190→  }
+   191→  for (const m of moodEntries) {
+   192→    const b = buckets.find((x) => x.dateStr === m.date)
+   193→    if (!b) continue
+   194→    const opt = MOOD_OPTIONS.find((o) => o.id === m.mood.toLowerCase())
+   195→    b.mood = opt ? opt.score : 3
+   196→    b.energy = m.energy
+   197→  }
+   198→  return buckets.map(({ date, mood, energy }) => ({
+   199→    date,
+   200→    mood: mood || 0,
+   201→    energy: energy || 0,
+   202→  }))
+   203→}
+   204→
+   205→function buildSymptomFrequencyData(symptomEntries: SymptomEntry[]) {
+   206→  // Count occurrences of each symptom category in the last 30 days
+   207→  const today = new Date()
+   208→  today.setHours(0, 0, 0, 0)
+   209→  const cutoff = new Date(today)
+   210→  cutoff.setDate(today.getDate() - 30)
+   211→  const cutoffStr = cutoff.toISOString().split('T')[0]
+   212→
+   213→  const counts: Record<string, number> = {}
+   214→  for (const s of symptomEntries) {
+   215→    if (s.date < cutoffStr) continue
+   216→    const label = SYMPTOM_OPTIONS.find((o) => o.id === s.category)?.label
+   217→      || s.category.charAt(0).toUpperCase() + s.category.slice(1)
+   218→    counts[label] = (counts[label] || 0) + 1
+   219→  }
+   220→  // Always include all known symptoms (zero if not logged) for consistent chart
+   221→  return SYMPTOM_OPTIONS.map((o, idx) => ({
+   222→    symptom: o.label,
+   223→    frequency: counts[o.label] || 0,
+   224→    fill: SYMPTOM_BAR_COLORS[idx % SYMPTOM_BAR_COLORS.length],
+   225→  })).filter((s) => s.frequency > 0).concat(
+   226→    // include zero-frequency entries sorted to the end
+   227→    SYMPTOM_OPTIONS
+   228→      .map((o, idx) => ({ symptom: o.label, frequency: 0, fill: SYMPTOM_BAR_COLORS[idx % SYMPTOM_BAR_COLORS.length] }))
+   229→      .filter((o) => !counts[o.symptom]),
+   230→  ).slice(0, 10)
+   231→}
+   232→
+   233→// ─── Custom Tooltip (defined outside render) ─────────────────────────────────
+   234→
+   235→function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+   236→  if (active && payload && payload.length) {
+   237→    return (
+   238→      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 text-xs">
+   239→        <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</p>
+   240→        {payload.map((entry, index) => (
+   241→          <p key={index} style={{ color: entry.color }} className="flex items-center gap-1">
+   242→            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: entry.color }} />
+   243→            {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value}
+   244→          </p>
+   245→        ))}
+   246→      </div>
+   247→    )
+   248→  }
+   249→  return null
+   250→}
+   251→
+   252→// ─── Component ────────────────────────────────────────────────────────────────
+   253→
+   254→export default function SymptomsModule() {
+   255→  const authUser = useAppStore((s) => s.authUser)
+   256→
+   257→  // ── State ──
+   258→  const [selectedMood, setSelectedMood] = useState<MoodType | null>(null)
+   259→  const [energyLevel, setEnergyLevel] = useState([3])
+   260→  const [stressLevel, setStressLevel] = useState([2])
+   261→  const [symptoms, setSymptoms] = useState<Record<string, SymptomState>>(() => {
+   262→    const initial: Record<string, SymptomState> = {}
+   263→    SYMPTOM_OPTIONS.forEach((s) => {
+   264→      initial[s.id] = { checked: false, severity: 'mild' }
+   265→    })
+   266→    return initial
+   267→  })
+   268→  const [sleepHours, setSleepHours] = useState(7)
+   269→  const [waterIntake, setWaterIntake] = useState(4)
+   270→  const [notes, setNotes] = useState('')
+   271→  const [saved, setSaved] = useState(false)
+   272→  const [saving, setSaving] = useState(false)
+   273→
+   274→  const [loading, setLoading] = useState(true)
+   275→  const [symptomEntries, setSymptomEntries] = useState<SymptomEntry[]>([])
+   276→  const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([])
+   277→
+   278→  // ── Fetch real data ─────────────────────────────────────────────────────────
+   279→  const fetchData = React.useCallback(async () => {
+   280→    const userId = authUser?.id
+   281→    if (!userId || userId === 'guest') {
+   282→      setLoading(false)
+   283→      setSymptomEntries([])
+   284→      setMoodEntries([])
+   285→      return
+   286→    }
+   287→    setLoading(true)
+   288→    try {
+   289→      const [symRes, moodRes] = await Promise.all([
+   290→        fetch(`/api/symptoms?userId=${encodeURIComponent(userId)}`, { headers: authHeaders() }),
+   291→        fetch(`/api/mood?userId=${encodeURIComponent(userId)}`, { headers: authHeaders() }),
+   292→      ])
+   293→      const sym = symRes.ok ? await symRes.json() : []
+   294→      const mood = moodRes.ok ? await moodRes.json() : []
+   295→      setSymptomEntries((sym || []) as SymptomEntry[])
+   296→      setMoodEntries((mood || []) as MoodEntry[])
+   297→    } catch (e) {
+   298→      console.error('[symptoms-tracker] fetch failed', e)
+   299→      toast.error('Could not load your symptom history')
+   300→    } finally {
+   301→      setLoading(false)
+   302→    }
+   303→  }, [authUser?.id])
+   304→
+   305→  useEffect(() => {
+   306→    void fetchData()
+   307→  }, [fetchData])
+   308→
+   309→  const moodHistoryData = useMemo(() => buildMoodHistoryData(moodEntries), [moodEntries])
+   310→  const SYMPTOM_FREQUENCY_DATA = useMemo(() => buildSymptomFrequencyData(symptomEntries), [symptomEntries])
+   311→
+   312→  const avgMood = useMemo(() => {
+   313→    const valid = moodHistoryData.filter((d) => d.mood > 0)
+   314→    if (valid.length === 0) return null
+   315→    return (valid.reduce((s, d) => s + d.mood, 0) / valid.length).toFixed(1)
+   316→  }, [moodHistoryData])
+   317→
+   318→  const avgEnergy = useMemo(() => {
+   319→    const valid = moodHistoryData.filter((d) => d.energy > 0)
+   320→    if (valid.length === 0) return null
+   321→    return (valid.reduce((s, d) => s + d.energy, 0) / valid.length).toFixed(1)
+   322→  }, [moodHistoryData])
+   323→
+   324→  const bestDay = useMemo(() => {
+   325→    const valid = moodHistoryData.filter((d) => d.mood > 0)
+   326→    if (valid.length === 0) return null
+   327→    const best = valid.reduce((a, b) => (a.mood > b.mood ? a : b))
+   328→    return best.date
+   329→  }, [moodHistoryData])
+   330→
+   331→  // ── Handlers ──
+   332→  const toggleSymptom = (id: string) => {
+   333→    setSymptoms((prev) => ({
+   334→      ...prev,
+   335→      [id]: { ...prev[id], checked: !prev[id].checked, severity: prev[id].checked ? 'mild' : prev[id].severity },
+   336→    }))
+   337→  }
+   338→
+   339→  const setSymptomSeverity = (id: string, severity: Severity) => {
+   340→    setSymptoms((prev) => ({
+   341→      ...prev,
+   342→      [id]: { ...prev[id], severity },
+   343→    }))
+   344→  }
+   345→
+   346→  const handleSave = async () => {
+   347→    const userId = authUser?.id
+   348→    if (!userId || userId === 'guest') {
+   349→      toast.error('Please sign in to save your log')
+   350→      return
+   351→    }
+   352→    setSaving(true)
+   353→    const today = new Date().toISOString().split('T')[0]
+   354→
+   355→    // Build a list of POST requests — mood (if selected), sleep, water, each checked symptom
+   356→    const requests: Array<Promise<Response>> = []
+   357→
+   358→    if (selectedMood) {
+   359→      requests.push(
+   360→        fetch('/api/mood', {
+   361→          method: 'POST',
+   362→          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+   363→          body: JSON.stringify({
+   364→            userId,
+   365→            mood: selectedMood,
+   366→            energy: energyLevel[0],
+   367→            stress: stressLevel[0],
+   368→            date: today,
+   369→            notes: notes || undefined,
+   370→          }),
+   371→        }),
+   372→      )
+   373→    }
+   374→
+   375→    requests.push(
+   376→      fetch('/api/sleep', {
+   377→        method: 'POST',
+   378→        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+   379→        body: JSON.stringify({
+   380→          userId,
+   381→          hoursSlept: sleepHours,
+   382→          quality: Math.round((energyLevel[0] + (6 - stressLevel[0])) / 2),
+   383→          date: today,
+   384→        }),
+   385→      }),
+   386→    )
+   387→
+   388→    requests.push(
+   389→      fetch('/api/water', {
+   390→        method: 'POST',
+   391→        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+   392→        body: JSON.stringify({
+   393→          userId,
+   394→          glasses: waterIntake,
+   395→          date: today,
+   396→        }),
+   397→      }),
+   398→    )
+   399→
+   400→    const checkedSymptoms = Object.entries(symptoms).filter(([, v]) => v.checked)
+   401→    for (const [category, state] of checkedSymptoms) {
+   402→      requests.push(
+   403→        fetch('/api/symptoms', {
+   404→          method: 'POST',
+   405→          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+   406→          body: JSON.stringify({
+   407→            userId,
+   408→            category,
+   409→            severity: SEVERITY_TO_INT[state.severity],
+   410→            date: today,
+   411→          }),
+   412→        }),
+   413→      )
+   414→    }
+   415→
+   416→    try {
+   417→      const results = await Promise.all(requests)
+   418→      const failed = results.filter((r) => !r.ok)
+   419→      if (failed.length > 0) {
+   420→        toast.error(`${failed.length} entr${failed.length === 1 ? 'y' : 'ies'} failed to save`)
+   421→      } else {
+   422→        toast.success(`Logged ${selectedMood ? 'mood, ' : ''}sleep, water${checkedSymptoms.length > 0 ? `, ${checkedSymptoms.length} symptom${checkedSymptoms.length === 1 ? '' : 's'}` : ''}!`)
+   423→        setSaved(true)
+   424→        setTimeout(() => setSaved(false), 2500)
+   425→        // Reset form
+   426→        setSelectedMood(null)
+   427→        setSymptoms(() => {
+   428→          const initial: Record<string, SymptomState> = {}
+   429→          SYMPTOM_OPTIONS.forEach((s) => {
+   430→            initial[s.id] = { checked: false, severity: 'mild' }
+   431→          })
+   432→          return initial
+   433→        })
+   434→        setNotes('')
+   435→        // Refetch
+   436→        await fetchData()
+   437→      }
+   438→    } catch (e) {
+   439→      console.error('[symptoms-tracker] save failed', e)
+   440→      toast.error('Failed to save your log')
+   441→    } finally {
+   442→      setSaving(false)
+   443→    }
+   444→  }
+   445→
+   446→  const getStressColor = () => {
+   447→    const level = stressLevel[0] - 1
+   448→    return STRESS_COLORS[level] || STRESS_COLORS[0]
+   449→  }
+   450→
+   451→  const checkedSymptomsCount = Object.values(symptoms).filter((s) => s.checked).length
+   452→
+   453→  // ── Loading skeleton ────────────────────────────────────────────────────────
+   454→  if (loading) {
+   455→    return (
+   456→      <div className="space-y-6">
+   457→        <div className="flex items-center gap-3">
+   458→          <Skeleton className="h-10 w-10 rounded-xl" />
+   459→          <div className="space-y-1">
+   460→            <Skeleton className="h-5 w-40" />
+   461→            <Skeleton className="h-3 w-56" />
+   462→          </div>
+   463→        </div>
+   464→        <Skeleton className="h-12 w-full rounded-xl" />
+   465→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   466→          {[...Array(4)].map((_, i) => (
+   467→            <Skeleton key={i} className="h-48 rounded-2xl" />
+   468→          ))}
+   469→        </div>
+   470→        <Skeleton className="h-64 rounded-2xl" />
+   471→      </div>
+   472→    )
+   473→  }
+   474→
+   475→  return (
+   476→    <div className="space-y-6">
+   477→      {/* Header */}
+   478→      <motion.div
+   479→        initial={{ opacity: 0, y: -10 }}
+   480→        animate={{ opacity: 1, y: 0 }}
+   481→        transition={{ duration: 0.4 }}
+   482→        className="flex items-center gap-3"
+   483→      >
+   484→        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-100 dark:bg-pink-900/30">
+   485→          <HeartPulse className="h-5 w-5 text-pink-500" />
+   486→        </div>
+   487→        <div>
+   488→          <h2 className="text-2xl font-bold tracking-tight">Symptoms & Mood</h2>
+   489→          <p className="text-sm text-muted-foreground">Track how you feel and discover patterns</p>
+   490→        </div>
+   491→      </motion.div>
+   492→
+   493→      {/* Empty-state banner when no history yet */}
+   494→      {moodEntries.length === 0 && symptomEntries.length === 0 && (
+   495→        <motion.div
+   496→          initial={{ opacity: 0, y: 10 }}
+   497→          animate={{ opacity: 1, y: 0 }}
+   498→          className="flex items-start gap-2 p-4 rounded-xl bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40"
+   499→        >
+   500→          <Sparkles className="h-4 w-4 text-pink-500 shrink-0 mt-0.5" />
+   501→          <p className="text-xs text-pink-700 dark:text-pink-300">
+   502→            No data yet — log your first entry below to see insights, patterns, and mood trends here.
+   503→          </p>
+   504→        </motion.div>
+   505→      )}
+   506→
+   507→      {/* Tabs */}
+   508→      <Tabs defaultValue="today" className="space-y-4">
+   509→        <TabsList className="bg-pink-50 dark:bg-pink-950/30 h-auto flex-wrap">
+   510→          <TabsTrigger value="today" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+   511→            📝 Today&apos;s Log
+   512→          </TabsTrigger>
+   513→          <TabsTrigger value="mood-history" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+   514→            📊 Mood History
+   515→          </TabsTrigger>
+   516→          <TabsTrigger value="patterns" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+   517→            🔍 Patterns
+   518→          </TabsTrigger>
+   519→          <TabsTrigger value="insights" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+   520→            🧠 AI Insights
+   521→          </TabsTrigger>
+   522→        </TabsList>
+   523→
+   524→        {/* ════════════════════════════════════════════════════════════════════
+   525→            TAB 1: Today's Log
+   526→        ════════════════════════════════════════════════════════════════════ */}
+   527→        <TabsContent value="today">
+   528→          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   529→
+   530→            {/* ── Mood Selector ── */}
+   531→            <motion.div
+   532→              initial={{ opacity: 0, y: 10 }}
+   533→              animate={{ opacity: 1, y: 0 }}
+   534→              transition={{ delay: 0.05 }}
+   535→            >
+   536→              <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   537→                <CardHeader>
+   538→                  <CardTitle className="text-base flex items-center gap-2">
+   539→                    <Smile className="h-4 w-4 text-pink-500" /> How are you feeling?
+   540→                  </CardTitle>
+   541→                  <CardDescription>Select your current mood</CardDescription>
+   542→                </CardHeader>
+   543→                <CardContent>
+   544→                  <div className="grid grid-cols-4 gap-2">
+   545→                    {MOOD_OPTIONS.map((mood) => (
+   546→                      <motion.button
+   547→                        key={mood.id}
+   548→                        whileHover={{ scale: 1.05 }}
+   549→                        whileTap={{ scale: 0.95 }}
+   550→                        onClick={() => setSelectedMood(mood.id)}
+   551→                        className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all duration-200 ${
+   552→                          selectedMood === mood.id
+   553→                            ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/40 shadow-md'
+   554→                            : 'border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-pink-300'
+   555→                        }`}
+   556→                      >
+   557→                        <span className="text-2xl">{mood.emoji}</span>
+   558→                        <span className="text-[10px] font-medium text-muted-foreground">{mood.label}</span>
+   559→                      </motion.button>
+   560→                    ))}
+   561→                  </div>
+   562→                  {selectedMood && (
+   563→                    <motion.p
+   564→                      initial={{ opacity: 0, y: 5 }}
+   565→                      animate={{ opacity: 1, y: 0 }}
+   566→                      className="text-sm text-pink-600 dark:text-pink-400 mt-3 text-center font-medium"
+   567→                    >
+   568→                      You&apos;re feeling {MOOD_OPTIONS.find((m) => m.id === selectedMood)?.label.toLowerCase()} today
+   569→                    </motion.p>
+   570→                  )}
+   571→                </CardContent>
+   572→              </Card>
+   573→            </motion.div>
+   574→
+   575→            {/* ── Energy & Stress Sliders ── */}
+   576→            <motion.div
+   577→              initial={{ opacity: 0, y: 10 }}
+   578→              animate={{ opacity: 1, y: 0 }}
+   579→              transition={{ delay: 0.1 }}
+   580→            >
+   581→              <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   582→                <CardHeader>
+   583→                  <CardTitle className="text-base flex items-center gap-2">
+   584→                    <Zap className="h-4 w-4 text-amber-500" /> Energy & Stress
+   585→                  </CardTitle>
+   586→                  <CardDescription>Rate your current levels</CardDescription>
+   587→                </CardHeader>
+   588→                <CardContent className="space-y-6">
+   589→                  {/* Energy */}
+   590→                  <div className="space-y-3">
+   591→                    <div className="flex items-center justify-between">
+   592→                      <Label className="text-sm font-medium">Energy Level</Label>
+   593→                      <span className="text-2xl">{ENERGY_EMOJIS[energyLevel[0] - 1]}</span>
+   594→                    </div>
+   595→                    <Slider
+   596→                      value={energyLevel}
+   597→                      onValueChange={setEnergyLevel}
+   598→                      min={1}
+   599→                      max={5}
+   600→                      step={1}
+   601→                      className="w-full"
+   602→                    />
+   603→                    <div className="flex justify-between text-[10px] text-muted-foreground px-1">
+   604→                      <span>Very Low</span>
+   605→                      <span>Low</span>
+   606→                      <span>Medium</span>
+   607→                      <span>High</span>
+   608→                      <span>Very High</span>
+   609→                    </div>
+   610→                  </div>
+   611→
+   612→                  <Separator />
+   613→
+   614→                  {/* Stress */}
+   615→                  <div className="space-y-3">
+   616→                    <div className="flex items-center justify-between">
+   617→                      <Label className="text-sm font-medium">Stress Level</Label>
+   618→                      <Badge
+   619→                        className={`${getStressColor()} text-white border-0`}
+   620→                      >
+   621→                        {STRESS_LABELS[stressLevel[0] - 1]}
+   622→                      </Badge>
+   623→                    </div>
+   624→                    <Slider
+   625→                      value={stressLevel}
+   626→                      onValueChange={setStressLevel}
+   627→                      min={1}
+   628→                      max={5}
+   629→                      step={1}
+   630→                      className="w-full"
+   631→                    />
+   632→                    <div className="flex gap-1 mt-1">
+   633→                      {[1, 2, 3, 4, 5].map((level) => (
+   634→                        <div
+   635→                          key={level}
+   636→                          className={`h-2 flex-1 rounded-full transition-colors duration-300 ${
+   637→                            level <= stressLevel[0] ? STRESS_COLORS[level - 1] : 'bg-gray-200 dark:bg-gray-700'
+   638→                          }`}
+   639→                        />
+   640→                      ))}
+   641→                    </div>
+   642→                  </div>
+   643→                </CardContent>
+   644→              </Card>
+   645→            </motion.div>
+   646→
+   647→            {/* ── Symptom Checkboxes ── */}
+   648→            <motion.div
+   649→              initial={{ opacity: 0, y: 10 }}
+   650→              animate={{ opacity: 1, y: 0 }}
+   651→              transition={{ delay: 0.15 }}
+   652→              className="lg:col-span-2"
+   653→            >
+   654→              <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   655→                <CardHeader>
+   656→                  <CardTitle className="text-base flex items-center gap-2">
+   657→                    <Activity className="h-4 w-4 text-rose-500" /> Symptoms
+   658→                    {checkedSymptomsCount > 0 && (
+   659→                      <Badge variant="secondary" className="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
+   660→                        {checkedSymptomsCount} selected
+   661→                      </Badge>
+   662→                    )}
+   663→                  </CardTitle>
+   664→                  <CardDescription>Check any symptoms you&apos;re experiencing and set severity</CardDescription>
+   665→                </CardHeader>
+   666→                <CardContent>
+   667→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   668→                    {SYMPTOM_OPTIONS.map((symptom) => (
+   669→                      <motion.div
+   670→                        key={symptom.id}
+   671→                        initial={{ opacity: 0, x: -5 }}
+   672→                        animate={{ opacity: 1, x: 0 }}
+   673→                        className={`rounded-xl border-2 p-3 transition-all duration-200 ${
+   674→                          symptoms[symptom.id].checked
+   675→                            ? 'border-pink-300 bg-pink-50/50 dark:bg-pink-950/20'
+   676→                            : 'border-transparent bg-gray-50/50 dark:bg-gray-800/30'
+   677→                        }`}
+   678→                      >
+   679→                        <div className="flex items-center gap-2">
+   680→                          <Checkbox
+   681→                            id={symptom.id}
+   682→                            checked={symptoms[symptom.id].checked}
+   683→                            onCheckedChange={() => toggleSymptom(symptom.id)}
+   684→                            className="data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+   685→                          />
+   686→                          <Label htmlFor={symptom.id} className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+   687→                            <span>{symptom.icon}</span>
+   688→                            {symptom.label}
+   689→                          </Label>
+   690→                        </div>
+   691→                        <AnimatePresence>
+   692→                          {symptoms[symptom.id].checked && (
+   693→                            <motion.div
+   694→                              initial={{ height: 0, opacity: 0 }}
+   695→                              animate={{ height: 'auto', opacity: 1 }}
+   696→                              exit={{ height: 0, opacity: 0 }}
+   697→                              transition={{ duration: 0.2 }}
+   698→                              className="overflow-hidden"
+   699→                            >
+   700→                              <div className="flex gap-1.5 mt-2 ml-6">
+   701→                                {(['mild', 'moderate', 'severe'] as Severity[]).map((sev) => (
+   702→                                  <button
+   703→                                    key={sev}
+   704→                                    onClick={() => setSymptomSeverity(symptom.id, sev)}
+   705→                                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all duration-200 ${
+   706→                                      symptoms[symptom.id].severity === sev
+   707→                                        ? sev === 'mild'
+   708→                                          ? 'bg-green-500 text-white'
+   709→                                          : sev === 'moderate'
+   710→                                            ? 'bg-amber-500 text-white'
+   711→                                            : 'bg-red-500 text-white'
+   712→                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+   713→                                    }`}
+   714→                                  >
+   715→                                    {sev.charAt(0).toUpperCase() + sev.slice(1)}
+   716→                                  </button>
+   717→                                ))}
+   718→                              </div>
+   719→                            </motion.div>
+   720→                          )}
+   721→                        </AnimatePresence>
+   722→                      </motion.div>
+   723→                    ))}
+   724→                  </div>
+   725→                </CardContent>
+   726→              </Card>
+   727→            </motion.div>
+   728→
+   729→            {/* ── Sleep & Water ── */}
+   730→            <motion.div
+   731→              initial={{ opacity: 0, y: 10 }}
+   732→              animate={{ opacity: 1, y: 0 }}
+   733→              transition={{ delay: 0.2 }}
+   734→            >
+   735→              <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   736→                <CardHeader>
+   737→                  <CardTitle className="text-base flex items-center gap-2">
+   738→                    <Moon className="h-4 w-4 text-indigo-400" /> Sleep
+   739→                  </CardTitle>
+   740→                  <CardDescription>How many hours did you sleep?</CardDescription>
+   741→                </CardHeader>
+   742→                <CardContent className="space-y-4">
+   743→                  <div className="flex items-center gap-3">
+   744→                    <Button
+   745→                      variant="outline"
+   746→                      size="icon"
+   747→                      className="h-8 w-8 rounded-full"
+   748→                      onClick={() => setSleepHours(Math.max(0, sleepHours - 0.5))}
+   749→                    >
+   750→                      -
+   751→                    </Button>
+   752→                    <div className="flex-1 text-center">
+   753→                      <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{sleepHours}</span>
+   754→                      <span className="text-sm text-muted-foreground ml-1">hrs</span>
+   755→                    </div>
+   756→                    <Button
+   757→                      variant="outline"
+   758→                      size="icon"
+   759→                      className="h-8 w-8 rounded-full"
+   760→                      onClick={() => setSleepHours(Math.min(14, sleepHours + 0.5))}
+   761→                    >
+   762→                      +
+   763→                    </Button>
+   764→                  </div>
+   765→                  <Progress value={(sleepHours / 9) * 100} className="h-3 bg-indigo-100 dark:bg-indigo-950/30 [&>[data-slot=progress-indicator]]:bg-indigo-500" />
+   766→                  <p className="text-xs text-muted-foreground text-center">
+   767→                    {sleepHours < 6
+   768→                      ? '😴 Below recommended — try to get more rest'
+   769→                      : sleepHours < 8
+   770→                        ? '😊 Decent sleep — room for improvement'
+   771→                        : '🌟 Great sleep — well rested!'}
+   772→                  </p>
+   773→                </CardContent>
+   774→              </Card>
+   775→            </motion.div>
+   776→
+   777→            <motion.div
+   778→              initial={{ opacity: 0, y: 10 }}
+   779→              animate={{ opacity: 1, y: 0 }}
+   780→              transition={{ delay: 0.25 }}
+   781→            >
+   782→              <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   783→                <CardHeader>
+   784→                  <CardTitle className="text-base flex items-center gap-2">
+   785→                    <Droplets className="h-4 w-4 text-sky-500" /> Water Intake
+   786→                  </CardTitle>
+   787→                  <CardDescription>Target: 8 glasses per day</CardDescription>
+   788→                </CardHeader>
+   789→                <CardContent className="space-y-4">
+   790→                  <div className="grid grid-cols-4 gap-2">
+   791→                    {Array.from({ length: 8 }, (_, i) => (
+   792→                      <motion.button
+   793→                        key={i}
+   794→                        whileHover={{ scale: 1.1 }}
+   795→                        whileTap={{ scale: 0.9 }}
+   796→                        onClick={() => setWaterIntake(i + 1)}
+   797→                        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-200 ${
+   798→                          i < waterIntake
+   799→                            ? 'bg-sky-100 dark:bg-sky-900/30 border-2 border-sky-400'
+   800→                            : 'bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent hover:border-sky-200'
+   801→                        }`}
+   802→                      >
+   803→                        <span className="text-lg">{i < waterIntake ? '💧' : '🥛'}</span>
+   804→                        <span className="text-[9px] font-medium text-muted-foreground">{i + 1}</span>
+   805→                      </motion.button>
+   806→                    ))}
+   807→                  </div>
+   808→                  <div className="flex items-center justify-between">
+   809→                    <span className="text-sm font-medium">{waterIntake}/8 glasses</span>
+   810→                    <Badge
+   811→                      className={`${
+   812→                        waterIntake >= 8
+   813→                          ? 'bg-emerald-500 text-white'
+   814→                          : waterIntake >= 5
+   815→                            ? 'bg-sky-500 text-white'
+   816→                            : 'bg-amber-500 text-white'
+   817→                      } border-0`}
+   818→                    >
+   819→                      {waterIntake >= 8 ? '🎯 Goal met!' : `${Math.round((waterIntake / 8) * 100)}%`}
+   820→                    </Badge>
+   821→                  </div>
+   822→                </CardContent>
+   823→              </Card>
+   824→            </motion.div>
+   825→
+   826→            {/* ── Notes & Save ── */}
+   827→            <motion.div
+   828→              initial={{ opacity: 0, y: 10 }}
+   829→              animate={{ opacity: 1, y: 0 }}
+   830→              transition={{ delay: 0.3 }}
+   831→              className="lg:col-span-2"
+   832→            >
+   833→              <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   834→                <CardHeader>
+   835→                  <CardTitle className="text-base">📝 Notes</CardTitle>
+   836→                  <CardDescription>Any additional observations for today</CardDescription>
+   837→                </CardHeader>
+   838→                <CardContent className="space-y-4">
+   839→                  <Textarea
+   840→                    placeholder="How was your day? Any triggers or observations..."
+   841→                    value={notes}
+   842→                    onChange={(e) => setNotes(e.target.value)}
+   843→                    className="min-h-[80px] resize-none border-pink-200 dark:border-pink-900/50 focus-visible:ring-pink-400"
+   844→                  />
+   845→                  <div className="flex items-center justify-between">
+   846→                    <p className="text-xs text-muted-foreground">{notes.length} characters</p>
+   847→                    <motion.div whileTap={{ scale: 0.95 }}>
+   848→                      <Button
+   849→                        onClick={handleSave}
+   850→                        disabled={saving}
+   851→                        className={`gap-2 ${
+   852→                          saved
+   853→                            ? 'bg-emerald-500 hover:bg-emerald-600'
+   854→                            : 'bg-pink-500 hover:bg-pink-600'
+   855→                        } text-white`}
+   856→                      >
+   857→                        {saving ? (
+   858→                          <>
+   859→                            <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+   860→                          </>
+   861→                        ) : saved ? (
+   862→                          <>
+   863→                            <Check className="h-4 w-4" /> Saved!
+   864→                          </>
+   865→                        ) : (
+   866→                          <>
+   867→                            <Save className="h-4 w-4" /> Save Today&apos;s Log
+   868→                          </>
+   869→                        )}
+   870→                      </Button>
+   871→                    </motion.div>
+   872→                  </div>
+   873→                </CardContent>
+   874→              </Card>
+   875→            </motion.div>
+   876→          </div>
+   877→        </TabsContent>
+   878→
+   879→        {/* ════════════════════════════════════════════════════════════════════
+   880→            TAB 2: Mood History
+   881→        ════════════════════════════════════════════════════════════════════ */}
+   882→        <TabsContent value="mood-history">
+   883→          <motion.div
+   884→            initial={{ opacity: 0, y: 10 }}
+   885→            animate={{ opacity: 1, y: 0 }}
+   886→            transition={{ duration: 0.4 }}
+   887→          >
+   888→            <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   889→              <CardHeader>
+   890→                <CardTitle className="text-base flex items-center gap-2">
+   891→                  <TrendingUp className="h-4 w-4 text-pink-500" /> Mood & Energy Over 30 Days
+   892→                </CardTitle>
+   893→                <CardDescription>Track how your mood and energy levels change over time</CardDescription>
+   894→              </CardHeader>
+   895→              <CardContent>
+   896→                {moodEntries.length === 0 ? (
+   897→                  <div className="text-center py-12 text-sm text-muted-foreground">
+   898→                    <Smile className="h-10 w-10 mx-auto mb-3 opacity-40" />
+   899→                    No mood entries yet — log your first mood on the Today&apos;s Log tab to see trends here.
+   900→                  </div>
+   901→                ) : (
+   902→                  <>
+   903→                    <div className="h-[380px] w-full">
+   904→                      <ResponsiveContainer width="100%" height="100%">
+   905→                        <AreaChart data={moodHistoryData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+   906→                          <defs>
+   907→                            <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+   908→                              <stop offset="5%" stopColor="#ec4899" stopOpacity={0.4} />
+   909→                              <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
+   910→                            </linearGradient>
+   911→                            <linearGradient id="energyGradient" x1="0" y1="0" x2="0" y2="1">
+   912→                              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+   913→                              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+   914→                            </linearGradient>
+   915→                          </defs>
+   916→                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+   917→                          <XAxis
+   918→                            dataKey="date"
+   919→                            tick={{ fontSize: 10, fill: '#9ca3af' }}
+   920→                            tickLine={false}
+   921→                            axisLine={false}
+   922→                            interval={2}
+   923→                          />
+   924→                          <YAxis
+   925→                            domain={[0, 6]}
+   926→                            tick={{ fontSize: 10, fill: '#9ca3af' }}
+   927→                            tickLine={false}
+   928→                            axisLine={false}
+   929→                          />
+   930→                          <RechartsTooltip content={<ChartTooltip />} />
+   931→                          <Legend
+   932→                            wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+   933→                          />
+   934→                          <Area
+   935→                            type="monotone"
+   936→                            dataKey="mood"
+   937→                            name="Mood Score"
+   938→                            stroke="#ec4899"
+   939→                            strokeWidth={2.5}
+   940→                            fill="url(#moodGradient)"
+   941→                            dot={false}
+   942→                            activeDot={{ r: 5, fill: '#ec4899', stroke: '#fff', strokeWidth: 2 }}
+   943→                          />
+   944→                          <Area
+   945→                            type="monotone"
+   946→                            dataKey="energy"
+   947→                            name="Energy Level"
+   948→                            stroke="#f59e0b"
+   949→                            strokeWidth={2.5}
+   950→                            fill="url(#energyGradient)"
+   951→                            dot={false}
+   952→                            activeDot={{ r: 5, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
+   953→                          />
+   954→                        </AreaChart>
+   955→                      </ResponsiveContainer>
+   956→                    </div>
+   957→
+   958→                    {/* Summary Stats */}
+   959→                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+   960→                      {[
+   961→                        { label: 'Avg Mood', value: avgMood || '—', icon: '😊', color: 'bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300' },
+   962→                        { label: 'Avg Energy', value: avgEnergy || '—', icon: '⚡', color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' },
+   963→                        { label: 'Best Day', value: bestDay || '—', icon: '🌟', color: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300' },
+   964→                        { label: 'Entries', value: String(moodEntries.length), icon: '📈', color: 'bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300' },
+   965→                      ].map((stat) => (
+   966→                        <div key={stat.label} className={`rounded-xl p-3 ${stat.color}`}>
+   967→                          <div className="text-lg mb-1">{stat.icon}</div>
+   968→                          <div className="text-xs font-medium opacity-70">{stat.label}</div>
+   969→                          <div className="text-sm font-bold">{stat.value}</div>
+   970→                        </div>
+   971→                      ))}
+   972→                    </div>
+   973→                  </>
+   974→                )}
+   975→              </CardContent>
+   976→            </Card>
+   977→          </motion.div>
+   978→        </TabsContent>
+   979→
+   980→        {/* ════════════════════════════════════════════════════════════════════
+   981→            TAB 3: Symptom Patterns
+   982→        ════════════════════════════════════════════════════════════════════ */}
+   983→        <TabsContent value="patterns">
+   984→          <motion.div
+   985→            initial={{ opacity: 0, y: 10 }}
+   986→            animate={{ opacity: 1, y: 0 }}
+   987→            transition={{ duration: 0.4 }}
+   988→          >
+   989→            <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md">
+   990→              <CardHeader>
+   991→                <CardTitle className="text-base flex items-center gap-2">
+   992→                  <Activity className="h-4 w-4 text-rose-500" /> Symptom Frequency (30 Days)
+   993→                </CardTitle>
+   994→                <CardDescription>How often each symptom has occurred in the past month</CardDescription>
+   995→              </CardHeader>
+   996→              <CardContent>
+   997→                {symptomEntries.length === 0 ? (
+   998→                  <div className="text-center py-12 text-sm text-muted-foreground">
+   999→                    <Activity className="h-10 w-10 mx-auto mb-3 opacity-40" />
+  1000→                    No symptoms logged yet. Check symptoms on the Today&apos;s Log tab to see your patterns here.
+  1001→                  </div>
+  1002→                ) : (
+  1003→                  <>
+  1004→                    <div className="h-[420px] w-full">
+  1005→                      <ResponsiveContainer width="100%" height="100%">
+  1006→                        <BarChart
+  1007→                          data={SYMPTOM_FREQUENCY_DATA}
+  1008→                          layout="vertical"
+  1009→                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+  1010→                        >
+  1011→                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} horizontal={false} />
+  1012→                          <XAxis
+  1013→                            type="number"
+  1014→                            tick={{ fontSize: 10, fill: '#9ca3af' }}
+  1015→                            tickLine={false}
+  1016→                            axisLine={false}
+  1017→                            allowDecimals={false}
+  1018→                          />
+  1019→                          <YAxis
+  1020→                            type="category"
+  1021→                            dataKey="symptom"
+  1022→                            tick={{ fontSize: 11, fill: '#6b7280' }}
+  1023→                            tickLine={false}
+  1024→                            axisLine={false}
+  1025→                            width={120}
+  1026→                          />
+  1027→                          <RechartsTooltip content={<ChartTooltip />} />
+  1028→                          <Bar
+  1029→                            dataKey="frequency"
+  1030→                            name="Days"
+  1031→                            radius={[0, 6, 6, 0]}
+  1032→                            barSize={20}
+  1033→                          >
+  1034→                            {SYMPTOM_FREQUENCY_DATA.map((entry, index) => (
+  1035→                              <RechartsCell key={index} fill={entry.fill} />
+  1036→                            ))}
+  1037→                          </Bar>
+  1038→                        </BarChart>
+  1039→                      </ResponsiveContainer>
+  1040→                    </div>
+  1041→
+  1042→                    {/* Top symptoms callout */}
+  1043→                    <div className="mt-6 p-4 rounded-xl bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40">
+  1044→                      <div className="flex items-center gap-2 mb-2">
+  1045→                        <Sparkles className="h-4 w-4 text-pink-500" />
+  1046→                        <span className="text-sm font-semibold text-pink-700 dark:text-pink-300">Top 3 Most Frequent</span>
+  1047→                      </div>
+  1048→                      <div className="flex flex-wrap gap-2">
+  1049→                        {[...SYMPTOM_FREQUENCY_DATA]
+  1050→                          .sort((a, b) => b.frequency - a.frequency)
+  1051→                          .slice(0, 3)
+  1052→                          .map((s) => (
+  1053→                            <Badge key={s.symptom} className="bg-pink-500 text-white border-0">
+  1054→                              {s.symptom} — {s.frequency} day{s.frequency === 1 ? '' : 's'}
+  1055→                            </Badge>
+  1056→                          ))}
+  1057→                      </div>
+  1058→                    </div>
+  1059→                  </>
+  1060→                )}
+  1061→              </CardContent>
+  1062→            </Card>
+  1063→          </motion.div>
+  1064→        </TabsContent>
+  1065→
+  1066→        {/* ════════════════════════════════════════════════════════════════════
+  1067→            TAB 4: AI Insights
+  1068→        ════════════════════════════════════════════════════════════════════ */}
+  1069→        <TabsContent value="insights">
+  1070→          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1071→            {AI_INSIGHTS.map((insight, index) => (
+  1072→              <motion.div
+  1073→                key={insight.id}
+  1074→                initial={{ opacity: 0, y: 15 }}
+  1075→                animate={{ opacity: 1, y: 0 }}
+  1076→                transition={{ delay: index * 0.1, duration: 0.4 }}
+  1077→              >
+  1078→                <Card className="border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-md hover:shadow-lg transition-shadow duration-300 h-full">
+  1079→                  <CardHeader>
+  1080→                    <div className="flex items-start justify-between">
+  1081→                      <div className="flex items-center gap-2">
+  1082→                        <span className="text-2xl">{insight.icon}</span>
+  1083→                        <div>
+  1084→                          <CardTitle className="text-sm">{insight.title}</CardTitle>
+  1085→                          <Badge
+  1086→                            className={`mt-1 border-0 text-[10px] ${
+  1087→                              insight.severity === 'high'
+  1088→                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+  1089→                                : insight.severity === 'moderate'
+  1090→                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+  1091→                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+  1092→                            }`}
+  1093→                          >
+  1094→                            {insight.severity.charAt(0).toUpperCase() + insight.severity.slice(1)} impact
+  1095→                          </Badge>
+  1096→                        </div>
+  1097→                      </div>
+  1098→                      <div className="flex items-center gap-1 bg-pink-50 dark:bg-pink-950/30 rounded-lg px-2 py-1">
+  1099→                        <Brain className="h-3 w-3 text-pink-500" />
+  1100→                        <span className="text-xs font-bold text-pink-600 dark:text-pink-400">{insight.confidence}%</span>
+  1101→                      </div>
+  1102→                    </div>
+  1103→                  </CardHeader>
+  1104→                  <CardContent>
+  1105→                    <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
+  1106→                    <div className="mt-3">
+  1107→                      <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+  1108→                        <span>Confidence</span>
+  1109→                        <span>{insight.confidence}%</span>
+  1110→                      </div>
+  1111→                      <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+  1112→                        <motion.div
+  1113→                          initial={{ width: 0 }}
+  1114→                          animate={{ width: `${insight.confidence}%` }}
+  1115→                          transition={{ delay: 0.3 + index * 0.15, duration: 0.8, ease: 'easeOut' }}
+  1116→                          className={`h-full rounded-full ${
+  1117→                            insight.confidence >= 85
+  1118→                              ? 'bg-emerald-500'
+  1119→                              : insight.confidence >= 70
+  1120→                                ? 'bg-amber-500'
+  1121→                                : 'bg-pink-500'
+  1122→                          }`}
+  1123→                        />
+  1124→                      </div>
+  1125→                    </div>
+  1126→                  </CardContent>
+  1127→                </Card>
+  1128→              </motion.div>
+  1129→            ))}
+  1130→          </div>
+  1131→
+  1132→          {/* AI Disclaimer */}
+  1133→          <motion.div
+  1134→            initial={{ opacity: 0 }}
+  1135→            animate={{ opacity: 1 }}
+  1136→            transition={{ delay: 0.5 }}
+  1137→            className="flex items-start gap-2 p-4 mt-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40"
+  1138→          >
+  1139→            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+  1140→            <p className="text-xs text-amber-700 dark:text-amber-300">
+  1141→              AI insights are generated based on your tracked data patterns. They are not medical advice. Always consult your healthcare provider for medical concerns.
+  1142→            </p>
+  1143→          </motion.div>
+  1144→        </TabsContent>
+  1145→      </Tabs>
+  1146→    </div>
+  1147→  )
+  1148→}
+  1149→

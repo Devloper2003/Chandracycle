@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useMemo, useEffect, useRef } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import {
+     6→  LineChart,
+     7→  Line,
+     8→  BarChart,
+     9→  Bar,
+    10→  XAxis,
+    11→  YAxis,
+    12→  CartesianGrid,
+    13→  Tooltip as RechartsTooltip,
+    14→  ResponsiveContainer,
+    15→  ReferenceLine,
+    16→} from 'recharts'
+    17→import {
+    18→  Card,
+    19→  CardContent,
+    20→  CardHeader,
+    21→  CardTitle,
+    22→  CardDescription,
+    23→  CardFooter,
+    24→} from '@/components/ui/card'
+    25→import { Button } from '@/components/ui/button'
+    26→import { Badge } from '@/components/ui/badge'
+    27→import { Textarea } from '@/components/ui/textarea'
+    28→import { Slider } from '@/components/ui/slider'
+    29→import { Progress } from '@/components/ui/progress'
+    30→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    31→import { Separator } from '@/components/ui/separator'
+    32→import { ScrollArea } from '@/components/ui/scroll-area'
+    33→import {
+    34→  Dialog,
+    35→  DialogContent,
+    36→  DialogHeader,
+    37→  DialogTitle,
+    38→  DialogDescription,
+    39→  DialogFooter,
+    40→} from '@/components/ui/dialog'
+    41→import { cn } from '@/lib/utils'
+    42→import { useAppStore } from '@/lib/store'
+    43→import {
+    44→  Brain,
+    45→  Heart,
+    46→  HeartPulse,
+    47→  Sparkles,
+    48→  Play,
+    49→  Pause,
+    50→  X,
+    51→  Wind,
+    52→  Moon,
+    53→  Sun,
+    54→  BookOpen,
+    55→  CalendarDays,
+    56→  TrendingUp,
+    57→  Quote,
+    58→  Phone,
+    59→  MessageSquare,
+    60→  Siren,
+    61→  Stethoscope,
+    62→  ChevronLeft,
+    63→  ChevronRight,
+    64→  Flame,
+    65→  Clock,
+    66→  Timer,
+    67→  Smile,
+    68→  CheckCircle2,
+    69→  Activity,
+    70→  Award,
+    71→  Flower2,
+    72→  Music2,
+    73→  SkipForward,
+    74→  SkipBack,
+    75→  RotateCcw,
+    76→  Star,
+    77→  PencilLine,
+    78→  SmilePlus,
+    79→  ShieldAlert,
+    80→  LifeBuoy,
+    81→} from 'lucide-react'
+    82→
+    83→// ─── Types ────────────────────────────────────────────────────────────────────
+    84→
+    85→type MoodLevel = 'great' | 'good' | 'okay' | 'low' | 'struggling'
+    86→
+    87→interface Mood {
+    88→  level: MoodLevel
+    89→  label: string
+    90→  emoji: string
+    91→  score: number // 5 = great, 1 = struggling
+    92→  color: string // hex
+    93→  bgGradient: string
+    94→  ringClass: string
+    95→  message: string
+    96→  suggestion: string
+    97→}
+    98→
+    99→interface Meditation {
+   100→  id: string
+   101→  title: string
+   102→  duration: number // minutes
+   103→  description: string
+   104→  category: 'Cycle Sync' | 'Stress & Anxiety' | 'Sleep' | 'Self-Love'
+   105→  gradient: string
+   106→  icon: 'lotus' | 'wind' | 'moon' | 'heart'
+   107→}
+   108→
+   109→interface BreathingTechnique {
+   110→  id: '4-7-8' | 'box' | 'calm'
+   111→  name: string
+   112→  description: string
+   113→  phases: { label: string; duration: number; scale: number }[]
+   114→}
+   115→
+   116→interface JournalEntry {
+   117→  id: string
+   118→  date: string // YYYY-MM-DD
+   119→  mood: MoodLevel
+   120→  moodScore: number
+   121→  stress: number
+   122→  note: string
+   123→}
+   124→
+   125→interface Affirmation {
+   126→  id: string
+   127→  text: string
+   128→  category: 'Self-love' | 'Body positivity' | 'Strength' | 'Peace' | 'Healing'
+   129→  author?: string
+   130→}
+   131→
+   132→interface QuizQuestion {
+   133→  id: number
+   134→  text: string
+   135→  options: { label: string; value: number }[]
+   136→}
+   137→
+   138→// ─── Data ─────────────────────────────────────────────────────────────────────
+   139→
+   140→const MOODS: Mood[] = [
+   141→  {
+   142→    level: 'great',
+   143→    label: 'Great',
+   144→    emoji: '😊',
+   145→    score: 5,
+   146→    color: '#10b981',
+   147→    bgGradient: 'from-emerald-400 to-teal-500',
+   148→    ringClass: 'ring-emerald-400',
+   149→    message: "You're glowing today! Let's keep that beautiful energy flowing.",
+   150→    suggestion: 'Try a Confidence Boost meditation to amplify your shine.',
+   151→  },
+   152→  {
+   153→    level: 'good',
+   154→    label: 'Good',
+   155→    emoji: '🙂',
+   156→    score: 4,
+   157→    color: '#8b5cf6',
+   158→    bgGradient: 'from-violet-400 to-purple-500',
+   159→    ringClass: 'ring-violet-400',
+   160→    message: 'A steady, positive day. You deserve to savor this calm.',
+   161→    suggestion: 'A short Box Breathing session will keep you grounded.',
+   162→  },
+   163→  {
+   164→    level: 'okay',
+   165→    label: 'Okay',
+   166→    emoji: '😐',
+   167→    score: 3,
+   168→    color: '#f59e0b',
+   169→    bgGradient: 'from-amber-400 to-orange-500',
+   170→    ringClass: 'ring-amber-400',
+   171→    message: "Neutral is perfectly okay. You don't have to feel amazing every day.",
+   172→    suggestion: 'A 10-minute Body Scan can help you reconnect with yourself.',
+   173→  },
+   174→  {
+   175→    level: 'low',
+   176→    label: 'Low',
+   177→    emoji: '😔',
+   178→    score: 2,
+   179→    color: '#6366f1',
+   180→    bgGradient: 'from-indigo-400 to-blue-500',
+   181→    ringClass: 'ring-indigo-400',
+   182→    message: 'It is okay to feel low. Be gentle with yourself today.',
+   183→    suggestion: 'Self Compassion meditation can soothe what feels heavy.',
+   184→  },
+   185→  {
+   186→    level: 'struggling',
+   187→    label: 'Struggling',
+   188→    emoji: '😢',
+   189→    score: 1,
+   190→    color: '#ec4899',
+   191→    bgGradient: 'from-pink-400 to-rose-500',
+   192→    ringClass: 'ring-pink-400',
+   193→    message: "You're not alone in this. Reaching out is a brave act of self-love.",
+   194→    suggestion: 'Consider a calming Deep Breathing exercise or talking to someone.',
+   195→  },
+   196→]
+   197→
+   198→const MEDITATIONS: Meditation[] = [
+   199→  // Cycle Sync
+   200→  {
+   201→    id: 'med-1',
+   202→    title: 'Menstrual Phase Rest',
+   203→    duration: 15,
+   204→    description: "Honor your body's need for rest",
+   205→    category: 'Cycle Sync',
+   206→    gradient: 'from-rose-500 via-pink-500 to-fuchsia-500',
+   207→    icon: 'lotus',
+   208→  },
+   209→  {
+   210→    id: 'med-2',
+   211→    title: 'Follicular Energy',
+   212→    duration: 10,
+   213→    description: 'Channel your rising energy',
+   214→    category: 'Cycle Sync',
+   215→    gradient: 'from-amber-500 via-orange-500 to-rose-500',
+   216→    icon: 'sun',
+   217→  },
+   218→  {
+   219→    id: 'med-3',
+   220→    title: 'Ovulation Confidence',
+   221→    duration: 12,
+   222→    description: 'Embrace your power',
+   223→    category: 'Cycle Sync',
+   224→    gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+   225→    icon: 'sparkles',
+   226→  },
+   227→  {
+   228→    id: 'med-4',
+   229→    title: 'Luteal Calm',
+   230→    duration: 18,
+   231→    description: 'Find peace in transition',
+   232→    category: 'Cycle Sync',
+   233→    gradient: 'from-indigo-500 via-violet-500 to-purple-500',
+   234→    icon: 'moon',
+   235→  },
+   236→  // Stress & Anxiety
+   237→  {
+   238→    id: 'med-5',
+   239→    title: 'Deep Breathing',
+   240→    duration: 5,
+   241→    description: 'Reset your nervous system in minutes',
+   242→    category: 'Stress & Anxiety',
+   243→    gradient: 'from-sky-500 via-cyan-500 to-teal-500',
+   244→    icon: 'wind',
+   245→  },
+   246→  {
+   247→    id: 'med-6',
+   248→    title: 'Anxiety Release',
+   249→    duration: 10,
+   250→    description: 'Let go of tension and worry',
+   251→    category: 'Stress & Anxiety',
+   252→    gradient: 'from-teal-500 via-emerald-500 to-green-500',
+   253→    icon: 'wind',
+   254→  },
+   255→  {
+   256→    id: 'med-7',
+   257→    title: 'Body Scan',
+   258→    duration: 20,
+   259→    description: 'Reconnect with every part of you',
+   260→    category: 'Stress & Anxiety',
+   261→    gradient: 'from-blue-500 via-indigo-500 to-violet-500',
+   262→    icon: 'heart',
+   263→  },
+   264→  {
+   265→    id: 'med-8',
+   266→    title: 'Progressive Relaxation',
+   267→    duration: 15,
+   268→    description: 'Release tension head to toe',
+   269→    category: 'Stress & Anxiety',
+   270→    gradient: 'from-cyan-500 via-sky-500 to-blue-500',
+   271→    icon: 'wind',
+   272→  },
+   273→  // Sleep
+   274→  {
+   275→    id: 'med-9',
+   276→    title: 'Sleep Story',
+   277→    duration: 25,
+   278→    description: 'Drift into deep, restful sleep',
+   279→    category: 'Sleep',
+   280→    gradient: 'from-indigo-600 via-violet-700 to-purple-800',
+   281→    icon: 'moon',
+   282→  },
+   283→  {
+   284→    id: 'med-10',
+   285→    title: 'Wind Down',
+   286→    duration: 10,
+   287→    description: 'Transition from day to night',
+   288→    category: 'Sleep',
+   289→    gradient: 'from-slate-600 via-indigo-600 to-violet-700',
+   290→    icon: 'moon',
+   291→  },
+   292→  {
+   293→    id: 'med-11',
+   294→    title: 'Midnight Calm',
+   295→    duration: 15,
+   296→    description: 'Find your way back to sleep',
+   297→    category: 'Sleep',
+   298→    gradient: 'from-purple-700 via-violet-800 to-indigo-900',
+   299→    icon: 'moon',
+   300→  },
+   301→  // Self-Love
+   302→  {
+   303→    id: 'med-12',
+   304→    title: 'Body Acceptance',
+   305→    duration: 12,
+   306→    description: 'Make peace with your beautiful body',
+   307→    category: 'Self-Love',
+   308→    gradient: 'from-pink-500 via-rose-500 to-red-500',
+   309→    icon: 'heart',
+   310→  },
+   311→  {
+   312→    id: 'med-13',
+   313→    title: 'Self Compassion',
+   314→    duration: 10,
+   315→    description: 'Treat yourself like a dear friend',
+   316→    category: 'Self-Love',
+   317→    gradient: 'from-rose-400 via-pink-500 to-fuchsia-500',
+   318→    icon: 'heart',
+   319→  },
+   320→  {
+   321→    id: 'med-14',
+   322→    title: 'Confidence Boost',
+   323→    duration: 8,
+   324→    description: 'Step into your power',
+   325→    category: 'Self-Love',
+   326→    gradient: 'from-fuchsia-500 via-purple-500 to-violet-500',
+   327→    icon: 'sparkles',
+   328→  },
+   329→]
+   330→
+   331→const BREATHING_TECHNIQUES: BreathingTechnique[] = [
+   332→  {
+   333→    id: '4-7-8',
+   334→    name: '4-7-8 Breathing',
+   335→    description: 'Dr. Andrew Weil\'s relaxing breath — calms anxiety and helps you fall asleep.',
+   336→    phases: [
+   337→      { label: 'Breathe In', duration: 4, scale: 1.6 },
+   338→      { label: 'Hold', duration: 7, scale: 1.6 },
+   339→      { label: 'Breathe Out', duration: 8, scale: 1 },
+   340→    ],
+   341→  },
+   342→  {
+   343→    id: 'box',
+   344→    name: 'Box Breathing',
+   345→    description: 'Used by Navy SEALs to stay focused and calm under pressure.',
+   346→    phases: [
+   347→      { label: 'Breathe In', duration: 4, scale: 1.6 },
+   348→      { label: 'Hold', duration: 4, scale: 1.6 },
+   349→      { label: 'Breathe Out', duration: 4, scale: 1 },
+   350→      { label: 'Hold', duration: 4, scale: 1 },
+   351→    ],
+   352→  },
+   353→  {
+   354→    id: 'calm',
+   355→    name: 'Calm Breathing',
+   356→    description: 'Simple 4-6 pattern — perfect for everyday relaxation.',
+   357→    phases: [
+   358→      { label: 'Breathe In', duration: 4, scale: 1.6 },
+   359→      { label: 'Breathe Out', duration: 6, scale: 1 },
+   360→    ],
+   361→  },
+   362→]
+   363→
+   364→const AFFIRMATIONS: Affirmation[] = [
+   365→  { id: 'a1', text: 'I am enough exactly as I am.', category: 'Self-love' },
+   366→  { id: 'a2', text: 'My body is worthy of love and care.', category: 'Body positivity' },
+   367→  { id: 'a3', text: 'I am stronger than I realize.', category: 'Strength' },
+   368→  { id: 'a4', text: 'I choose peace over perfection.', category: 'Peace' },
+   369→  { id: 'a5', text: 'Every day, I am healing a little more.', category: 'Healing' },
+   370→  { id: 'a6', text: 'I honor my feelings without judgment.', category: 'Self-love' },
+   371→  { id: 'a7', text: 'My worth is not defined by a number on a scale.', category: 'Body positivity' },
+   372→  { id: 'a8', text: 'I trust my body and its wisdom.', category: 'Body positivity' },
+   373→  { id: 'a9', text: 'I have the courage to face hard days.', category: 'Strength' },
+   374→  { id: 'a10', text: 'Stillness is a gift I give myself.', category: 'Peace' },
+   375→  { id: 'a11', text: 'I release what I cannot control.', category: 'Peace' },
+   376→  { id: 'a12', text: 'I am allowed to take up space.', category: 'Self-love' },
+   377→  { id: 'a13', text: 'My scars are proof of my resilience.', category: 'Healing' },
+   378→  { id: 'a14', text: 'I am gentle with myself when I stumble.', category: 'Self-love' },
+   379→  { id: 'a15', text: 'I am a work of art in progress.', category: 'Body positivity' },
+   380→  { id: 'a16', text: 'I breathe in calm, I breathe out tension.', category: 'Peace' },
+   381→  { id: 'a17', text: 'I am the calm in my own storm.', category: 'Strength' },
+   382→  { id: 'a18', text: 'My mind deserves rest, too.', category: 'Healing' },
+   383→  { id: 'a19', text: 'I forgive myself for what I didn\'t know.', category: 'Healing' },
+   384→  { id: 'a20', text: 'I am proud of the woman I am becoming.', category: 'Self-love' },
+   385→  { id: 'a21', text: 'My softness is my strength.', category: 'Strength' },
+   386→  { id: 'a22', text: 'I trust the timing of my life.', category: 'Peace' },
+   387→  { id: 'a23', text: 'My body carries me through every chapter.', category: 'Body positivity' },
+   388→  { id: 'a24', text: 'I am worthy of love that feels like home.', category: 'Self-love' },
+   389→]
+   390→
+   391→const PHQ9_QUESTIONS: QuizQuestion[] = [
+   392→  { id: 1, text: 'Little interest or pleasure in doing things', options: [
+   393→    { label: 'Not at all', value: 0 },
+   394→    { label: 'Several days', value: 1 },
+   395→    { label: 'More than half the days', value: 2 },
+   396→    { label: 'Nearly every day', value: 3 },
+   397→  ]},
+   398→  { id: 2, text: 'Feeling down, depressed, or hopeless', options: [
+   399→    { label: 'Not at all', value: 0 },
+   400→    { label: 'Several days', value: 1 },
+   401→    { label: 'More than half the days', value: 2 },
+   402→    { label: 'Nearly every day', value: 3 },
+   403→  ]},
+   404→  { id: 3, text: 'Trouble falling/staying asleep, or sleeping too much', options: [
+   405→    { label: 'Not at all', value: 0 },
+   406→    { label: 'Several days', value: 1 },
+   407→    { label: 'More than half the days', value: 2 },
+   408→    { label: 'Nearly every day', value: 3 },
+   409→  ]},
+   410→  { id: 4, text: 'Feeling tired or having little energy', options: [
+   411→    { label: 'Not at all', value: 0 },
+   412→    { label: 'Several days', value: 1 },
+   413→    { label: 'More than half the days', value: 2 },
+   414→    { label: 'Nearly every day', value: 3 },
+   415→  ]},
+   416→  { id: 5, text: 'Poor appetite or overeating', options: [
+   417→    { label: 'Not at all', value: 0 },
+   418→    { label: 'Several days', value: 1 },
+   419→    { label: 'More than half the days', value: 2 },
+   420→    { label: 'Nearly every day', value: 3 },
+   421→  ]},
+   422→  { id: 6, text: 'Feeling bad about yourself — that you are a failure or have let down yourself or your family', options: [
+   423→    { label: 'Not at all', value: 0 },
+   424→    { label: 'Several days', value: 1 },
+   425→    { label: 'More than half the days', value: 2 },
+   426→    { label: 'Nearly every day', value: 3 },
+   427→  ]},
+   428→  { id: 7, text: 'Trouble concentrating on things, such as reading or watching television', options: [
+   429→    { label: 'Not at all', value: 0 },
+   430→    { label: 'Several days', value: 1 },
+   431→    { label: 'More than half the days', value: 2 },
+   432→    { label: 'Nearly every day', value: 3 },
+   433→  ]},
+   434→  { id: 8, text: 'Moving or speaking so slowly that other people could have noticed — or the opposite, being so fidgety that you have been moving around a lot more than usual', options: [
+   435→    { label: 'Not at all', value: 0 },
+   436→    { label: 'Several days', value: 1 },
+   437→    { label: 'More than half the days', value: 2 },
+   438→    { label: 'Nearly every day', value: 3 },
+   439→  ]},
+   440→  { id: 9, text: 'Thoughts that you would be better off dead, or of hurting yourself in some way', options: [
+   441→    { label: 'Not at all', value: 0 },
+   442→    { label: 'Several days', value: 1 },
+   443→    { label: 'More than half the days', value: 2 },
+   444→    { label: 'Nearly every day', value: 3 },
+   445→  ]},
+   446→]
+   447→
+   448→const GAD7_QUESTIONS: QuizQuestion[] = [
+   449→  { id: 1, text: 'Feeling nervous, anxious, or on edge', options: [
+   450→    { label: 'Not at all', value: 0 },
+   451→    { label: 'Several days', value: 1 },
+   452→    { label: 'More than half the days', value: 2 },
+   453→    { label: 'Nearly every day', value: 3 },
+   454→  ]},
+   455→  { id: 2, text: 'Not being able to stop or control worrying', options: [
+   456→    { label: 'Not at all', value: 0 },
+   457→    { label: 'Several days', value: 1 },
+   458→    { label: 'More than half the days', value: 2 },
+   459→    { label: 'Nearly every day', value: 3 },
+   460→  ]},
+   461→  { id: 3, text: 'Worrying too much about different things', options: [
+   462→    { label: 'Not at all', value: 0 },
+   463→    { label: 'Several days', value: 1 },
+   464→    { label: 'More than half the days', value: 2 },
+   465→    { label: 'Nearly every day', value: 3 },
+   466→  ]},
+   467→  { id: 4, text: 'Trouble relaxing', options: [
+   468→    { label: 'Not at all', value: 0 },
+   469→    { label: 'Several days', value: 1 },
+   470→    { label: 'More than half the days', value: 2 },
+   471→    { label: 'Nearly every day', value: 3 },
+   472→  ]},
+   473→  { id: 5, text: 'Being so restless that it is hard to sit still', options: [
+   474→    { label: 'Not at all', value: 0 },
+   475→    { label: 'Several days', value: 1 },
+   476→    { label: 'More than half the days', value: 2 },
+   477→    { label: 'Nearly every day', value: 3 },
+   478→  ]},
+   479→  { id: 6, text: 'Becoming easily annoyed or irritable', options: [
+   480→    { label: 'Not at all', value: 0 },
+   481→    { label: 'Several days', value: 1 },
+   482→    { label: 'More than half the days', value: 2 },
+   483→    { label: 'Nearly every day', value: 3 },
+   484→  ]},
+   485→  { id: 7, text: 'Feeling afraid, as if something awful might happen', options: [
+   486→    { label: 'Not at all', value: 0 },
+   487→    { label: 'Several days', value: 1 },
+   488→    { label: 'More than half the days', value: 2 },
+   489→    { label: 'Nearly every day', value: 3 },
+   490→  ]},
+   491→]
+   492→
+   493→// Mood history is empty by default — populated from /api/mood in the component.
+   494→const MOOD_HISTORY: JournalEntry[] = []
+   495→
+   496→const WEEKLY_MED_MINUTES = [
+   497→  { day: 'Mon', minutes: 0 },
+   498→  { day: 'Tue', minutes: 0 },
+   499→  { day: 'Wed', minutes: 0 },
+   500→  { day: 'Thu', minutes: 0 },
+   501→  { day: 'Fri', minutes: 0 },
+   502→  { day: 'Sat', minutes: 0 },
+   503→  { day: 'Sun', minutes: 0 },
+   504→]
+   505→
+   506→// ─── Helper functions ─────────────────────────────────────────────────────────
+   507→
+   508→const getMoodByLevel = (level: MoodLevel) => MOODS.find(m => m.level === level)!
+   509→const getMoodByScore = (score: number) => MOODS.find(m => m.score === score)!
+   510→
+   511→const formatDate = (dateStr: string) => {
+   512→  const d = new Date(dateStr)
+   513→  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+   514→}
+   515→
+   516→const formatLongDate = (dateStr: string) => {
+   517→  const d = new Date(dateStr)
+   518→  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+   519→}
+   520→
+   521→const getDayOfYear = (date: Date) => {
+   522→  const start = new Date(date.getFullYear(), 0, 0)
+   523→  const diff = date.getTime() - start.getTime()
+   524→  return Math.floor(diff / (1000 * 60 * 60 * 24))
+   525→}
+   526→
+   527→const getDailyAffirmation = () => {
+   528→  const dayOfYear = getDayOfYear(new Date())
+   529→  return AFFIRMATIONS[dayOfYear % AFFIRMATIONS.length]
+   530→}
+   531→
+   532→// ─── Animation variants ───────────────────────────────────────────────────────
+   533→
+   534→const staggerContainer = {
+   535→  hidden: { opacity: 0 },
+   536→  show: {
+   537→    opacity: 1,
+   538→    transition: { staggerChildren: 0.08, ease: 'easeOut' as const },
+   539→  },
+   540→}
+   541→
+   542→const staggerItem = {
+   543→  hidden: { opacity: 0, y: 16 },
+   544→  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as const } },
+   545→}
+   546→
+   547→// ═══════════════════════════════════════════════════════════════════════════════
+   548→// SECTION COMPONENTS
+   549→// ═══════════════════════════════════════════════════════════════════════════════
+   550→
+   551→// ─── Meditation Icon Picker ───────────────────────────────────────────────────
+   552→function MeditationIcon({ icon, className }: { icon: Meditation['icon']; className?: string }) {
+   553→  switch (icon) {
+   554→    case 'lotus': return <Flower2 className={className} />
+   555→    case 'wind': return <Wind className={className} />
+   556→    case 'moon': return <Moon className={className} />
+   557→    case 'sun': return <Sun className={className} />
+   558→    case 'heart': return <Heart className={className} />
+   559→    case 'sparkles': return <Sparkles className={className} />
+   560→    default: return <Flower2 className={className} />
+   561→  }
+   562→}
+   563→
+   564→// ─── 1. Header Section ────────────────────────────────────────────────────────
+   565→function HeaderSection() {
+   566→  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+   567→  return (
+   568→    <motion.div
+   569→      initial={{ opacity: 0, y: 20 }}
+   570→      animate={{ opacity: 1, y: 0 }}
+   571→      transition={{ duration: 0.5 }}
+   572→      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 md:p-10 text-white shadow-xl shadow-violet-500/20"
+   573→    >
+   574→      {/* Decorative blurred orbs */}
+   575→      <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+   576→      <div className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+   577→      <div className="absolute top-8 right-8 hidden md:block">
+   578→        <motion.div
+   579→          animate={{ y: [0, -8, 0], rotate: [0, 5, 0] }}
+   580→          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+   581→        >
+   582→          <Flower2 className="h-20 w-20 text-white/20" />
+   583→        </motion.div>
+   584→      </div>
+   585→
+   586→      <div className="relative">
+   587→        <div className="flex items-center gap-2 mb-3">
+   588→          <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/20">
+   589→            <Sparkles className="h-3 w-3 mr-1" />
+   590→            Mental Wellness
+   591→          </Badge>
+   592→          <span className="text-xs text-white/70">{today}</span>
+   593→        </div>
+   594→        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-violet-50 to-fuchsia-100 bg-clip-text text-transparent">
+   595→          Mind &amp; Soul
+   596→        </h1>
+   597→        <p className="mt-3 text-base md:text-lg text-violet-100/90 max-w-2xl">
+   598→          Nurture your mental wellness through every phase
+   599→        </p>
+   600→        <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
+   601→          <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm">
+   602→            <Brain className="h-4 w-4" />
+   603→            <span>5-min check-in</span>
+   604→          </div>
+   605→          <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm">
+   606→            <Heart className="h-4 w-4" />
+   607→            <span>14 guided meditations</span>
+   608→          </div>
+   609→          <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-sm">
+   610→            <Wind className="h-4 w-4" />
+   611→            <span>3 breathing techniques</span>
+   612→          </div>
+   613→        </div>
+   614→      </div>
+   615→    </motion.div>
+   616→  )
+   617→}
+   618→
+   619→// ─── 2. Daily Mood Check-in ───────────────────────────────────────────────────
+   620→function MoodCheckIn() {
+   621→  const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null)
+   622→  const [stress, setStress] = useState<number[]>([3])
+   623→  const [notes, setNotes] = useState('')
+   624→  const [saved, setSaved] = useState(false)
+   625→
+   626→  const selected = selectedMood ? getMoodByLevel(selectedMood) : null
+   627→
+   628→  const handleSave = () => {
+   629→    if (!selectedMood) return
+   630→    setSaved(true)
+   631→    setTimeout(() => setSaved(false), 3000)
+   632→  }
+   633→
+   634→  return (
+   635→    <motion.div
+   636→      initial={{ opacity: 0, y: 20 }}
+   637→      animate={{ opacity: 1, y: 0 }}
+   638→      transition={{ duration: 0.5, delay: 0.05 }}
+   639→    >
+   640→      <Card className="glass border-violet-200/50 overflow-hidden">
+   641→        <CardHeader className="pb-3">
+   642→          <div className="flex items-center justify-between gap-2">
+   643→            <div>
+   644→              <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
+   645→                <SmilePlus className="h-5 w-5" />
+   646→                Daily Mood Check-in
+   647→              </CardTitle>
+   648→              <CardDescription className="mt-1">
+   649→                How are you feeling right now? Take a moment to listen.
+   650→              </CardDescription>
+   651→            </div>
+   652→            <Badge variant="outline" className="border-violet-300 text-violet-600">
+   653→              <Clock className="h-3 w-3 mr-1" />
+   654→              2 min
+   655→            </Badge>
+   656→          </div>
+   657→        </CardHeader>
+   658→        <CardContent className="space-y-6">
+   659→          {/* Mood selector */}
+   660→          <div>
+   661→            <p className="text-sm font-medium text-muted-foreground mb-3">Choose your mood</p>
+   662→            <div className="grid grid-cols-5 gap-2 md:gap-3">
+   663→              {MOODS.map((mood) => {
+   664→                const isSelected = selectedMood === mood.level
+   665→                return (
+   666→                  <motion.button
+   667→                    key={mood.level}
+   668→                    type="button"
+   669→                    whileHover={{ scale: 1.05, y: -4 }}
+   670→                    whileTap={{ scale: 0.95 }}
+   671→                    onClick={() => setSelectedMood(mood.level)}
+   672→                    className={cn(
+   673→                      'relative flex flex-col items-center gap-2 rounded-2xl border-2 p-3 md:p-4 transition-all',
+   674→                      isSelected
+   675→                        ? cn('border-transparent bg-gradient-to-br text-white shadow-lg', mood.bgGradient, 'ring-4', mood.ringClass, 'ring-offset-2')
+   676→                        : 'border-border bg-card hover:border-violet-300'
+   677→                    )}
+   678→                  >
+   679→                    <span className="text-3xl md:text-4xl select-none">{mood.emoji}</span>
+   680→                    <span className={cn(
+   681→                      'text-xs md:text-sm font-medium',
+   682→                      isSelected ? 'text-white' : 'text-muted-foreground'
+   683→                    )}>
+   684→                      {mood.label}
+   685→                    </span>
+   686→                    {isSelected && (
+   687→                      <motion.div
+   688→                        layoutId="mood-check"
+   689→                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white flex items-center justify-center shadow"
+   690→                      >
+   691→                        <CheckCircle2 className="h-4 w-4 text-violet-600" />
+   692→                      </motion.div>
+   693→                    )}
+   694→                  </motion.button>
+   695→                )
+   696→              })}
+   697→            </div>
+   698→          </div>
+   699→
+   700→          {/* Affirming message */}
+   701→          <AnimatePresence mode="wait">
+   702→            {selected && (
+   703→              <motion.div
+   704→                key={selected.level}
+   705→                initial={{ opacity: 0, y: 8, height: 0 }}
+   706→                animate={{ opacity: 1, y: 0, height: 'auto' }}
+   707→                exit={{ opacity: 0, y: -8, height: 0 }}
+   708→                transition={{ duration: 0.3 }}
+   709→                className={cn(
+   710→                  'rounded-2xl p-4 bg-gradient-to-br text-white shadow-md',
+   711→                  selected.bgGradient
+   712→                )}
+   713→              >
+   714→                <div className="flex items-start gap-3">
+   715→                  <div className="text-3xl shrink-0">{selected.emoji}</div>
+   716→                  <div>
+   717→                    <p className="font-medium leading-snug">{selected.message}</p>
+   718→                    <p className="text-sm text-white/85 mt-1 flex items-center gap-1.5">
+   719→                      <Sparkles className="h-3.5 w-3.5 shrink-0" />
+   720→                      {selected.suggestion}
+   721→                    </p>
+   722→                  </div>
+   723→                </div>
+   724→              </motion.div>
+   725→            )}
+   726→          </AnimatePresence>
+   727→
+   728→          {/* Stress slider */}
+   729→          <div>
+   730→            <div className="flex items-center justify-between mb-3">
+   731→              <p className="text-sm font-medium text-muted-foreground">Stress level today</p>
+   732→              <Badge variant="secondary" className="font-mono">
+   733→                {stress[0]} / 10
+   734→              </Badge>
+   735→            </div>
+   736→            <Slider
+   737→              value={stress}
+   738→              onValueChange={setStress}
+   739→              min={1}
+   740→              max={10}
+   741→              step={1}
+   742→              className="py-2"
+   743→            />
+   744→            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+   745→              <span>Calm</span>
+   746→              <span>Moderate</span>
+   747→              <span>Overwhelmed</span>
+   748→            </div>
+   749→          </div>
+   750→
+   751→          {/* Optional notes */}
+   752→          <div>
+   753→            <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+   754→              <PencilLine className="h-4 w-4" />
+   755→              Notes (optional)
+   756→            </p>
+   757→            <Textarea
+   758→              placeholder="What's on your mind? Anything you'd like to remember about today..."
+   759→              value={notes}
+   760→              onChange={(e) => setNotes(e.target.value)}
+   761→              className="min-h-[80px] resize-none border-violet-200 focus-visible:ring-violet-400"
+   762→            />
+   763→          </div>
+   764→
+   765→          {/* Save */}
+   766→          <div className="flex items-center justify-between gap-3">
+   767→            <p className="text-xs text-muted-foreground">
+   768→              {selectedMood ? 'Ready to save your check-in' : 'Pick a mood to begin'}
+   769→            </p>
+   770→            <Button
+   771→              onClick={handleSave}
+   772→              disabled={!selectedMood}
+   773→              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+   774→            >
+   775→              <AnimatePresence mode="wait">
+   776→                {saved ? (
+   777→                  <motion.span key="saved" className="flex items-center gap-1.5"
+   778→                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+   779→                  >
+   780→                    <CheckCircle2 className="h-4 w-4" /> Saved
+   781→                  </motion.span>
+   782→                ) : (
+   783→                  <motion.span key="save" className="flex items-center gap-1.5"
+   784→                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+   785→                  >
+   786→                    <Heart className="h-4 w-4" /> Save Check-in
+   787→                  </motion.span>
+   788→                )}
+   789→              </AnimatePresence>
+   790→            </Button>
+   791→          </div>
+   792→        </CardContent>
+   793→      </Card>
+   794→    </motion.div>
+   795→  )
+   796→}
+   797→
+   798→// ─── 3. Meditation Library + Now Playing ──────────────────────────────────────
+   799→function NowPlayingView({
+   800→  meditation,
+   801→  onClose,
+   802→}: {
+   803→  meditation: Meditation
+   804→  onClose: () => void
+   805→}) {
+   806→  const totalSeconds = meditation.duration * 60
+   807→  const [elapsed, setElapsed] = useState(0)
+   808→  const [isPlaying, setIsPlaying] = useState(true)
+   809→  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+   810→
+   811→  useEffect(() => {
+   812→    if (isPlaying) {
+   813→      intervalRef.current = setInterval(() => {
+   814→        setElapsed((prev) => {
+   815→          if (prev >= totalSeconds) {
+   816→            setIsPlaying(false)
+   817→            return totalSeconds
+   818→          }
+   819→          return prev + 1
+   820→        })
+   821→      }, 1000)
+   822→    }
+   823→    return () => {
+   824→      if (intervalRef.current) clearInterval(intervalRef.current)
+   825→    }
+   826→  }, [isPlaying, totalSeconds])
+   827→
+   828→  // Note: state resets naturally when parent remounts this component (AnimatePresence
+   829→  // unmounts NowPlayingView when closed, so a fresh meditation starts fresh state).
+   830→
+   831→  const progress = (elapsed / totalSeconds) * 100
+   832→  const remaining = totalSeconds - elapsed
+   833→  const mins = Math.floor(remaining / 60)
+   834→  const secs = remaining % 60
+   835→
+   836→  // Circular progress
+   837→  const radius = 130
+   838→  const circumference = 2 * Math.PI * radius
+   839→  const strokeDashoffset = circumference - (progress / 100) * circumference
+   840→
+   841→  const isComplete = elapsed >= totalSeconds
+   842→
+   843→  return (
+   844→    <motion.div
+   845→      initial={{ opacity: 0 }}
+   846→      animate={{ opacity: 1 }}
+   847→      exit={{ opacity: 0 }}
+   848→      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-md p-4"
+   849→      onClick={onClose}
+   850→    >
+   851→      <motion.div
+   852→        initial={{ scale: 0.92, y: 20 }}
+   853→        animate={{ scale: 1, y: 0 }}
+   854→        exit={{ scale: 0.92, y: 20 }}
+   855→        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+   856→        className={cn(
+   857→          'relative w-full max-w-lg rounded-3xl bg-gradient-to-br p-8 md:p-10 text-white shadow-2xl overflow-hidden',
+   858→          meditation.gradient
+   859→        )}
+   860→        onClick={(e) => e.stopPropagation()}
+   861→      >
+   862→        {/* Decorative orbs */}
+   863→        <div className="absolute -top-20 -right-20 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+   864→        <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-black/10 blur-3xl" />
+   865→
+   866→        {/* Close button */}
+   867→        <Button
+   868→          variant="ghost"
+   869→          size="icon"
+   870→          className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/10 z-10"
+   871→          onClick={onClose}
+   872→        >
+   873→          <X className="h-5 w-5" />
+   874→        </Button>
+   875→
+   876→        <div className="relative text-center">
+   877→          <Badge className="mb-4 bg-white/20 text-white border-white/30">
+   878→            <Music2 className="h-3 w-3 mr-1" />
+   879→            Now Playing
+   880→          </Badge>
+   881→
+   882→          {/* Circular timer */}
+   883→          <div className="relative mx-auto mb-6 h-[280px] w-[280px] flex items-center justify-center">
+   884→            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 280 280">
+   885→              <circle
+   886→                cx="140"
+   887→                cy="140"
+   888→                r={radius}
+   889→                fill="none"
+   890→                stroke="rgba(255,255,255,0.15)"
+   891→                strokeWidth="8"
+   892→              />
+   893→              <motion.circle
+   894→                cx="140"
+   895→                cy="140"
+   896→                r={radius}
+   897→                fill="none"
+   898→                stroke="white"
+   899→                strokeWidth="8"
+   900→                strokeLinecap="round"
+   901→                strokeDasharray={circumference}
+   902→                strokeDashoffset={strokeDashoffset}
+   903→                animate={{ strokeDashoffset }}
+   904→                transition={{ duration: 0.5, ease: 'linear' }}
+   905→              />
+   906→            </svg>
+   907→
+   908→            {/* Pulsing meditation icon in center */}
+   909→            <motion.div
+   910→              animate={isPlaying ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+   911→              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+   912→              className="absolute flex flex-col items-center justify-center"
+   913→            >
+   914→              <div className="h-20 w-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3">
+   915→                <MeditationIcon icon={meditation.icon} className="h-10 w-10 text-white" />
+   916→              </div>
+   917→              <div className="text-4xl font-mono font-semibold tabular-nums">
+   918→                {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+   919→              </div>
+   920→              <div className="text-xs text-white/80 mt-1">
+   921→                {isComplete ? 'Session complete' : isPlaying ? 'Breathe deeply' : 'Paused'}
+   922→              </div>
+   923→            </motion.div>
+   924→          </div>
+   925→
+   926→          <h3 className="text-2xl font-bold mb-1">{meditation.title}</h3>
+   927→          <p className="text-white/80 text-sm mb-6">{meditation.description}</p>
+   928→
+   929→          {/* Controls */}
+   930→          <div className="flex items-center justify-center gap-6">
+   931→            <Button
+   932→              variant="ghost"
+   933→              size="icon"
+   934→              className="text-white/80 hover:text-white hover:bg-white/10 rounded-full h-12 w-12"
+   935→              onClick={() => setElapsed(Math.max(0, elapsed - 15))}
+   936→              aria-label="Rewind 15 seconds"
+   937→            >
+   938→              <SkipBack className="h-5 w-5" />
+   939→            </Button>
+   940→            <Button
+   941→              size="icon"
+   942→              className="bg-white text-violet-700 hover:bg-white/90 rounded-full h-16 w-16 shadow-lg"
+   943→              onClick={() => setIsPlaying(!isPlaying)}
+   944→              aria-label={isPlaying ? 'Pause' : 'Play'}
+   945→              disabled={isComplete}
+   946→            >
+   947→              {isPlaying ? (
+   948→                <Pause className="h-7 w-7" />
+   949→              ) : (
+   950→                <Play className="h-7 w-7 ml-1" />
+   951→              )}
+   952→            </Button>
+   953→            <Button
+   954→              variant="ghost"
+   955→              size="icon"
+   956→              className="text-white/80 hover:text-white hover:bg-white/10 rounded-full h-12 w-12"
+   957→              onClick={() => setElapsed(Math.min(totalSeconds, elapsed + 15))}
+   958→              aria-label="Forward 15 seconds"
+   959→            >
+   960→              <SkipForward className="h-5 w-5" />
+   961→            </Button>
+   962→          </div>
+   963→
+   964→          {/* Progress bar */}
+   965→          <div className="mt-6">
+   966→            <div className="flex items-center justify-between text-xs text-white/80 mb-1">
+   967→              <span>{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}</span>
+   968→              <span>{meditation.duration}:00</span>
+   969→            </div>
+   970→            <div className="h-1.5 w-full rounded-full bg-white/20 overflow-hidden">
+   971→              <motion.div
+   972→                className="h-full bg-white rounded-full"
+   973→                animate={{ width: `${progress}%` }}
+   974→                transition={{ duration: 0.3 }}
+   975→              />
+   976→            </div>
+   977→          </div>
+   978→
+   979→          {isComplete && (
+   980→            <motion.div
+   981→              initial={{ opacity: 0, y: 8 }}
+   982→              animate={{ opacity: 1, y: 0 }}
+   983→              className="mt-4 rounded-xl bg-white/20 backdrop-blur-sm p-3 text-sm"
+   984→            >
+   985→              <p className="font-medium flex items-center justify-center gap-1.5">
+   986→                <CheckCircle2 className="h-4 w-4" />
+   987→                Beautiful. You took {meditation.duration} minutes for yourself.
+   988→              </p>
+   989→            </motion.div>
+   990→          )}
+   991→        </div>
+   992→      </motion.div>
+   993→    </motion.div>
+   994→  )
+   995→}
+   996→
+   997→function MeditationLibrary() {
+   998→  const [activeCategory, setActiveCategory] = useState<'All' | Meditation['category']>('All')
+   999→  const [nowPlaying, setNowPlaying] = useState<Meditation | null>(null)
+  1000→
+  1001→  const categories: Array<'All' | Meditation['category']> = ['All', 'Cycle Sync', 'Stress & Anxiety', 'Sleep', 'Self-Love']
+  1002→
+  1003→  const filtered = useMemo(() => {
+  1004→    if (activeCategory === 'All') return MEDITATIONS
+  1005→    return MEDITATIONS.filter(m => m.category === activeCategory)
+  1006→  }, [activeCategory])
+  1007→
+  1008→  return (
+  1009→    <motion.div
+  1010→      initial={{ opacity: 0, y: 20 }}
+  1011→      animate={{ opacity: 1, y: 0 }}
+  1012→      transition={{ duration: 0.5, delay: 0.1 }}
+  1013→    >
+  1014→      <Card className="glass border-violet-200/50">
+  1015→        <CardHeader className="pb-3">
+  1016→          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  1017→            <div>
+  1018→              <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
+  1019→                <Flower2 className="h-5 w-5" />
+  1020→                Meditation Library
+  1021→              </CardTitle>
+  1022→              <CardDescription className="mt-1">
+  1023→                {MEDITATIONS.length} guided journeys for every mood & phase
+  1024→              </CardDescription>
+  1025→            </div>
+  1026→            <div className="flex flex-wrap gap-1.5">
+  1027→              {categories.map(cat => (
+  1028→                <Button
+  1029→                  key={cat}
+  1030→                  variant={activeCategory === cat ? 'default' : 'outline'}
+  1031→                  size="sm"
+  1032→                  onClick={() => setActiveCategory(cat)}
+  1033→                  className={cn(
+  1034→                    'h-7 text-xs',
+  1035→                    activeCategory === cat && 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700'
+  1036→                  )}
+  1037→                >
+  1038→                  {cat}
+  1039→                </Button>
+  1040→              ))}
+  1041→            </div>
+  1042→          </div>
+  1043→        </CardHeader>
+  1044→        <CardContent>
+  1045→          <motion.div
+  1046→            variants={staggerContainer}
+  1047→            initial="hidden"
+  1048→            animate="show"
+  1049→            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+  1050→          >
+  1051→            {filtered.map((med) => (
+  1052→              <motion.button
+  1053→                key={med.id}
+  1054→                variants={staggerItem}
+  1055→                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+  1056→                onClick={() => setNowPlaying(med)}
+  1057→                className="group relative overflow-hidden rounded-2xl text-left shadow-md"
+  1058→              >
+  1059→                <div className={cn('relative h-44 bg-gradient-to-br p-5 flex flex-col justify-between', med.gradient)}>
+  1060→                  {/* Decorative orbs */}
+  1061→                  <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+  1062→                  <div className="absolute -bottom-8 -left-4 h-20 w-20 rounded-full bg-black/10 blur-2xl" />
+  1063→
+  1064→                  <div className="relative flex items-start justify-between">
+  1065→                    <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+  1066→                      <MeditationIcon icon={med.icon} className="h-6 w-6 text-white" />
+  1067→                    </div>
+  1068→                    <Badge className="bg-white/25 text-white border-white/30 backdrop-blur-sm text-[10px]">
+  1069→                      {med.category}
+  1070→                    </Badge>
+  1071→                  </div>
+  1072→                  <div className="relative text-white">
+  1073→                    <h3 className="font-bold text-base leading-tight">{med.title}</h3>
+  1074→                    <p className="text-xs text-white/85 mt-0.5 line-clamp-2">{med.description}</p>
+  1075→                    <div className="flex items-center justify-between mt-2">
+  1076→                      <span className="flex items-center gap-1 text-xs text-white/90">
+  1077→                        <Clock className="h-3 w-3" /> {med.duration} min
+  1078→                      </span>
+  1079→                      <div className="h-9 w-9 rounded-full bg-white text-violet-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+  1080→                        <Play className="h-4 w-4 ml-0.5 fill-current" />
+  1081→                      </div>
+  1082→                    </div>
+  1083→                  </div>
+  1084→                </div>
+  1085→              </motion.button>
+  1086→            ))}
+  1087→          </motion.div>
+  1088→        </CardContent>
+  1089→      </Card>
+  1090→
+  1091→      <AnimatePresence>
+  1092→        {nowPlaying && (
+  1093→          <NowPlayingView key={nowPlaying.id} meditation={nowPlaying} onClose={() => setNowPlaying(null)} />
+  1094→        )}
+  1095→      </AnimatePresence>
+  1096→    </motion.div>
+  1097→  )
+  1098→}
+  1099→
+  1100→// ─── 4. Breathing Exercises ───────────────────────────────────────────────────
+  1101→function BreathingExercise() {
+  1102→  const [activeId, setActiveIdState] = useState<BreathingTechnique['id']>('4-7-8')
+  1103→  const [isRunning, setIsRunning] = useState(false)
+  1104→  const [elapsed, setElapsed] = useState(0)
+  1105→
+  1106→  const technique = BREATHING_TECHNIQUES.find(t => t.id === activeId)!
+  1107→  const cycleDuration = technique.phases.reduce((s, p) => s + p.duration, 0)
+  1108→
+  1109→  // Derive current phase from elapsed time (cheap computation, no memo needed)
+  1110→  const pos = elapsed % cycleDuration
+  1111→  let acc = 0
+  1112→  let phaseIdx = 0
+  1113→  let secondsLeft = technique.phases[0].duration
+  1114→  for (let i = 0; i < technique.phases.length; i++) {
+  1115→    const p = technique.phases[i]
+  1116→    if (pos < acc + p.duration) {
+  1117→      phaseIdx = i
+  1118→      secondsLeft = p.duration - (pos - acc)
+  1119→      break
+  1120→    }
+  1121→    acc += p.duration
+  1122→  }
+  1123→  const cycles = Math.floor(elapsed / cycleDuration)
+  1124→
+  1125→  const currentPhase = technique.phases[phaseIdx]
+  1126→
+  1127→  useEffect(() => {
+  1128→    if (!isRunning) return
+  1129→    const timer = setInterval(() => {
+  1130→      setElapsed(e => e + 1)
+  1131→    }, 1000)
+  1132→    return () => clearInterval(timer)
+  1133→  }, [isRunning])
+  1134→
+  1135→  // Technique change handler also resets state (no effect needed)
+  1136→  const handleTechniqueChange = (id: BreathingTechnique['id']) => {
+  1137→    setActiveIdState(id)
+  1138→    setIsRunning(false)
+  1139→    setElapsed(0)
+  1140→  }
+  1141→
+  1142→  const handleStart = () => {
+  1143→    if (elapsed >= cycleDuration * 4) setElapsed(0) // restart after 4 cycles
+  1144→    setIsRunning(true)
+  1145→  }
+  1146→  const handlePause = () => setIsRunning(false)
+  1147→  const handleReset = () => {
+  1148→    setIsRunning(false)
+  1149→    setElapsed(0)
+  1150→  }
+  1151→
+  1152→  return (
+  1153→    <motion.div
+  1154→      initial={{ opacity: 0, y: 20 }}
+  1155→      animate={{ opacity: 1, y: 0 }}
+  1156→      transition={{ duration: 0.5, delay: 0.15 }}
+  1157→    >
+  1158→      <Card className="glass border-violet-200/50 overflow-hidden">
+  1159→        <CardHeader className="pb-3">
+  1160→          <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
+  1161→            <Wind className="h-5 w-5" />
+  1162→            Breathing Exercises
+  1163→          </CardTitle>
+  1164→          <CardDescription>Follow the circle. Let your breath lead you home.</CardDescription>
+  1165→        </CardHeader>
+  1166→        <CardContent className="space-y-6">
+  1167→          {/* Technique selector */}
+  1168→          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  1169→            {BREATHING_TECHNIQUES.map(tech => (
+  1170→              <button
+  1171→                key={tech.id}
+  1172→                onClick={() => handleTechniqueChange(tech.id)}
+  1173→                className={cn(
+  1174→                  'rounded-xl border-2 p-3 text-left transition-all',
+  1175→                  activeId === tech.id
+  1176→                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/40'
+  1177→                    : 'border-border hover:border-violet-300'
+  1178→                )}
+  1179→              >
+  1180→                <div className="font-semibold text-sm">{tech.name}</div>
+  1181→                <div className="text-xs text-muted-foreground mt-0.5">
+  1182→                  {tech.phases.map(p => p.duration).join('-')} seconds
+  1183→                </div>
+  1184→              </button>
+  1185→            ))}
+  1186→          </div>
+  1187→
+  1188→          {/* Animation area */}
+  1189→          <div className="relative rounded-2xl bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-violet-950/40 dark:via-purple-950/40 dark:to-fuchsia-950/40 overflow-hidden">
+  1190→            {/* Decorative blurred orbs */}
+  1191→            <div className="absolute top-4 left-4 h-20 w-20 rounded-full bg-violet-300/30 blur-2xl" />
+  1192→            <div className="absolute bottom-4 right-4 h-24 w-24 rounded-full bg-fuchsia-300/30 blur-2xl" />
+  1193→
+  1194→            <div className="relative flex flex-col items-center justify-center py-12 px-4 min-h-[420px]">
+  1195→              {/* Concentric guide rings */}
+  1196→              <div className="absolute h-64 w-64 rounded-full border border-violet-200/60 dark:border-violet-700/40" />
+  1197→              <div className="absolute h-80 w-80 rounded-full border border-violet-100/50 dark:border-violet-800/30" />
+  1198→
+  1199→              {/* Animated breathing circle */}
+  1200→              <div className="relative flex h-64 w-64 items-center justify-center">
+  1201→                <motion.div
+  1202→                  animate={{ scale: currentPhase.scale }}
+  1203→                  transition={{
+  1204→                    duration: currentPhase.duration,
+  1205→                    ease: 'easeInOut',
+  1206→                  }}
+  1207→                  className="absolute h-44 w-44 rounded-full bg-gradient-to-br from-violet-400 via-purple-400 to-fuchsia-400 shadow-2xl shadow-violet-500/40"
+  1208→                  style={{ opacity: 0.9 }}
+  1209→                />
+  1210→                <motion.div
+  1211→                  animate={{ scale: currentPhase.scale }}
+  1212→                  transition={{
+  1213→                    duration: currentPhase.duration,
+  1214→                    ease: 'easeInOut',
+  1215→                  }}
+  1216→                  className="absolute h-32 w-32 rounded-full bg-gradient-to-br from-violet-300 to-fuchsia-300 opacity-60 blur-md"
+  1217→                />
+  1218→                {/* Center label */}
+  1219→                <div className="relative z-10 text-center text-white">
+  1220→                  <div className="text-2xl md:text-3xl font-bold drop-shadow-md">
+  1221→                    {currentPhase.label}
+  1222→                  </div>
+  1223→                  <div className="text-5xl md:text-6xl font-mono font-bold mt-1 drop-shadow-md">
+  1224→                    {secondsLeft}
+  1225→                  </div>
+  1226→                </div>
+  1227→              </div>
+  1228→
+  1229→              {/* Phase indicators */}
+  1230→              <div className="relative mt-8 flex items-center gap-2">
+  1231→                {technique.phases.map((p, i) => (
+  1232→                  <div key={i} className="flex items-center gap-2">
+  1233→                    <div className={cn(
+  1234→                      'h-2 rounded-full transition-all duration-500',
+  1235→                      i === phaseIdx ? 'w-10 bg-violet-600' : 'w-4 bg-violet-200 dark:bg-violet-800'
+  1236→                    )} />
+  1237→                    <span className={cn(
+  1238→                      'text-[10px] font-medium',
+  1239→                      i === phaseIdx ? 'text-violet-700 dark:text-violet-300' : 'text-muted-foreground'
+  1240→                    )}>
+  1241→                      {p.duration}s
+  1242→                    </span>
+  1243→                    {i < technique.phases.length - 1 && (
+  1244→                      <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+  1245→                    )}
+  1246→                  </div>
+  1247→                ))}
+  1248→              </div>
+  1249→
+  1250→              {/* Cycles counter */}
+  1251→              <div className="relative mt-4 flex items-center gap-3 text-sm">
+  1252→                <Badge variant="outline" className="border-violet-300 text-violet-600">
+  1253→                  <Timer className="h-3 w-3 mr-1" />
+  1254→                  Cycle {cycles + 1}
+  1255→                </Badge>
+  1256→                <span className="text-muted-foreground">
+  1257→                  {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')} elapsed
+  1258→                </span>
+  1259→              </div>
+  1260→            </div>
+  1261→          </div>
+  1262→
+  1263→          {/* Description & controls */}
+  1264→          <div className="rounded-xl bg-muted/40 p-4">
+  1265→            <p className="text-sm text-muted-foreground">{technique.description}</p>
+  1266→          </div>
+  1267→
+  1268→          <div className="flex items-center justify-center gap-3">
+  1269→            <Button
+  1270→              variant="outline"
+  1271→              size="icon"
+  1272→              className="rounded-full h-11 w-11 border-violet-300"
+  1273→              onClick={handleReset}
+  1274→              aria-label="Reset"
+  1275→            >
+  1276→              <RotateCcw className="h-4 w-4" />
+  1277→            </Button>
+  1278→            <Button
+  1279→              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 rounded-full h-14 px-8"
+  1280→              onClick={isRunning ? handlePause : handleStart}
+  1281→            >
+  1282→              {isRunning ? (
+  1283→                <><Pause className="h-5 w-5 mr-2" /> Pause</>
+  1284→              ) : (
+  1285→                <><Play className="h-5 w-5 mr-2 fill-current" /> {elapsed > 0 ? 'Resume' : 'Begin'}</>
+  1286→              )}
+  1287→            </Button>
+  1288→            <div className="w-11" />
+  1289→          </div>
+  1290→        </CardContent>
+  1291→      </Card>
+  1292→    </motion.div>
+  1293→  )
+  1294→}
+  1295→
+  1296→// ─── 5. Mood Journal ──────────────────────────────────────────────────────────
+  1297→function MoodJournal() {
+  1298→  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
+  1299→  const [journalText, setJournalText] = useState('')
+  1300→  const [viewMonth, setViewMonth] = useState(new Date())
+  1301→
+  1302→  const todayEntry = MOOD_HISTORY[MOOD_HISTORY.length - 1]
+  1303→  const pastEntries = [...MOOD_HISTORY].reverse().slice(1, 8) // exclude today, show 7 past
+  1304→
+  1305→  // Build calendar for current month
+  1306→  const calendarDays = useMemo(() => {
+  1307→    const year = viewMonth.getFullYear()
+  1308→    const month = viewMonth.getMonth()
+  1309→    const firstDay = new Date(year, month, 1)
+  1310→    const lastDay = new Date(year, month + 1, 0)
+  1311→    const startWeekday = firstDay.getDay()
+  1312→    const daysInMonth = lastDay.getDate()
+  1313→
+  1314→    const days: (Date | null)[] = []
+  1315→    for (let i = 0; i < startWeekday; i++) days.push(null)
+  1316→    for (let d = 1; d <= daysInMonth; d++) {
+  1317→      days.push(new Date(year, month, d))
+  1318→    }
+  1319→    return days
+  1320→  }, [viewMonth])
+  1321→
+  1322→  const moodForDate = (date: Date): JournalEntry | undefined => {
+  1323→    const dateStr = date.toISOString().split('T')[0]
+  1324→    return MOOD_HISTORY.find(e => e.date === dateStr)
+  1325→  }
+  1326→
+  1327→  // Chart data: last 30 days
+  1328→  const chartData = useMemo(() => {
+  1329→    return MOOD_HISTORY.map(e => ({
+  1330→      date: formatDate(e.date),
+  1331→      mood: e.moodScore,
+  1332→      stress: e.stress,
+  1333→      fullDate: e.date,
+  1334→    }))
+  1335→  }, [])
+  1336→
+  1337→  const prevMonth = () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
+  1338→  const nextMonth = () => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
+  1339→
+  1340→  return (
+  1341→    <motion.div
+  1342→      initial={{ opacity: 0, y: 20 }}
+  1343→      animate={{ opacity: 1, y: 0 }}
+  1344→      transition={{ duration: 0.5, delay: 0.2 }}
+  1345→    >
+  1346→      <Card className="glass border-violet-200/50">
+  1347→        <CardHeader className="pb-3">
+  1348→          <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
+  1349→            <BookOpen className="h-5 w-5" />
+  1350→            Mood Journal
+  1351→          </CardTitle>
+  1352→          <CardDescription>Track your emotional landscape over time</CardDescription>
+  1353→        </CardHeader>
+  1354→        <CardContent className="space-y-6">
+  1355→          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  1356→            {/* Calendar */}
+  1357→            <div>
+  1358→              <div className="flex items-center justify-between mb-3">
+  1359→                <h3 className="font-semibold text-sm flex items-center gap-1.5">
+  1360→                  <CalendarDays className="h-4 w-4 text-violet-500" />
+  1361→                  {viewMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+  1362→                </h3>
+  1363→                <div className="flex gap-1">
+  1364→                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevMonth}>
+  1365→                    <ChevronLeft className="h-4 w-4" />
+  1366→                  </Button>
+  1367→                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextMonth}>
+  1368→                    <ChevronRight className="h-4 w-4" />
+  1369→                  </Button>
+  1370→                </div>
+  1371→              </div>
+  1372→              <div className="grid grid-cols-7 gap-1 mb-1">
+  1373→                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+  1374→                  <div key={i} className="text-center text-[10px] font-medium text-muted-foreground py-1">
+  1375→                    {d}
+  1376→                  </div>
+  1377→                ))}
+  1378→              </div>
+  1379→              <div className="grid grid-cols-7 gap-1">
+  1380→                {calendarDays.map((date, i) => {
+  1381→                  if (!date) return <div key={i} />
+  1382→                  const entry = moodForDate(date)
+  1383→                  const mood = entry ? getMoodByLevel(entry.mood) : null
+  1384→                  const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+  1385→                  return (
+  1386→                    <button
+  1387→                      key={i}
+  1388→                      onClick={() => entry && setSelectedEntry(entry)}
+  1389→                      className={cn(
+  1390→                        'aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-medium transition-all relative',
+  1391→                        mood
+  1392→                          ? 'text-white shadow-sm hover:scale-105'
+  1393→                          : 'text-muted-foreground hover:bg-accent',
+  1394→                        mood && cn('bg-gradient-to-br', mood.bgGradient),
+  1395→                        isToday && 'ring-2 ring-violet-500 ring-offset-1'
+  1396→                      )}
+  1397→                      title={entry ? `${getMoodByLevel(entry.mood).label} • Stress ${entry.stress}/10` : ''}
+  1398→                    >
+  1399→                      <span>{date.getDate()}</span>
+  1400→                      {mood && <span className="text-[10px] mt-0.5">{mood.emoji}</span>}
+  1401→                    </button>
+  1402→                  )
+  1403→                })}
+  1404→              </div>
+  1405→              {/* Legend */}
+  1406→              <div className="flex flex-wrap items-center gap-2 mt-4 text-[10px]">
+  1407→                {MOODS.map(m => (
+  1408→                  <div key={m.level} className="flex items-center gap-1">
+  1409→                    <div className={cn('h-3 w-3 rounded-full bg-gradient-to-br', m.bgGradient)} />
+  1410→                    <span className="text-muted-foreground">{m.label}</span>
+  1411→                  </div>
+  1412→                ))}
+  1413→              </div>
+  1414→            </div>
+  1415→
+  1416→            {/* Today's entry */}
+  1417→            <div>
+  1418→              <h3 className="font-semibold text-sm flex items-center gap-1.5 mb-3">
+  1419→                <PencilLine className="h-4 w-4 text-violet-500" />
+  1420→                Today's Journal Entry
+  1421→              </h3>
+  1422→              <div className="rounded-xl border border-violet-200 dark:border-violet-800 p-4 space-y-3">
+  1423→                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1424→                  <SmilePlus className="h-4 w-4" />
+  1425→                  Mood: <span className="font-medium">{MOODS.find(m => m.level === todayEntry.mood)?.emoji} {MOODS.find(m => m.level === todayEntry.mood)?.label}</span>
+  1426→                  <Separator orientation="vertical" className="h-3 mx-1" />
+  1427→                  Stress: <span className="font-medium">{todayEntry.stress}/10</span>
+  1428→                </div>
+  1429→                <Textarea
+  1430→                  placeholder="What happened today? How do you feel about it? What are you grateful for?"
+  1431→                  value={journalText}
+  1432→                  onChange={(e) => setJournalText(e.target.value)}
+  1433→                  className="min-h-[120px] resize-none border-violet-200 focus-visible:ring-violet-400"
+  1434→                />
+  1435→                <div className="flex items-center justify-between">
+  1436→                  <span className="text-xs text-muted-foreground">{journalText.length} characters</span>
+  1437→                  <Button size="sm" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700">
+  1438→                    <Heart className="h-3.5 w-3.5 mr-1" /> Save Entry
+  1439→                  </Button>
+  1440→                </div>
+  1441→              </div>
+  1442→            </div>
+  1443→          </div>
+  1444→
+  1445→          {/* Mood trends chart */}
+  1446→          <div>
+  1447→            <h3 className="font-semibold text-sm flex items-center gap-1.5 mb-3">
+  1448→              <TrendingUp className="h-4 w-4 text-violet-500" />
+  1449→              Mood Trends (30 days)
+  1450→            </h3>
+  1451→            <div className="rounded-xl border border-violet-100 dark:border-violet-900/50 p-4 bg-card/50">
+  1452→              <ResponsiveContainer width="100%" height={220}>
+  1453→                <LineChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+  1454→                  <defs>
+  1455→                    <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
+  1456→                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
+  1457→                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+  1458→                    </linearGradient>
+  1459→                  </defs>
+  1460→                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.91 0.02 325)" vertical={false} />
+  1461→                  <XAxis
+  1462→                    dataKey="date"
+  1463→                    tick={{ fontSize: 10, fill: 'oklch(0.5 0.03 325)' }}
+  1464→                    interval={4}
+  1465→                    tickLine={false}
+  1466→                    axisLine={false}
+  1467→                  />
+  1468→                  <YAxis
+  1469→                    domain={[0, 5]}
+  1470→                    ticks={[1, 2, 3, 4, 5]}
+  1471→                    tick={{ fontSize: 10, fill: 'oklch(0.5 0.03 325)' }}
+  1472→                    tickLine={false}
+  1473→                    axisLine={false}
+  1474→                  />
+  1475→                  <RechartsTooltip
+  1476→                    contentStyle={{
+  1477→                      borderRadius: 12,
+  1478→                      border: '1px solid oklch(0.91 0.02 325)',
+  1479→                      background: 'oklch(1 0 0)',
+  1480→                      fontSize: 12,
+  1481→                      padding: '8px 12px',
+  1482→                    }}
+  1483→                    formatter={(value: number, name: string) => {
+  1484→                      if (name === 'mood') {
+  1485→                        const m = getMoodByScore(value)
+  1486→                        return [`${m.emoji} ${m.label}`, 'Mood']
+  1487→                      }
+  1488→                      return [`${value}/10`, 'Stress']
+  1489→                    }}
+  1490→                    labelFormatter={(label) => `Date: ${label}`}
+  1491→                  />
+  1492→                  <ReferenceLine y={3} stroke="oklch(0.7 0.05 325)" strokeDasharray="4 4" />
+  1493→                  <Line
+  1494→                    type="monotone"
+  1495→                    dataKey="mood"
+  1496→                    stroke="#8b5cf6"
+  1497→                    strokeWidth={3}
+  1498→                    dot={{ fill: '#8b5cf6', r: 3 }}
+  1499→                    activeDot={{ r: 6, fill: '#7c3aed' }}
+  1500→                    name="mood"
+  1501→                  />
+  1502→                  <Line
+  1503→                    type="monotone"
+  1504→                    dataKey="stress"
+  1505→                    stroke="#f59e0b"
+  1506→                    strokeWidth={2}
+  1507→                    strokeDasharray="5 5"
+  1508→                    dot={false}
+  1509→                    name="stress"
+  1510→                  />
+  1511→                </LineChart>
+  1512→              </ResponsiveContainer>
+  1513→            </div>
+  1514→          </div>
+  1515→
+  1516→          {/* Past entries */}
+  1517→          <div>
+  1518→            <h3 className="font-semibold text-sm flex items-center gap-1.5 mb-3">
+  1519→              <BookOpen className="h-4 w-4 text-violet-500" />
+  1520→              Past Entries
+  1521→            </h3>
+  1522→            <div className="space-y-2 max-h-72 overflow-y-auto pr-2">
+  1523→              {pastEntries.map(entry => {
+  1524→                const mood = getMoodByLevel(entry.mood)
+  1525→                return (
+  1526→                  <button
+  1527→                    key={entry.id}
+  1528→                    onClick={() => setSelectedEntry(entry)}
+  1529→                    className="w-full text-left rounded-xl border border-border hover:border-violet-300 hover:bg-violet-50/50 dark:hover:bg-violet-950/20 p-3 transition-all flex items-center gap-3"
+  1530→                  >
+  1531→                    <div className={cn(
+  1532→                      'h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-lg shrink-0',
+  1533→                      mood.bgGradient
+  1534→                    )}>
+  1535→                      {mood.emoji}
+  1536→                    </div>
+  1537→                    <div className="flex-1 min-w-0">
+  1538→                      <div className="flex items-center gap-2">
+  1539→                        <span className="font-medium text-sm">{formatLongDate(entry.date)}</span>
+  1540→                        <Badge variant="outline" className="text-[10px] h-4 px-1">{mood.label}</Badge>
+  1541→                      </div>
+  1542→                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+  1543→                        {entry.note || <span className="italic">No notes — mood check-in only</span>}
+  1544→                      </p>
+  1545→                    </div>
+  1546→                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+  1547→                  </button>
+  1548→                )
+  1549→              })}
+  1550→            </div>
+  1551→          </div>
+  1552→        </CardContent>
+  1553→      </Card>
+  1554→
+  1555→      {/* Entry detail dialog */}
+  1556→      <Dialog open={!!selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)}>
+  1557→        <DialogContent className="sm:max-w-md">
+  1558→          <DialogHeader>
+  1559→            <DialogTitle className="flex items-center gap-2">
+  1560→              {selectedEntry && (
+  1561→                <>
+  1562→                  <span className="text-2xl">{getMoodByLevel(selectedEntry.mood).emoji}</span>
+  1563→                  <span>{getMoodByLevel(selectedEntry.mood).label}</span>
+  1564→                </>
+  1565→              )}
+  1566→            </DialogTitle>
+  1567→            <DialogDescription>
+  1568→              {selectedEntry && formatLongDate(selectedEntry.date)}
+  1569→            </DialogDescription>
+  1570→          </DialogHeader>
+  1571→          {selectedEntry && (
+  1572→            <div className="space-y-4 py-2">
+  1573→              <div className="grid grid-cols-2 gap-3">
+  1574→                <div className="rounded-lg bg-muted/50 p-3">
+  1575→                  <div className="text-xs text-muted-foreground">Mood Score</div>
+  1576→                  <div className="text-2xl font-bold text-violet-600">{selectedEntry.moodScore}/5</div>
+  1577→                </div>
+  1578→                <div className="rounded-lg bg-muted/50 p-3">
+  1579→                  <div className="text-xs text-muted-foreground">Stress Level</div>
+  1580→                  <div className="text-2xl font-bold text-amber-600">{selectedEntry.stress}/10</div>
+  1581→                </div>
+  1582→              </div>
+  1583→              <div>
+  1584→                <div className="text-xs font-medium text-muted-foreground mb-2">Journal Note</div>
+  1585→                <div className="rounded-lg border border-violet-100 dark:border-violet-900 p-3 text-sm min-h-[80px]">
+  1586→                  {selectedEntry.note || <span className="italic text-muted-foreground">No notes for this day.</span>}
+  1587→                </div>
+  1588→              </div>
+  1589→            </div>
+  1590→          )}
+  1591→          <DialogFooter>
+  1592→            <Button variant="outline" onClick={() => setSelectedEntry(null)}>Close</Button>
+  1593→          </DialogFooter>
+  1594→        </DialogContent>
+  1595→      </Dialog>
+  1596→    </motion.div>
+  1597→  )
+  1598→}
+  1599→
+  1600→// ─── 6. Affirmations ──────────────────────────────────────────────────────────
+  1601→function AffirmationsWall() {
+  1602→  const daily = getDailyAffirmation()
+  1603→  const [favorites, setFavorites] = useState<Set<string>>(new Set(['a1', 'a12']))
+  1604→  const [activeCategory, setActiveCategory] = useState<'All' | Affirmation['category']>('All')
+  1605→
+  1606→  const categories: Array<'All' | Affirmation['category']> = ['All', 'Self-love', 'Body positivity', 'Strength', 'Peace', 'Healing']
+  1607→
+  1608→  const filtered = useMemo(() => {
+  1609→    if (activeCategory === 'All') return AFFIRMATIONS
+  1610→    return AFFIRMATIONS.filter(a => a.category === activeCategory)
+  1611→  }, [activeCategory])
+  1612→
+  1613→  const toggleFavorite = (id: string) => {
+  1614→    setFavorites(prev => {
+  1615→      const next = new Set(prev)
+  1616→      if (next.has(id)) next.delete(id)
+  1617→      else next.add(id)
+  1618→      return next
+  1619→    })
+  1620→  }
+  1621→
+  1622→  const categoryColors: Record<Affirmation['category'], string> = {
+  1623→    'Self-love': 'from-rose-400 to-pink-500',
+  1624→    'Body positivity': 'from-fuchsia-400 to-purple-500',
+  1625→    'Strength': 'from-amber-400 to-orange-500',
+  1626→    'Peace': 'from-sky-400 to-cyan-500',
+  1627→    'Healing': 'from-emerald-400 to-teal-500',
+  1628→  }
+  1629→
+  1630→  return (
+  1631→    <motion.div
+  1632→      initial={{ opacity: 0, y: 20 }}
+  1633→      animate={{ opacity: 1, y: 0 }}
+  1634→      transition={{ duration: 0.5, delay: 0.25 }}
+  1635→    >
+  1636→      <Card className="glass border-violet-200/50">
+  1637→        <CardHeader className="pb-3">
+  1638→          <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
+  1639→            <Quote className="h-5 w-5" />
+  1640→            Daily Affirmations
+  1641→          </CardTitle>
+  1642→          <CardDescription>Words to carry with you through the day</CardDescription>
+  1643→        </CardHeader>
+  1644→        <CardContent className="space-y-6">
+  1645→          {/* Daily affirmation */}
+  1646→          <motion.div
+  1647→            initial={{ opacity: 0, scale: 0.97 }}
+  1648→            animate={{ opacity: 1, scale: 1 }}
+  1649→            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-6 md:p-8 text-white shadow-lg"
+  1650→          >
+  1651→            <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+  1652→            <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-2xl" />
+  1653→            <div className="relative">
+  1654→              <div className="flex items-center justify-between mb-3">
+  1655→                <Badge className="bg-white/20 text-white border-white/30">
+  1656→                  <Sparkles className="h-3 w-3 mr-1" />
+  1657→                  Today's Affirmation
+  1658→                </Badge>
+  1659→                <Button
+  1660→                  variant="ghost"
+  1661→                  size="icon"
+  1662→                  className="text-white hover:bg-white/20 rounded-full h-9 w-9"
+  1663→                  onClick={() => toggleFavorite(daily.id)}
+  1664→                >
+  1665→                  {favorites.has(daily.id) ? (
+  1666→                    <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />
+  1667→                  ) : (
+  1668→                    <Star className="h-5 w-5" />
+  1669→                  )}
+  1670→                </Button>
+  1671→              </div>
+  1672→              <Quote className="h-8 w-8 text-white/40 mb-2" />
+  1673→              <p className="text-xl md:text-2xl font-medium leading-snug">
+  1674→                {daily.text}
+  1675→              </p>
+  1676→              <div className="mt-4 flex items-center gap-3 text-xs text-white/80">
+  1677→                <span>Category:</span>
+  1678→                <Badge variant="outline" className="border-white/30 text-white">{daily.category}</Badge>
+  1679→              </div>
+  1680→            </div>
+  1681→          </motion.div>
+  1682→
+  1683→          {/* Category filter */}
+  1684→          <div className="flex flex-wrap gap-1.5">
+  1685→            {categories.map(cat => (
+  1686→              <Button
+  1687→                key={cat}
+  1688→                variant={activeCategory === cat ? 'default' : 'outline'}
+  1689→                size="sm"
+  1690→                onClick={() => setActiveCategory(cat)}
+  1691→                className={cn(
+  1692→                  'h-7 text-xs',
+  1693→                  activeCategory === cat && 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700'
+  1694→                )}
+  1695→              >
+  1696→                {cat}
+  1697→                {cat !== 'All' && (
+  1698→                  <span className="ml-1.5 text-[10px] opacity-70">
+  1699→                    ({AFFIRMATIONS.filter(a => a.category === cat).length})
+  1700→                  </span>
+  1701→                )}
+  1702→              </Button>
+  1703→            ))}
+  1704→          </div>
+  1705→
+  1706→          {/* Affirmations wall */}
+  1707→          <motion.div
+  1708→            variants={staggerContainer}
+  1709→            initial="hidden"
+  1710→            animate="show"
+  1711→            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+  1712→          >
+  1713→            {filtered.map(aff => (
+  1714→              <motion.div
+  1715→                key={aff.id}
+  1716→                variants={staggerItem}
+  1717→                whileHover={{ y: -3 }}
+  1718→                className={cn(
+  1719→                  'group relative overflow-hidden rounded-2xl bg-gradient-to-br p-4 text-white shadow-md min-h-[140px] flex flex-col justify-between',
+  1720→                  categoryColors[aff.category]
+  1721→                )}
+  1722→              >
+  1723→                <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/15 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+  1724→                <Quote className="h-5 w-5 text-white/40 mb-1" />
+  1725→                <p className="text-sm font-medium leading-snug relative flex-1">{aff.text}</p>
+  1726→                <div className="flex items-center justify-between mt-3 relative">
+  1727→                  <Badge className="bg-white/25 text-white border-white/30 text-[10px]">
+  1728→                    {aff.category}
+  1729→                  </Badge>
+  1730→                  <button
+  1731→                    onClick={() => toggleFavorite(aff.id)}
+  1732→                    className="text-white/80 hover:text-white transition-colors"
+  1733→                    aria-label={favorites.has(aff.id) ? 'Remove favorite' : 'Add favorite'}
+  1734→                  >
+  1735→                    {favorites.has(aff.id) ? (
+  1736→                      <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+  1737→                    ) : (
+  1738→                      <Star className="h-4 w-4" />
+  1739→                    )}
+  1740→                  </button>
+  1741→                </div>
+  1742→              </motion.div>
+  1743→            ))}
+  1744→          </motion.div>
+  1745→
+  1746→          {/* Favorites counter */}
+  1747→          <div className="text-center text-xs text-muted-foreground">
+  1748→            <Star className="inline h-3.5 w-3.5 mr-1 fill-violet-400 text-violet-400" />
+  1749→            You've favorited {favorites.size} affirmation{favorites.size === 1 ? '' : 's'}
+  1750→          </div>
+  1751→        </CardContent>
+  1752→      </Card>
+  1753→    </motion.div>
+  1754→  )
+  1755→}
+  1756→
+  1757→// ─── 7. Therapy & Support + Quizzes ───────────────────────────────────────────
+  1758→function QuizRunner({
+  1759→  questions,
+  1760→  title,
+  1761→  description,
+  1762→  scoring,
+  1763→  accentColor,
+  1764→  crisisNote,
+  1765→}: {
+  1766→  questions: QuizQuestion[]
+  1767→  title: string
+  1768→  description: string
+  1769→  scoring: { min: number; max: number; label: string; color: string; recommendation: string }[]
+  1770→  accentColor: 'violet' | 'rose'
+  1771→  crisisNote?: string
+  1772→}) {
+  1773→  const [answers, setAnswers] = useState<Record<number, number>>({})
+  1774→  const [submitted, setSubmitted] = useState(false)
+  1775→
+  1776→  const total = questions.length
+  1777→  const answeredCount = Object.keys(answers).length
+  1778→  const score = Object.values(answers).reduce((s, v) => s + v, 0)
+  1779→  const result = scoring.find(s => score >= s.min && score <= s.max) || scoring[scoring.length - 1]
+  1780→
+  1781→  const reset = () => {
+  1782→    setAnswers({})
+  1783→    setSubmitted(false)
+  1784→  }
+  1785→
+  1786→  const accentClasses = accentColor === 'violet'
+  1787→    ? {
+  1788→        bg: 'bg-violet-600',
+  1789→        bgHover: 'hover:bg-violet-700',
+  1790→        bgSoft: 'bg-violet-50 dark:bg-violet-950/40',
+  1791→        border: 'border-violet-300',
+  1792→        text: 'text-violet-600',
+  1793→        ring: 'ring-violet-400',
+  1794→      }
+  1795→    : {
+  1796→        bg: 'bg-rose-600',
+  1797→        bgHover: 'hover:bg-rose-700',
+  1798→        bgSoft: 'bg-rose-50 dark:bg-rose-950/40',
+  1799→        border: 'border-rose-300',
+  1800→        text: 'text-rose-600',
+  1801→        ring: 'ring-rose-400',
+  1802→      }
+  1803→
+  1804→  return (
+  1805→    <div className="rounded-2xl border border-border bg-card/50 p-4 md:p-5">
+  1806→      <div className="flex items-center justify-between gap-2 mb-1">
+  1807→        <h4 className="font-semibold text-sm">{title}</h4>
+  1808→        <Badge variant="outline" className="text-[10px]">{total} questions</Badge>
+  1809→      </div>
+  1810→      <p className="text-xs text-muted-foreground mb-4">{description}</p>
+  1811→
+  1812→      {!submitted ? (
+  1813→        <>
+  1814→          <div className="mb-4">
+  1815→            <div className="flex items-center justify-between text-xs mb-1">
+  1816→              <span className="text-muted-foreground">Progress</span>
+  1817→              <span className="font-medium">{answeredCount}/{total}</span>
+  1818→            </div>
+  1819→            <Progress value={(answeredCount / total) * 100} className="h-1.5" />
+  1820→          </div>
+  1821→
+  1822→          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+  1823→            {questions.map((q, idx) => (
+  1824→              <div key={q.id} className={cn(
+  1825→                'rounded-xl border p-3 transition-colors',
+  1826→                answers[q.id] !== undefined ? cn(accentClasses.border, accentClasses.bgSoft) : 'border-border'
+  1827→              )}>
+  1828→                <div className="flex items-start gap-2 mb-2">
+  1829→                  <span className={cn(
+  1830→                    'shrink-0 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold',
+  1831→                    answers[q.id] !== undefined ? cn(accentClasses.bg, 'text-white') : 'bg-muted text-muted-foreground'
+  1832→                  )}>
+  1833→                    {idx + 1}
+  1834→                  </span>
+  1835→                  <p className="text-sm font-medium leading-snug">{q.text}</p>
+  1836→                </div>
+  1837→                <div className="grid grid-cols-2 gap-1.5 ml-7">
+  1838→                  {q.options.map(opt => {
+  1839→                    const isSelected = answers[q.id] === opt.value
+  1840→                    return (
+  1841→                      <button
+  1842→                        key={opt.label}
+  1843→                        onClick={() => setAnswers(prev => ({ ...prev, [q.id]: opt.value }))}
+  1844→                        className={cn(
+  1845→                          'text-left text-xs rounded-lg border px-2.5 py-2 transition-all',
+  1846→                          isSelected
+  1847→                            ? cn(accentClasses.bg, 'text-white border-transparent')
+  1848→                            : 'border-border hover:border-violet-300 text-muted-foreground'
+  1849→                        )}
+  1850→                      >
+  1851→                        {opt.label}
+  1852→                      </button>
+  1853→                    )
+  1854→                  })}
+  1855→                </div>
+  1856→              </div>
+  1857→            ))}
+  1858→          </div>
+  1859→
+  1860→          <div className="mt-4 flex items-center justify-between gap-2">
+  1861→            <Button variant="ghost" size="sm" onClick={reset} disabled={answeredCount === 0}>
+  1862→              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
+  1863→            </Button>
+  1864→            <Button
+  1865→              onClick={() => setSubmitted(true)}
+  1866→              disabled={answeredCount < total}
+  1867→              className={cn(accentClasses.bg, accentClasses.bgHover)}
+  1868→              size="sm"
+  1869→            >
+  1870→              See Results
+  1871→            </Button>
+  1872→          </div>
+  1873→        </>
+  1874→      ) : (
+  1875→        <motion.div
+  1876→          initial={{ opacity: 0, y: 10 }}
+  1877→          animate={{ opacity: 1, y: 0 }}
+  1878→          className="space-y-4"
+  1879→        >
+  1880→          <div className={cn('rounded-xl p-5 text-center text-white shadow-md bg-gradient-to-br', result.color)}>
+  1881→            <div className="text-xs uppercase tracking-wide opacity-90 mb-1">Your Score</div>
+  1882→            <div className="text-5xl font-bold mb-1">{score}</div>
+  1883→            <div className="text-sm opacity-90 mb-2">out of {total * 3}</div>
+  1884→            <div className="inline-block rounded-full bg-white/20 px-4 py-1.5 text-sm font-semibold backdrop-blur-sm">
+  1885→              {result.label}
+  1886→            </div>
+  1887→          </div>
+  1888→
+  1889→          <div className="rounded-xl border border-border p-4">
+  1890→            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Recommendation</div>
+  1891→            <p className="text-sm leading-relaxed">{result.recommendation}</p>
+  1892→          </div>
+  1893→
+  1894→          {crisisNote && score >= 1 && (
+  1895→            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 p-4">
+  1896→              <div className="flex items-start gap-2">
+  1897→                <ShieldAlert className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+  1898→                <div>
+  1899→                  <p className="text-sm font-medium text-rose-700 dark:text-rose-300">Important</p>
+  1900→                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{crisisNote}</p>
+  1901→                </div>
+  1902→              </div>
+  1903→            </div>
+  1904→          )}
+  1905→
+  1906→          <div className="flex items-center gap-2">
+  1907→            <Button variant="outline" size="sm" onClick={reset} className="flex-1">
+  1908→              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Retake
+  1909→            </Button>
+  1910→          </div>
+  1911→
+  1912→          <p className="text-[10px] text-muted-foreground text-center">
+  1913→            This screening tool is for educational purposes only and is not a diagnosis. Please consult a healthcare professional for proper evaluation.
+  1914→          </p>
+  1915→        </motion.div>
+  1916→      )}
+  1917→    </div>
+  1918→  )
+  1919→}
+  1920→
+  1921→function TherapySupport() {
+  1922→  const { setActiveModule } = useAppStore()
+  1923→  const [activeQuiz, setActiveQuiz] = useState<'none' | 'phq9' | 'gad7'>('none')
+  1924→
+  1925→  return (
+  1926→    <motion.div
+  1927→      initial={{ opacity: 0, y: 20 }}
+  1928→      animate={{ opacity: 1, y: 0 }}
+  1929→      transition={{ duration: 0.5, delay: 0.3 }}
+  1930→    >
+  1931→      <Card className="glass border-violet-200/50">
+  1932→        <CardHeader className="pb-3">
+  1933→          <CardTitle className="flex items-center gap-2 text-violet-700 dark:text-violet-300">
+  1934→            <LifeBuoy className="h-5 w-5" />
+  1935→            Therapy &amp; Support
+  1936→          </CardTitle>
+  1937→          <CardDescription>You deserve support — you don't have to do this alone</CardDescription>
+  1938→        </CardHeader>
+  1939→        <CardContent className="space-y-6">
+  1940→          {/* Therapist CTA */}
+  1941→          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-5 md:p-6 text-white shadow-md">
+  1942→            <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+  1943→            <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  1944→              <div>
+  1945→                <Badge className="bg-white/20 text-white border-white/30 mb-2">
+  1946→                  <Stethoscope className="h-3 w-3 mr-1" />
+  1947→                  Professional Support
+  1948→                </Badge>
+  1949→                <h3 className="text-xl md:text-2xl font-bold mb-1">Connect with a Therapist</h3>
+  1950→                <p className="text-sm text-white/85 max-w-md">
+  1951→                  Find licensed mental health professionals, counselors, and psychologists near you. Telehealth and in-person options available.
+  1952→                </p>
+  1953→              </div>
+  1954→              <Button
+  1955→                onClick={() => setActiveModule('doctors')}
+  1956→                className="bg-white text-violet-700 hover:bg-white/90 shrink-0"
+  1957→              >
+  1958→                <Stethoscope className="h-4 w-4 mr-1.5" />
+  1959→                Find a Therapist
+  1960→              </Button>
+  1961→            </div>
+  1962→          </div>
+  1963→
+  1964→          {/* Crisis support resources */}
+  1965→          <div>
+  1966→            <h3 className="font-semibold text-sm flex items-center gap-1.5 mb-3">
+  1967→              <Siren className="h-4 w-4 text-rose-500" />
+  1968→              Crisis Support Resources
+  1969→            </h3>
+  1970→            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+  1971→              <div className="rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-950/20 dark:border-rose-900 p-4">
+  1972→                <div className="flex items-center gap-2 mb-2">
+  1973→                  <div className="h-9 w-9 rounded-full bg-rose-500 flex items-center justify-center">
+  1974→                    <Phone className="h-4 w-4 text-white" />
+  1975→                  </div>
+  1976→                  <div>
+  1977→                    <div className="text-xs text-muted-foreground">Helpline</div>
+  1978→                    <div className="text-sm font-semibold">India</div>
+  1979→                  </div>
+  1980→                </div>
+  1981→                <div className="space-y-1 text-sm">
+  1982→                  <div>
+  1983→                    <div className="font-mono font-bold text-rose-600">iCall: 9152987821</div>
+  1984→                    <div className="text-[10px] text-muted-foreground">Mon–Sat, 8 AM – 10 PM</div>
+  1985→                  </div>
+  1986→                  <Separator className="my-1" />
+  1987→                  <div>
+  1988→                    <div className="font-mono font-bold text-rose-600">Vandrevala: 1860-2662-345</div>
+  1989→                    <div className="text-[10px] text-muted-foreground">24/7</div>
+  1990→                  </div>
+  1991→                  <Separator className="my-1" />
+  1992→                  <div>
+  1993→                    <div className="font-mono font-bold text-rose-600">Kiran: 1800-599-0019</div>
+  1994→                    <div className="text-[10px] text-muted-foreground">Govt. of India, 24/7</div>
+  1995→                  </div>
+  1996→                </div>
+  1997→              </div>
+  1998→
+  1999→              <div className="rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900 p-4">
+  2000→                <div className="flex items-center gap-2 mb-2">
+
+[showing lines 1-2000 of 2414; use offset=2001 with limit to continue reading]

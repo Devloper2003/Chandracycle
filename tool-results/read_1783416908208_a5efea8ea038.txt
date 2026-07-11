@@ -1,0 +1,1811 @@
+     1→'use client'
+     2→
+     3→import { useState, useMemo } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
+     6→import { Badge } from '@/components/ui/badge'
+     7→import { Button } from '@/components/ui/button'
+     8→import { Input } from '@/components/ui/input'
+     9→import { Label } from '@/components/ui/label'
+    10→import { Textarea } from '@/components/ui/textarea'
+    11→import { Separator } from '@/components/ui/separator'
+    12→import { ScrollArea } from '@/components/ui/scroll-area'
+    13→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+    14→import { Calendar } from '@/components/ui/calendar'
+    15→import {
+    16→  Dialog,
+    17→  DialogContent,
+    18→  DialogHeader,
+    19→  DialogTitle,
+    20→  DialogDescription,
+    21→  DialogFooter,
+    22→  DialogClose,
+    23→} from '@/components/ui/dialog'
+    24→import {
+    25→  Select,
+    26→  SelectContent,
+    27→  SelectItem,
+    28→  SelectTrigger,
+    29→  SelectValue,
+    30→} from '@/components/ui/select'
+    31→import { cn } from '@/lib/utils'
+    32→import {
+    33→  MapPin,
+    34→  Stethoscope,
+    35→  Star,
+    36→  Phone,
+    37→  Video,
+    38→  Calendar as CalendarIcon,
+    39→  Clock,
+    40→  Search,
+    41→  Filter,
+    42→  AlertTriangle,
+    43→  CheckCircle2,
+    44→  User,
+    45→  Award,
+    46→  Languages,
+    47→  Navigation,
+    48→  Heart,
+    49→  Activity,
+    50→  Brain,
+    51→  Baby,
+    52→  Sparkles,
+    53→  Zap,
+    54→  Loader2,
+    55→  Siren,
+    56→  Eye,
+    57→  Droplet,
+    58→  Thermometer,
+    59→  Pill,
+    60→  Hospital,
+    61→  CircleDollarSign,
+    62→  Frown,
+    63→  Flame,
+    64→  Utensils,
+    65→  HandHeart,
+    66→} from 'lucide-react'
+    67→
+    68→// ─── Types ────────────────────────────────────────────────────────────────────
+    69→
+    70→type Specialty =
+    71→  | 'Gynecologist'
+    72→  | 'Fertility Specialist'
+    73→  | 'Obstetrician'
+    74→  | 'Endocrinologist'
+    75→  | 'Nutritionist'
+    76→  | 'Dermatologist'
+    77→  | 'Mental Health Counselor'
+    78→  | 'General Physician'
+    79→  | 'Urologist'
+    80→
+    81→type Severity = 'Mild' | 'Moderate' | 'Severe'
+    82→
+    83→interface Doctor {
+    84→  id: string
+    85→  name: string
+    86→  specialty: Specialty
+    87→  qualifications: string
+    88→  experience: number
+    89→  rating: number
+    90→  reviews: number
+    91→  clinic: string
+    92→  address: string
+    93→  city: string
+    94→  distance: number
+    95→  fee: number
+    96→  nextSlotDay: 'Today' | 'Tomorrow' | 'Day After'
+    97→  nextSlotTime: string
+    98→  languages: string[]
+    99→  gender: 'Female' | 'Male'
+   100→  availableToday: boolean
+   101→  videoConsult: boolean
+   102→  onlineNow: boolean
+   103→}
+   104→
+   105→// ─── Specialty Metadata ───────────────────────────────────────────────────────
+   106→
+   107→interface SpecialtyMeta {
+   108→  id: Specialty
+   109→  label: string
+   110→  shortLabel: string
+   111→  description: string
+   112→  icon: React.ElementType
+   113→  color: string
+   114→  bgColor: string
+   115→  borderColor: string
+   116→  textColor: string
+   117→}
+   118→
+   119→const SPECIALTIES: SpecialtyMeta[] = [
+   120→  {
+   121→    id: 'Gynecologist',
+   122→    label: 'Gynecologist',
+   123→    shortLabel: 'Gynecologist',
+   124→    description: 'Period issues, PCOS, irregular cycles',
+   125→    icon: Stethoscope,
+   126→    color: '#0d9488',
+   127→    bgColor: 'bg-teal-50 dark:bg-teal-950/40',
+   128→    borderColor: 'border-teal-200 dark:border-teal-800',
+   129→    textColor: 'text-teal-700 dark:text-teal-300',
+   130→  },
+   131→  {
+   132→    id: 'Fertility Specialist',
+   133→    label: 'Fertility Specialist',
+   134→    shortLabel: 'Fertility',
+   135→    description: 'Conception, IVF, fertility tracking',
+   136→    icon: Baby,
+   137→    color: '#0891b2',
+   138→    bgColor: 'bg-cyan-50 dark:bg-cyan-950/40',
+   139→    borderColor: 'border-cyan-200 dark:border-cyan-800',
+   140→    textColor: 'text-cyan-700 dark:text-cyan-300',
+   141→  },
+   142→  {
+   143→    id: 'Obstetrician',
+   144→    label: 'Obstetrician',
+   145→    shortLabel: 'Obstetrician',
+   146→    description: 'Pregnancy care, prenatal',
+   147→    icon: Heart,
+   148→    color: '#be123c',
+   149→    bgColor: 'bg-rose-50 dark:bg-rose-950/40',
+   150→    borderColor: 'border-rose-200 dark:border-rose-800',
+   151→    textColor: 'text-rose-700 dark:text-rose-300',
+   152→  },
+   153→  {
+   154→    id: 'Endocrinologist',
+   155→    label: 'Endocrinologist',
+   156→    shortLabel: 'Endocrine',
+   157→    description: 'Hormone issues, thyroid, PCOS',
+   158→    icon: Activity,
+   159→    color: '#7c3aed',
+   160→    bgColor: 'bg-violet-50 dark:bg-violet-950/40',
+   161→    borderColor: 'border-violet-200 dark:border-violet-800',
+   162→    textColor: 'text-violet-700 dark:text-violet-300',
+   163→  },
+   164→  {
+   165→    id: 'Nutritionist',
+   166→    label: 'Nutritionist/Dietitian',
+   167→    shortLabel: 'Nutritionist',
+   168→    description: 'Diet, weight management',
+   169→    icon: Utensils,
+   170→    color: '#16a34a',
+   171→    bgColor: 'bg-green-50 dark:bg-green-950/40',
+   172→    borderColor: 'border-green-200 dark:border-green-800',
+   173→    textColor: 'text-green-700 dark:text-green-300',
+   174→  },
+   175→  {
+   176→    id: 'Dermatologist',
+   177→    label: 'Dermatologist',
+   178→    shortLabel: 'Dermatologist',
+   179→    description: 'Acne, skin issues related to hormones',
+   180→    icon: Sparkles,
+   181→    color: '#db2777',
+   182→    bgColor: 'bg-pink-50 dark:bg-pink-950/40',
+   183→    borderColor: 'border-pink-200 dark:border-pink-800',
+   184→    textColor: 'text-pink-700 dark:text-pink-300',
+   185→  },
+   186→  {
+   187→    id: 'Mental Health Counselor',
+   188→    label: 'Mental Health Counselor',
+   189→    shortLabel: 'Mental Health',
+   190→    description: 'Anxiety, depression, mood',
+   191→    icon: Brain,
+   192→    color: '#2563eb',
+   193→    bgColor: 'bg-sky-50 dark:bg-sky-950/40',
+   194→    borderColor: 'border-sky-200 dark:border-sky-800',
+   195→    textColor: 'text-sky-700 dark:text-sky-300',
+   196→  },
+   197→  {
+   198→    id: 'General Physician',
+   199→    label: 'General Physician',
+   200→    shortLabel: 'General Physician',
+   201→    description: 'General health',
+   202→    icon: Stethoscope,
+   203→    color: '#475569',
+   204→    bgColor: 'bg-slate-50 dark:bg-slate-950/40',
+   205→    borderColor: 'border-slate-200 dark:border-slate-800',
+   206→    textColor: 'text-slate-700 dark:text-slate-300',
+   207→  },
+   208→  {
+   209→    id: 'Urologist',
+   210→    label: 'Urologist',
+   211→    shortLabel: 'Urologist',
+   212→    description: 'Urinary issues',
+   213→    icon: Droplet,
+   214→    color: '#0284c7',
+   215→    bgColor: 'bg-cyan-50 dark:bg-cyan-950/40',
+   216→    borderColor: 'border-cyan-200 dark:border-cyan-800',
+   217→    textColor: 'text-cyan-700 dark:text-cyan-300',
+   218→  },
+   219→]
+   220→
+   221→const SPECIALTY_MAP: Record<Specialty, SpecialtyMeta> = SPECIALTIES.reduce(
+   222→  (acc, s) => ({ ...acc, [s.id]: s }),
+   223→  {} as Record<Specialty, SpecialtyMeta>
+   224→)
+   225→
+   226→// ─── Mock Doctor Data ─────────────────────────────────────────────────────────
+   227→
+   228→const DOCTORS: Doctor[] = [
+   229→  {
+   230→    id: 'd1',
+   231→    name: 'Dr. Meera Patel',
+   232→    specialty: 'Gynecologist',
+   233→    qualifications: 'MBBS, MD - Obstetrics & Gynaecology',
+   234→    experience: 15,
+   235→    rating: 4.8,
+   236→    reviews: 324,
+   237→    clinic: 'Aura Women\'s Wellness Clinic',
+   238→    address: '204, Linking Road, Bandra West',
+   239→    city: 'Mumbai',
+   240→    distance: 2.3,
+   241→    fee: 800,
+   242→    nextSlotDay: 'Today',
+   243→    nextSlotTime: '4:30 PM',
+   244→    languages: ['English', 'Hindi', 'Marathi', 'Gujarati'],
+   245→    gender: 'Female',
+   246→    availableToday: true,
+   247→    videoConsult: true,
+   248→    onlineNow: true,
+   249→  },
+   250→  {
+   251→    id: 'd2',
+   252→    name: 'Dr. Anjali Sharma',
+   253→    specialty: 'Gynecologist',
+   254→    qualifications: 'MBBS, MS (Gynaecology), Fellowship in Laparoscopy',
+   255→    experience: 12,
+   256→    rating: 4.7,
+   257→    reviews: 256,
+   258→    clinic: 'Fortis La Femme',
+   259→    address: 'S-549, School Block, Shakarpur',
+   260→    city: 'Delhi',
+   261→    distance: 4.1,
+   262→    fee: 1000,
+   263→    nextSlotDay: 'Today',
+   264→    nextSlotTime: '6:00 PM',
+   265→    languages: ['English', 'Hindi', 'Punjabi'],
+   266→    gender: 'Female',
+   267→    availableToday: true,
+   268→    videoConsult: true,
+   269→    onlineNow: false,
+   270→  },
+   271→  {
+   272→    id: 'd3',
+   273→    name: 'Dr. Priya Nair',
+   274→    specialty: 'Fertility Specialist',
+   275→    qualifications: 'MBBS, MD, Fellowship in Reproductive Medicine (IVF)',
+   276→    experience: 18,
+   277→    rating: 4.9,
+   278→    reviews: 412,
+   279→    clinic: 'Cloudnine Fertility Center',
+   280→    address: '1532, 12th Main Road, HAL 2nd Stage, Indiranagar',
+   281→    city: 'Bangalore',
+   282→    distance: 3.5,
+   283→    fee: 1200,
+   284→    nextSlotDay: 'Tomorrow',
+   285→    nextSlotTime: '11:00 AM',
+   286→    languages: ['English', 'Hindi', 'Kannada', 'Malayalam'],
+   287→    gender: 'Female',
+   288→    availableToday: false,
+   289→    videoConsult: true,
+   290→    onlineNow: true,
+   291→  },
+   292→  {
+   293→    id: 'd4',
+   294→    name: 'Dr. Vikram Rao',
+   295→    specialty: 'Endocrinologist',
+   296→    qualifications: 'MBBS, MD (Medicine), DM (Endocrinology)',
+   297→    experience: 20,
+   298→    rating: 4.6,
+   299→    reviews: 198,
+   300→    clinic: 'Apollo Hospitals',
+   301→    address: '21, Greams Lane, Off Greams Road',
+   302→    city: 'Chennai',
+   303→    distance: 5.2,
+   304→    fee: 900,
+   305→    nextSlotDay: 'Today',
+   306→    nextSlotTime: '5:15 PM',
+   307→    languages: ['English', 'Hindi', 'Tamil', 'Telugu'],
+   308→    gender: 'Male',
+   309→    availableToday: true,
+   310→    videoConsult: false,
+   311→    onlineNow: false,
+   312→  },
+   313→  {
+   314→    id: 'd5',
+   315→    name: 'Dr. Sneha Reddy',
+   316→    specialty: 'Obstetrician',
+   317→    qualifications: 'MBBS, MS (OBG), High-Risk Pregnancy Specialist',
+   318→    experience: 14,
+   319→    rating: 4.9,
+   320→    reviews: 387,
+   321→    clinic: 'Rainbow Children\'s Hospital',
+   322→    address: '3-6-106, Liberty Road, Himayatnagar',
+   323→    city: 'Hyderabad',
+   324→    distance: 6.8,
+   325→    fee: 750,
+   326→    nextSlotDay: 'Tomorrow',
+   327→    nextSlotTime: '10:30 AM',
+   328→    languages: ['English', 'Hindi', 'Telugu', 'Urdu'],
+   329→    gender: 'Female',
+   330→    availableToday: false,
+   331→    videoConsult: true,
+   332→    onlineNow: false,
+   333→  },
+   334→  {
+   335→    id: 'd6',
+   336→    name: 'Dr. Kavita Iyer',
+   337→    specialty: 'Mental Health Counselor',
+   338→    qualifications: 'M.A. Clinical Psychology, Ph.D. (Mental Health)',
+   339→    experience: 10,
+   340→    rating: 4.8,
+   341→    reviews: 174,
+   342→    clinic: 'Mindful Living Therapy Center',
+   343→    address: '502, Pinnacle Corporate Park, BKC',
+   344→    city: 'Mumbai',
+   345→    distance: 1.9,
+   346→    fee: 1500,
+   347→    nextSlotDay: 'Today',
+   348→    nextSlotTime: '7:00 PM',
+   349→    languages: ['English', 'Hindi', 'Marathi'],
+   350→    gender: 'Female',
+   351→    availableToday: true,
+   352→    videoConsult: true,
+   353→    onlineNow: true,
+   354→  },
+   355→  {
+   356→    id: 'd7',
+   357→    name: 'Dr. Rohit Banerjee',
+   358→    specialty: 'Dermatologist',
+   359→    qualifications: 'MBBS, MD (Dermatology), Cosmetic Dermatology Fellow',
+   360→    experience: 11,
+   361→    rating: 4.5,
+   362→    reviews: 142,
+   363→    clinic: 'Skin & Hair Clinic',
+   364→    address: '14, Park Street, Near Park Hotel',
+   365→    city: 'Kolkata',
+   366→    distance: 8.4,
+   367→    fee: 700,
+   368→    nextSlotDay: 'Day After',
+   369→    nextSlotTime: '2:00 PM',
+   370→    languages: ['English', 'Hindi', 'Bengali'],
+   371→    gender: 'Male',
+   372→    availableToday: false,
+   373→    videoConsult: true,
+   374→    onlineNow: false,
+   375→  },
+   376→  {
+   377→    id: 'd8',
+   378→    name: 'Dr. Lakshmi Menon',
+   379→    specialty: 'Nutritionist',
+   380→    qualifications: 'B.Sc, M.Sc (Dietetics), Certified Diabetes Educator',
+   381→    experience: 9,
+   382→    rating: 4.7,
+   383→    reviews: 221,
+   384→    clinic: 'NutriLife Wellness Center',
+   385→    address: '45, Marine Drive, Nariman Point',
+   386→    city: 'Mumbai',
+   387→    distance: 3.2,
+   388→    fee: 600,
+   389→    nextSlotDay: 'Today',
+   390→    nextSlotTime: '5:45 PM',
+   391→    languages: ['English', 'Hindi', 'Malayalam'],
+   392→    gender: 'Female',
+   393→    availableToday: true,
+   394→    videoConsult: true,
+   395→    onlineNow: true,
+   396→  },
+   397→  {
+   398→    id: 'd9',
+   399→    name: 'Dr. Arjun Kapoor',
+   400→    specialty: 'Urologist',
+   401→    qualifications: 'MBBS, MS (Surgery), MCh (Urology)',
+   402→    experience: 17,
+   403→    rating: 4.6,
+   404→    reviews: 189,
+   405→    clinic: 'Max Super Speciality Hospital',
+   406→    address: '1, 2, Press Enclave Marg, Saket',
+   407→    city: 'Delhi',
+   408→    distance: 7.1,
+   409→    fee: 1100,
+   410→    nextSlotDay: 'Tomorrow',
+   411→    nextSlotTime: '9:30 AM',
+   412→    languages: ['English', 'Hindi', 'Punjabi'],
+   413→    gender: 'Male',
+   414→    availableToday: false,
+   415→    videoConsult: false,
+   416→    onlineNow: false,
+   417→  },
+   418→  {
+   419→    id: 'd10',
+   420→    name: 'Dr. Neha Gupta',
+   421→    specialty: 'General Physician',
+   422→    qualifications: 'MBBS, MD (Internal Medicine)',
+   423→    experience: 8,
+   424→    rating: 4.4,
+   425→    reviews: 96,
+   426→    clinic: 'Care Plus Clinic',
+   427→    address: '88, Brigade Road, Ashok Nagar',
+   428→    city: 'Bangalore',
+   429→    distance: 2.0,
+   430→    fee: 500,
+   431→    nextSlotDay: 'Today',
+   432→    nextSlotTime: '3:00 PM',
+   433→    languages: ['English', 'Hindi', 'Kannada'],
+   434→    gender: 'Female',
+   435→    availableToday: true,
+   436→    videoConsult: true,
+   437→    onlineNow: true,
+   438→  },
+   439→  {
+   440→    id: 'd11',
+   441→    name: 'Dr. Aishwarya Deshpande',
+   442→    specialty: 'Gynecologist',
+   443→    qualifications: 'MBBS, MD (OBG), Laparoscopic Surgeon',
+   444→    experience: 13,
+   445→    rating: 4.7,
+   446→    reviews: 278,
+   447→    clinic: 'Surya Mother & Child Care',
+   448→    address: '12, Model Colony, Shivajinagar',
+   449→    city: 'Pune',
+   450→    distance: 4.6,
+   451→    fee: 850,
+   452→    nextSlotDay: 'Tomorrow',
+   453→    nextSlotTime: '12:30 PM',
+   454→    languages: ['English', 'Hindi', 'Marathi'],
+   455→    gender: 'Female',
+   456→    availableToday: false,
+   457→    videoConsult: true,
+   458→    onlineNow: false,
+   459→  },
+   460→  {
+   461→    id: 'd12',
+   462→    name: 'Dr. Sanjay Pillai',
+   463→    specialty: 'Endocrinologist',
+   464→    qualifications: 'MBBS, MD, DM (Endocrinology & Metabolism)',
+   465→    experience: 22,
+   466→    rating: 4.8,
+   467→    reviews: 301,
+   468→    clinic: 'Aster Medcity',
+   469→    address: 'NH Bypass, Kuttisahib Road, South Kalamassery',
+   470→    city: 'Kochi',
+   471→    distance: 9.3,
+   472→    fee: 950,
+   473→    nextSlotDay: 'Today',
+   474→    nextSlotTime: '6:30 PM',
+   475→    languages: ['English', 'Hindi', 'Malayalam', 'Tamil'],
+   476→    gender: 'Male',
+   477→    availableToday: true,
+   478→    videoConsult: true,
+   479→    onlineNow: true,
+   480→  },
+   481→  {
+   482→    id: 'd13',
+   483→    name: 'Dr. Aisha Khan',
+   484→    specialty: 'Gynecologist',
+   485→    qualifications: 'MBBS, MD (Obstetrics & Gynaecology), Fellowship in Minimally Invasive Surgery',
+   486→    experience: 11,
+   487→    rating: 4.7,
+   488→    reviews: 189,
+   489→    clinic: 'Lilavati Hospital',
+   490→    address: 'A-791, Bandra Reclamation, Bandra West',
+   491→    city: 'Mumbai',
+   492→    distance: 5.2,
+   493→    fee: 900,
+   494→    nextSlotDay: 'Today',
+   495→    nextSlotTime: '5:00 PM',
+   496→    languages: ['English', 'Hindi', 'Urdu'],
+   497→    gender: 'Female',
+   498→    availableToday: true,
+   499→    videoConsult: true,
+   500→    onlineNow: false,
+   501→  },
+   502→  {
+   503→    id: 'd14',
+   504→    name: 'Dr. Ritu Desai',
+   505→    specialty: 'Gynecologist',
+   506→    qualifications: 'MBBS, MS (Gynaecology), Diploma in Laparoscopic Surgery',
+   507→    experience: 14,
+   508→    rating: 4.6,
+   509→    reviews: 221,
+   510→    clinic: 'Hiranandani Hospital',
+   511→    address: 'Hillside Avenue, Hiranandani Gardens, Powai',
+   512→    city: 'Mumbai',
+   513→    distance: 8.7,
+   514→    fee: 750,
+   515→    nextSlotDay: 'Tomorrow',
+   516→    nextSlotTime: '10:30 AM',
+   517→    languages: ['English', 'Hindi', 'Marathi'],
+   518→    gender: 'Female',
+   519→    availableToday: false,
+   520→    videoConsult: true,
+   521→    onlineNow: false,
+   522→  },
+   523→  {
+   524→    id: 'd15',
+   525→    name: 'Dr. Neha Kapoor',
+   526→    specialty: 'Nutritionist',
+   527→    qualifications: 'B.Sc, M.Sc (Dietetics), Certified Diabetes Educator',
+   528→    experience: 9,
+   529→    rating: 4.8,
+   530→    reviews: 156,
+   531→    clinic: 'NutriWell Clinic',
+   532→    address: '501, Lokhandwala Complex, Andheri West',
+   533→    city: 'Mumbai',
+   534→    distance: 6.1,
+   535→    fee: 600,
+   536→    nextSlotDay: 'Today',
+   537→    nextSlotTime: '3:00 PM',
+   538→    languages: ['English', 'Hindi', 'Marathi'],
+   539→    gender: 'Female',
+   540→    availableToday: true,
+   541→    videoConsult: true,
+   542→    onlineNow: true,
+   543→  },
+   544→  {
+   545→    id: 'd16',
+   546→    name: 'Dr. Sanjay Gupta',
+   547→    specialty: 'Endocrinologist',
+   548→    qualifications: 'MBBS, MD (Medicine), DM (Endocrinology)',
+   549→    experience: 17,
+   550→    rating: 4.5,
+   551→    reviews: 143,
+   552→    clinic: 'Hinduja Hospital',
+   553→    address: 'Veer Savarkar Marg, Mahim',
+   554→    city: 'Mumbai',
+   555→    distance: 7.4,
+   556→    fee: 1100,
+   557→    nextSlotDay: 'Tomorrow',
+   558→    nextSlotTime: '12:00 PM',
+   559→    languages: ['English', 'Hindi'],
+   560→    gender: 'Male',
+   561→    availableToday: false,
+   562→    videoConsult: false,
+   563→    onlineNow: false,
+   564→  },
+   565→  {
+   566→    id: 'd17',
+   567→    name: 'Dr. Pooja Bhatt',
+   568→    specialty: 'Mental Health Counselor',
+   569→    qualifications: 'M.A (Psychology), PhD (Clinical Psychology)',
+   570→    experience: 10,
+   571→    rating: 4.9,
+   572→    reviews: 203,
+   573→    clinic: 'MindCare Wellness Center',
+   574→    address: '12, Marine Drive, Nariman Point',
+   575→    city: 'Mumbai',
+   576→    distance: 4.8,
+   577→    fee: 1500,
+   578→    nextSlotDay: 'Today',
+   579→    nextSlotTime: '7:00 PM',
+   580→    languages: ['English', 'Hindi', 'Gujarati'],
+   581→    gender: 'Female',
+   582→    availableToday: true,
+   583→    videoConsult: true,
+   584→    onlineNow: true,
+   585→  },
+   586→  {
+   587→    id: 'd18',
+   588→    name: 'Dr. Aditya Malhotra',
+   589→    specialty: 'Dermatologist',
+   590→    qualifications: 'MBBS, MD (Dermatology), Fellowship in Aesthetic Medicine',
+   591→    experience: 13,
+   592→    rating: 4.7,
+   593→    reviews: 287,
+   594→    clinic: 'Skin & Glow Clinic',
+   595→    address: 'C-45, Greater Kailash II',
+   596→    city: 'Delhi',
+   597→    distance: 3.2,
+   598→    fee: 850,
+   599→    nextSlotDay: 'Today',
+   600→    nextSlotTime: '4:00 PM',
+   601→    languages: ['English', 'Hindi', 'Punjabi'],
+   602→    gender: 'Male',
+   603→    availableToday: true,
+   604→    videoConsult: true,
+   605→    onlineNow: false,
+   606→  },
+   607→  {
+   608→    id: 'd19',
+   609→    name: 'Dr. Divya Krishnan',
+   610→    specialty: 'Obstetrician',
+   611→    qualifications: 'MBBS, MS (OBG), Fellowship in High-Risk Pregnancy',
+   612→    experience: 16,
+   613→    rating: 4.8,
+   614→    reviews: 341,
+   615→    clinic: 'Motherhood Hospital',
+   616→    address: 'Sarjapur Road, Bellandur',
+   617→    city: 'Bangalore',
+   618→    distance: 5.5,
+   619→    fee: 950,
+   620→    nextSlotDay: 'Today',
+   621→    nextSlotTime: '5:30 PM',
+   622→    languages: ['English', 'Hindi', 'Kannada', 'Tamil'],
+   623→    gender: 'Female',
+   624→    availableToday: true,
+   625→    videoConsult: true,
+   626→    onlineNow: true,
+   627→  },
+   628→  {
+   629→    id: 'd20',
+   630→    name: 'Dr. Sunita Agarwal',
+   631→    specialty: 'Gynecologist',
+   632→    qualifications: 'MBBS, MS (Gynaecology), Fellowship in Infertility Management',
+   633→    experience: 22,
+   634→    rating: 4.9,
+   635→    reviews: 498,
+   636→    clinic: 'Apollo Hospitals',
+   637→    address: '21, Greams Lane, Thousand Lights',
+   638→    city: 'Chennai',
+   639→    distance: 4.3,
+   640→    fee: 1200,
+   641→    nextSlotDay: 'Today',
+   642→    nextSlotTime: '11:30 AM',
+   643→    languages: ['English', 'Hindi', 'Tamil'],
+   644→    gender: 'Female',
+   645→    availableToday: true,
+   646→    videoConsult: true,
+   647→    onlineNow: false,
+   648→  },
+   649→  {
+   650→    id: 'd21',
+   651→    name: 'Dr. Meena Iyer',
+   652→    specialty: 'Nutritionist',
+   653→    qualifications: 'B.Sc, M.Sc (Food & Nutrition), Certified Sports Nutritionist',
+   654→    experience: 8,
+   655→    rating: 4.7,
+   656→    reviews: 134,
+   657→    clinic: 'HealthFirst Nutrition Clinic',
+   658→    address: 'Banjara Hills, Road No. 12',
+   659→    city: 'Hyderabad',
+   660→    distance: 3.8,
+   661→    fee: 700,
+   662→    nextSlotDay: 'Today',
+   663→    nextSlotTime: '2:30 PM',
+   664→    languages: ['English', 'Hindi', 'Telugu'],
+   665→    gender: 'Female',
+   666→    availableToday: true,
+   667→    videoConsult: true,
+   668→    onlineNow: true,
+   669→  },
+   670→  {
+   671→    id: 'd22',
+   672→    name: 'Dr. Rajesh Khanna',
+   673→    specialty: 'General Physician',
+   674→    qualifications: 'MBBS, MD (Internal Medicine)',
+   675→    experience: 19,
+   676→    rating: 4.5,
+   677→    reviews: 267,
+   678→    clinic: 'Max Super Speciality Hospital',
+   679→    address: '1, 2, Press Enclave Marg, Saket',
+   680→    city: 'Delhi',
+   681→    distance: 2.9,
+   682→    fee: 600,
+   683→    nextSlotDay: 'Today',
+   684→    nextSlotTime: '6:00 PM',
+   685→    languages: ['English', 'Hindi', 'Punjabi'],
+   686→    gender: 'Male',
+   687→    availableToday: true,
+   688→    videoConsult: true,
+   689→    onlineNow: false,
+   690→  },
+   691→]
+   692→
+   693→// ─── Health Concern Guide ─────────────────────────────────────────────────────
+   694→
+   695→interface GuideEntry {
+   696→  specialty: Specialty
+   697→  whenToSee: string
+   698→  icon: React.ElementType
+   699→}
+   700→
+   701→const SPECIALTY_GUIDE: GuideEntry[] = [
+   702→  {
+   703→    specialty: 'Gynecologist',
+   704→    whenToSee: 'Irregular periods, severe cramps, abnormal bleeding, pelvic pain, or routine annual check-ups.',
+   705→    icon: Stethoscope,
+   706→  },
+   707→  {
+   708→    specialty: 'Fertility Specialist',
+   709→    whenToSee: 'Trying to conceive for 12+ months (6+ months if over 35), PCOS with fertility concerns, or recurrent pregnancy loss.',
+   710→    icon: Baby,
+   711→  },
+   712→  {
+   713→    specialty: 'Endocrinologist',
+   714→    whenToSee: 'Hormone imbalances, thyroid issues (hypo/hyper), severe PCOS resistant to first-line treatment, or diabetes management.',
+   715→    icon: Activity,
+   716→  },
+   717→  {
+   718→    specialty: 'Obstetrician',
+   719→    whenToSee: 'Confirmed or suspected pregnancy, prenatal care, high-risk pregnancy monitoring, or postpartum follow-up.',
+   720→    icon: Heart,
+   721→  },
+   722→  {
+   723→    specialty: 'Mental Health Counselor',
+   724→    whenToSee: 'Persistent anxiety, low mood, mood swings affecting daily life, PMS/PMDD symptoms, or postpartum depression.',
+   725→    icon: Brain,
+   726→  },
+   727→  {
+   728→    specialty: 'Nutritionist',
+   729→    whenToSee: 'PCOS diet planning, weight management, gestational diabetes, or eating concerns tied to cycle changes.',
+   730→    icon: Utensils,
+   731→  },
+   732→]
+   733→
+   734→const RED_FLAG_SYMPTOMS = [
+   735→  { text: 'Severe pelvic pain that doesn\'t subside', icon: Frown },
+   736→  { text: 'Heavy bleeding — soaking a pad in 1 hour', icon: Droplet },
+   737→  { text: 'Missed period with severe abdominal pain', icon: AlertTriangle },
+   738→  { text: 'Fever (≥101°F) with pelvic symptoms', icon: Thermometer },
+   739→  { text: 'Sudden severe headache, worse than usual', icon: Zap },
+   740→  { text: 'Vision changes, blurriness, or flashing lights', icon: Eye },
+   741→]
+   742→
+   743→// ─── Time Slots for Booking ───────────────────────────────────────────────────
+   744→
+   745→const TIME_SLOTS = [
+   746→  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
+   747→  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
+   748→  '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
+   749→  '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
+   750→]
+   751→
+   752→// ─── Severity Config ──────────────────────────────────────────────────────────
+   753→
+   754→const SEVERITY_CONFIG: Record<Severity, { label: string; color: string; bg: string; border: string; ring: string; dot: string }> = {
+   755→  Mild: {
+   756→    label: 'Mild',
+   757→    color: 'text-emerald-700 dark:text-emerald-300',
+   758→    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+   759→    border: 'border-emerald-300 dark:border-emerald-700',
+   760→    ring: 'ring-emerald-500',
+   761→    dot: 'bg-emerald-500',
+   762→  },
+   763→  Moderate: {
+   764→    label: 'Moderate',
+   765→    color: 'text-amber-700 dark:text-amber-300',
+   766→    bg: 'bg-amber-50 dark:bg-amber-950/40',
+   767→    border: 'border-amber-300 dark:border-amber-700',
+   768→    ring: 'ring-amber-500',
+   769→    dot: 'bg-amber-500',
+   770→  },
+   771→  Severe: {
+   772→    label: 'Severe',
+   773→    color: 'text-rose-700 dark:text-rose-300',
+   774→    bg: 'bg-rose-50 dark:bg-rose-950/40',
+   775→    border: 'border-rose-300 dark:border-rose-700',
+   776→    ring: 'ring-rose-500',
+   777→    dot: 'bg-rose-500',
+   778→  },
+   779→}
+   780→
+   781→// ─── Helper: Avatar Gradient ──────────────────────────────────────────────────
+   782→
+   783→const AVATAR_GRADIENTS = [
+   784→  'from-teal-500 to-cyan-600',
+   785→  'from-rose-500 to-pink-600',
+   786→  'from-violet-500 to-purple-600',
+   787→  'from-amber-500 to-orange-600',
+   788→  'from-emerald-500 to-green-600',
+   789→  'from-sky-500 to-blue-600',
+   790→  'from-fuchsia-500 to-pink-600',
+   791→  'from-cyan-500 to-teal-600',
+   792→]
+   793→
+   794→function getAvatarGradient(name: string): string {
+   795→  let hash = 0
+   796→  for (let i = 0; i < name.length; i++) {
+   797→    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+   798→  }
+   799→  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length]
+   800→}
+   801→
+   802→function getInitials(name: string): string {
+   803→  const parts = name.replace(/^Dr\.\s*/i, '').split(' ')
+   804→  return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')
+   805→}
+   806→
+   807→// ─── Sub-component: Star Rating ───────────────────────────────────────────────
+   808→
+   809→function StarRating({ rating }: { rating: number }) {
+   810→  const full = Math.floor(rating)
+   811→  const hasHalf = rating - full >= 0.5
+   812→  return (
+   813→    <div className="flex items-center gap-0.5" aria-label={`Rating ${rating} out of 5`}>
+   814→      {Array.from({ length: 5 }).map((_, i) => {
+   815→        const isFull = i < full
+   816→        const isHalf = i === full && hasHalf
+   817→        return (
+   818→          <Star
+   819→            key={i}
+   820→            className={cn(
+   821→              'h-3.5 w-3.5',
+   822→              isFull || isHalf
+   823→                ? 'fill-amber-400 text-amber-400'
+   824→                : 'fill-muted text-muted-foreground/40'
+   825→            )}
+   826→          />
+   827→        )
+   828→      })}
+   829→    </div>
+   830→  )
+   831→}
+   832→
+   833→// ─── Main Component ───────────────────────────────────────────────────────────
+   834→
+   835→export default function DoctorFinderModule() {
+   836→  // Search state
+   837→  const [location, setLocation] = useState('')
+   838→  const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty | null>(null)
+   839→  const [severity, setSeverity] = useState<Severity | null>(null)
+   840→  const [hasSearched, setHasSearched] = useState(false)
+   841→  const [isSearching, setIsSearching] = useState(false)
+   842→
+   843→  // Filter & sort state
+   844→  const [sortBy, setSortBy] = useState<'distance' | 'rating' | 'experience' | 'fee'>('distance')
+   845→  const [filterToday, setFilterToday] = useState(false)
+   846→  const [filterVideo, setFilterVideo] = useState(false)
+   847→  const [filterFemale, setFilterFemale] = useState(false)
+   848→  const [maxFee, setMaxFee] = useState<'any' | '500' | '800' | '1200'>('any')
+   849→
+   850→  // Booking dialog state
+   851→  const [bookingDoctor, setBookingDoctor] = useState<Doctor | null>(null)
+   852→  const [bookingDate, setBookingDate] = useState<Date | undefined>(undefined)
+   853→  const [bookingTime, setBookingTime] = useState<string>('')
+   854→  const [bookingReason, setBookingReason] = useState('')
+   855→  const [bookingConfirmed, setBookingConfirmed] = useState(false)
+   856→
+   857→  // Derived: filtered + sorted doctors
+   858→  const filteredDoctors = useMemo(() => {
+   859→    if (!hasSearched) return []
+   860→    let list = [...DOCTORS]
+   861→
+   862→    // Filter by specialty (from search)
+   863→    if (selectedSpecialty) {
+   864→      list = list.filter((d) => d.specialty === selectedSpecialty)
+   865→    }
+   866→
+   867→    // Filter by location (city match — case insensitive, partial)
+   868→    if (location.trim()) {
+   869→      const q = location.trim().toLowerCase()
+   870→      list = list.filter(
+   871→        (d) =>
+   872→          d.city.toLowerCase().includes(q) ||
+   873→          d.address.toLowerCase().includes(q)
+   874→      )
+   875→    }
+   876→
+   877→    // Apply filter bar filters
+   878→    if (filterToday) list = list.filter((d) => d.availableToday)
+   879→    if (filterVideo) list = list.filter((d) => d.videoConsult)
+   880→    if (filterFemale) list = list.filter((d) => d.gender === 'Female')
+   881→    if (maxFee !== 'any') {
+   882→      const cap = parseInt(maxFee, 10)
+   883→      list = list.filter((d) => d.fee <= cap)
+   884→    }
+   885→
+   886→    // Sort
+   887→    list.sort((a, b) => {
+   888→      switch (sortBy) {
+   889→        case 'rating':
+   890→          return b.rating - a.rating
+   891→        case 'experience':
+   892→          return b.experience - a.experience
+   893→        case 'fee':
+   894→          return a.fee - b.fee
+   895→        case 'distance':
+   896→        default:
+   897→          return a.distance - b.distance
+   898→      }
+   899→    })
+   900→
+   901→    return list
+   902→  }, [hasSearched, selectedSpecialty, location, filterToday, filterVideo, filterFemale, maxFee, sortBy])
+   903→
+   904→  // Online-now doctors for telehealth quick connect
+   905→  const onlineDoctors = useMemo(() => DOCTORS.filter((d) => d.onlineNow).slice(0, 3), [])
+   906→
+   907→  const isSevere = severity === 'Severe'
+   908→
+   909→  // ─── Handlers ────────────────────────────────────────────────────────────
+   910→
+   911→  const handleSearch = () => {
+   912→    if (!selectedSpecialty && !location.trim()) return
+   913→    setIsSearching(true)
+   914→    setHasSearched(false)
+   915→    // Simulate network delay
+   916→    setTimeout(() => {
+   917→      setIsSearching(false)
+   918→      setHasSearched(true)
+   919→    }, 700)
+   920→  }
+   921→
+   922→  const handleSelectSpecialty = (s: Specialty) => {
+   923→    setSelectedSpecialty((cur) => (cur === s ? null : s))
+   924→  }
+   925→
+   926→  const openBooking = (doctor: Doctor) => {
+   927→    setBookingDoctor(doctor)
+   928→    setBookingDate(undefined)
+   929→    setBookingTime('')
+   930→    setBookingReason('')
+   931→    setBookingConfirmed(false)
+   932→  }
+   933→
+   934→  const closeBooking = () => {
+   935→    setBookingDoctor(null)
+   936→    // Clear confirmed state after the dialog closes
+   937→    setTimeout(() => setBookingConfirmed(false), 200)
+   938→  }
+   939→
+   940→  const confirmBooking = () => {
+   941→    if (!bookingDate || !bookingTime) return
+   942→    setBookingConfirmed(true)
+   943→  }
+   944→
+   945→  const canConfirm = bookingDate && bookingTime
+   946→
+   947→  // ─── Render ──────────────────────────────────────────────────────────────
+   948→
+   949→  return (
+   950→    <div className="space-y-6 pb-4">
+   951→      {/* ═══ 1. HEADER ═══ */}
+   952→      <motion.header
+   953→        initial={{ opacity: 0, y: -12 }}
+   954→        animate={{ opacity: 1, y: 0 }}
+   955→        transition={{ duration: 0.4 }}
+   956→        className="space-y-3"
+   957→      >
+   958→        <div className="flex items-center gap-3">
+   959→          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/20">
+   960→            <Stethoscope className="h-6 w-6" />
+   961→          </div>
+   962→          <div>
+   963→            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+   964→              <span className="bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-500 bg-clip-text text-transparent">
+   965→                Find Your Doctor
+   966→              </span>
+   967→            </h1>
+   968→            <p className="text-sm md:text-base text-muted-foreground mt-0.5">
+   969→              Connect with trusted healthcare specialists near you
+   970→            </p>
+   971→          </div>
+   972→        </div>
+   973→
+   974→        {/* Emergency banner */}
+   975→        <div className="flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-4 py-3">
+   976→          <Siren className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+   977→          <p className="text-sm text-rose-800 dark:text-rose-200 font-medium">
+   978→            🚨 For medical emergencies, call your local emergency number immediately
+   979→            <span className="block text-xs font-normal text-rose-700/80 dark:text-rose-300/80 mt-0.5">
+   980→              India: 108 / 112 · US: 911 · UK: 999 · EU: 112
+   981→            </span>
+   982→          </p>
+   983→        </div>
+   984→      </motion.header>
+   985→
+   986→      {/* ═══ 2. SEARCH SECTION ═══ */}
+   987→      <motion.div
+   988→        initial={{ opacity: 0, y: 12 }}
+   989→        animate={{ opacity: 1, y: 0 }}
+   990→        transition={{ duration: 0.4, delay: 0.05 }}
+   991→      >
+   992→        <Card className="border-teal-100 dark:border-teal-900/50 bg-gradient-to-br from-teal-50/40 via-white to-cyan-50/30 dark:from-teal-950/20 dark:via-card dark:to-cyan-950/20 backdrop-blur-sm">
+   993→          <CardHeader className="pb-4">
+   994→            <CardTitle className="flex items-center gap-2 text-lg">
+   995→              <Search className="h-5 w-5 text-teal-600" />
+   996→              Search Healthcare Providers
+   997→            </CardTitle>
+   998→            <CardDescription>
+   999→              Tell us what you need and we&apos;ll find the right specialist for you.
+  1000→            </CardDescription>
+  1001→          </CardHeader>
+  1002→          <CardContent className="space-y-5">
+  1003→            {/* Location input */}
+  1004→            <div className="space-y-2">
+  1005→              <Label htmlFor="location" className="text-sm font-medium flex items-center gap-1.5">
+  1006→                <MapPin className="h-3.5 w-3.5 text-teal-600" />
+  1007→                Your Location
+  1008→              </Label>
+  1009→              <div className="relative">
+  1010→                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+  1011→                <Input
+  1012→                  id="location"
+  1013→                  placeholder="Enter your city or area (e.g., Mumbai, Delhi, Bangalore)"
+  1014→                  value={location}
+  1015→                  onChange={(e) => setLocation(e.target.value)}
+  1016→                  className="pl-9 h-11 bg-background/70"
+  1017→                />
+  1018→              </div>
+  1019→            </div>
+  1020→
+  1021→            {/* Specialty selector grid */}
+  1022→            <div className="space-y-2">
+  1023→              <Label className="text-sm font-medium flex items-center gap-1.5">
+  1024→                <Stethoscope className="h-3.5 w-3.5 text-teal-600" />
+  1025→                Health Concern
+  1026→              </Label>
+  1027→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+  1028→                {SPECIALTIES.map((s) => {
+  1029→                  const Icon = s.icon
+  1030→                  const isSelected = selectedSpecialty === s.id
+  1031→                  return (
+  1032→                    <button
+  1033→                      key={s.id}
+  1034→                      type="button"
+  1035→                      onClick={() => handleSelectSpecialty(s.id)}
+  1036→                      className={cn(
+  1037→                        'group flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all duration-200',
+  1038→                        isSelected
+  1039→                          ? cn(s.bgColor, s.borderColor, 'shadow-md ring-2', s.ring, 'ring-offset-0')
+  1040→                          : 'border-border bg-background/60 hover:bg-accent/50 hover:border-teal-200 dark:hover:border-teal-800'
+  1041→                      )}
+  1042→                    >
+  1043→                      <div className="flex items-center gap-2 w-full">
+  1044→                        <span
+  1045→                          className={cn(
+  1046→                            'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
+  1047→                            isSelected ? cn(s.bgColor, s.textColor) : 'bg-muted text-muted-foreground'
+  1048→                          )}
+  1049→                        >
+  1050→                          <Icon className="h-4 w-4" />
+  1051→                        </span>
+  1052→                        {isSelected && (
+  1053→                          <CheckCircle2 className="h-4 w-4 ml-auto text-teal-600" />
+  1054→                        )}
+  1055→                      </div>
+  1056→                      <span className="text-xs font-semibold leading-tight">{s.shortLabel}</span>
+  1057→                      <span className="text-[10px] text-muted-foreground leading-tight line-clamp-2">
+  1058→                        {s.description}
+  1059→                      </span>
+  1060→                    </button>
+  1061→                  )
+  1062→                })}
+  1063→              </div>
+  1064→            </div>
+  1065→
+  1066→            {/* Severity level */}
+  1067→            <div className="space-y-2">
+  1068→              <Label className="text-sm font-medium flex items-center gap-1.5">
+  1069→                <Activity className="h-3.5 w-3.5 text-teal-600" />
+  1070→                Severity Level
+  1071→              </Label>
+  1072→              <div className="grid grid-cols-3 gap-2">
+  1073→                {(Object.keys(SEVERITY_CONFIG) as Severity[]).map((sev) => {
+  1074→                  const cfg = SEVERITY_CONFIG[sev]
+  1075→                  const isSelected = severity === sev
+  1076→                  return (
+  1077→                    <button
+  1078→                      key={sev}
+  1079→                      type="button"
+  1080→                      onClick={() => setSeverity((cur) => (cur === sev ? null : sev))}
+  1081→                      className={cn(
+  1082→                        'flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all',
+  1083→                        isSelected
+  1084→                          ? cn(cfg.bg, cfg.border, cfg.color, 'shadow-md ring-2', cfg.ring)
+  1085→                          : 'border-border bg-background/60 hover:bg-accent/50'
+  1086→                      )}
+  1087→                    >
+  1088→                      <span className={cn('h-2 w-2 rounded-full', cfg.dot)} />
+  1089→                      {cfg.label}
+  1090→                    </button>
+  1091→                  )
+  1092→                })}
+  1093→              </div>
+  1094→            </div>
+  1095→
+  1096→            {/* Severe warning */}
+  1097→            <AnimatePresence>
+  1098→              {isSevere && (
+  1099→                <motion.div
+  1100→                  initial={{ opacity: 0, height: 0 }}
+  1101→                  animate={{ opacity: 1, height: 'auto' }}
+  1102→                  exit={{ opacity: 0, height: 0 }}
+  1103→                  transition={{ duration: 0.25 }}
+  1104→                  className="overflow-hidden"
+  1105→                >
+  1106→                  <div className="flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-4 py-3">
+  1107→                    <AlertTriangle className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+  1108→                    <div className="text-sm">
+  1109→                      <p className="font-semibold text-rose-800 dark:text-rose-200">
+  1110→                        Your symptoms seem severe.
+  1111→                      </p>
+  1112→                      <p className="text-rose-700 dark:text-rose-300 mt-0.5">
+  1113→                        We recommend booking an appointment soon. Consider{' '}
+  1114→                        <span className="font-semibold">teleconsultation</span> for immediate advice.
+  1115→                      </p>
+  1116→                    </div>
+  1117→                  </div>
+  1118→                </motion.div>
+  1119→              )}
+  1120→            </AnimatePresence>
+  1121→
+  1122→            {/* Search button */}
+  1123→            <Button
+  1124→              size="lg"
+  1125→              onClick={handleSearch}
+  1126→              disabled={isSearching || (!selectedSpecialty && !location.trim())}
+  1127→              className="w-full h-12 text-base bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-lg shadow-teal-500/20"
+  1128→            >
+  1129→              {isSearching ? (
+  1130→                <>
+  1131→                  <Loader2 className="h-5 w-5 animate-spin" />
+  1132→                  Searching...
+  1133→                </>
+  1134→              ) : (
+  1135→                <>
+  1136→                  <Search className="h-5 w-5" />
+  1137→                  Find Doctors
+  1138→                </>
+  1139→              )}
+  1140→            </Button>
+  1141→          </CardContent>
+  1142→        </Card>
+  1143→      </motion.div>
+  1144→
+  1145→      {/* ═══ 5. TELEHEALTH QUICK CONNECT ═══ */}
+  1146→      <AnimatePresence>
+  1147→        {hasSearched && isSevere && (
+  1148→          <motion.div
+  1149→            initial={{ opacity: 0, y: 12 }}
+  1150→            animate={{ opacity: 1, y: 0 }}
+  1151→            exit={{ opacity: 0, y: -12 }}
+  1152→            transition={{ duration: 0.35 }}
+  1153→          >
+  1154→            <Card className="border-teal-300 dark:border-teal-800 bg-gradient-to-br from-teal-50 via-cyan-50 to-white dark:from-teal-950/40 dark:via-cyan-950/30 dark:to-card shadow-lg shadow-teal-500/10">
+  1155→              <CardContent className="p-5 md:p-6">
+  1156→                <div className="flex flex-col md:flex-row md:items-center gap-4">
+  1157→                  <div className="flex items-start gap-3 flex-1">
+  1158→                    <div className="relative">
+  1159→                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-md">
+  1160→                        <Video className="h-6 w-6" />
+  1161→                      </div>
+  1162→                      <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+  1163→                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+  1164→                        <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500" />
+  1165→                      </span>
+  1166→                    </div>
+  1167→                    <div>
+  1168→                      <h3 className="font-bold text-base text-teal-900 dark:text-teal-100">
+  1169→                        Need immediate advice? Connect with a doctor in 2 minutes
+  1170→                      </h3>
+  1171→                      <p className="text-sm text-teal-700 dark:text-teal-300 mt-0.5 flex items-center gap-1.5">
+  1172→                        <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+  1173→                        Video Consult Available Now
+  1174→                      </p>
+  1175→                    </div>
+  1176→                  </div>
+  1177→                  <Button className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-md shrink-0">
+  1178→                    <Video className="h-4 w-4" />
+  1179→                    Start Video Consult
+  1180→                  </Button>
+  1181→                </div>
+  1182→
+  1183→                <Separator className="my-4 bg-teal-200/50 dark:bg-teal-800/50" />
+  1184→
+  1185→                {/* Online doctors */}
+  1186→                <div className="space-y-2">
+  1187→                  <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
+  1188→                    Available Right Now
+  1189→                  </p>
+  1190→                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  1191→                    {onlineDoctors.map((doc) => (
+  1192→                      <div
+  1193→                        key={doc.id}
+  1194→                        className="flex items-center gap-2.5 rounded-lg border border-teal-200 dark:border-teal-800 bg-white/70 dark:bg-card/60 p-2.5"
+  1195→                      >
+  1196→                        <div className="relative shrink-0">
+  1197→                          <Avatar className="h-9 w-9">
+  1198→                            <AvatarFallback className={cn('bg-gradient-to-br text-white font-semibold text-xs', getAvatarGradient(doc.name))}>
+  1199→                              {getInitials(doc.name)}
+  1200→                            </AvatarFallback>
+  1201→                          </Avatar>
+  1202→                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white dark:border-card" />
+  1203→                        </div>
+  1204→                        <div className="min-w-0 flex-1">
+  1205→                          <p className="text-xs font-semibold truncate">{doc.name}</p>
+  1206→                          <div className="flex items-center gap-1">
+  1207→                            <Badge variant="secondary" className="h-4 text-[10px] px-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+  1208→                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
+  1209→                            </Badge>
+  1210→                            <span className="text-[10px] text-muted-foreground truncate">{SPECIALTY_MAP[doc.specialty].shortLabel}</span>
+  1211→                          </div>
+  1212→                        </div>
+  1213→                      </div>
+  1214→                    ))}
+  1215→                  </div>
+  1216→                </div>
+  1217→              </CardContent>
+  1218→            </Card>
+  1219→          </motion.div>
+  1220→        )}
+  1221→      </AnimatePresence>
+  1222→
+  1223→      {/* ═══ 3 & 4. RESULTS + FILTER BAR ═══ */}
+  1224→      <AnimatePresence>
+  1225→        {hasSearched && (
+  1226→          <motion.div
+  1227→            initial={{ opacity: 0 }}
+  1228→            animate={{ opacity: 1 }}
+  1229→            exit={{ opacity: 0 }}
+  1230→            transition={{ duration: 0.3 }}
+  1231→            className="space-y-4"
+  1232→          >
+  1233→            {/* Filter & Sort Bar */}
+  1234→            <Card className="bg-card/80 backdrop-blur-sm">
+  1235→              <CardContent className="p-4 space-y-3">
+  1236→                <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+  1237→                  {/* Results count */}
+  1238→                  <div className="flex items-center gap-2 text-sm">
+  1239→                    <span className="font-semibold text-base">{filteredDoctors.length}</span>
+  1240→                    <span className="text-muted-foreground">doctors found</span>
+  1241→                    {selectedSpecialty && (
+  1242→                      <Badge variant="secondary" className="ml-1 bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
+  1243→                        {SPECIALTY_MAP[selectedSpecialty].shortLabel}
+  1244→                      </Badge>
+  1245→                    )}
+  1246→                  </div>
+  1247→
+  1248→                  <div className="flex-1" />
+  1249→
+  1250→                  {/* Sort */}
+  1251→                  <div className="flex items-center gap-2">
+  1252→                    <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+  1253→                      <Filter className="h-3.5 w-3.5" /> Sort:
+  1254→                    </span>
+  1255→                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+  1256→                      <SelectTrigger className="h-8 w-[140px] text-xs">
+  1257→                        <SelectValue />
+  1258→                      </SelectTrigger>
+  1259→                      <SelectContent>
+  1260→                        <SelectItem value="distance">Distance</SelectItem>
+  1261→                        <SelectItem value="rating">Rating</SelectItem>
+  1262→                        <SelectItem value="experience">Experience</SelectItem>
+  1263→                        <SelectItem value="fee">Fee (Low to High)</SelectItem>
+  1264→                      </SelectContent>
+  1265→                    </Select>
+  1266→                  </div>
+  1267→                </div>
+  1268→
+  1269→                <Separator />
+  1270→
+  1271→                {/* Filter toggles */}
+  1272→                <div className="flex flex-wrap items-center gap-2">
+  1273→                  <span className="text-xs text-muted-foreground font-medium mr-1">Filters:</span>
+  1274→                  <FilterToggle
+  1275→                    active={filterToday}
+  1276→                    onClick={() => setFilterToday((v) => !v)}
+  1277→                    icon={CalendarIcon}
+  1278→                    label="Available Today"
+  1279→                  />
+  1280→                  <FilterToggle
+  1281→                    active={filterVideo}
+  1282→                    onClick={() => setFilterVideo((v) => !v)}
+  1283→                    icon={Video}
+  1284→                    label="Video Consult"
+  1285→                  />
+  1286→                  <FilterToggle
+  1287→                    active={filterFemale}
+  1288→                    onClick={() => setFilterFemale((v) => !v)}
+  1289→                    icon={User}
+  1290→                    label="Female Doctor"
+  1291→                  />
+  1292→                  <div className="flex items-center gap-1.5 ml-1">
+  1293→                    <CircleDollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+  1294→                    <Select value={maxFee} onValueChange={(v) => setMaxFee(v as typeof maxFee)}>
+  1295→                      <SelectTrigger className="h-7 w-[110px] text-xs">
+  1296→                        <SelectValue />
+  1297→                      </SelectTrigger>
+  1298→                      <SelectContent>
+  1299→                        <SelectItem value="any">Any Fee</SelectItem>
+  1300→                        <SelectItem value="500">≤ ₹500</SelectItem>
+  1301→                        <SelectItem value="800">≤ ₹800</SelectItem>
+  1302→                        <SelectItem value="1200">≤ ₹1200</SelectItem>
+  1303→                      </SelectContent>
+  1304→                    </Select>
+  1305→                  </div>
+  1306→                </div>
+  1307→              </CardContent>
+  1308→            </Card>
+  1309→
+  1310→            {/* Doctor cards */}
+  1311→            {isSearching ? (
+  1312→              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  1313→                {Array.from({ length: 3 }).map((_, i) => (
+  1314→                  <Card key={i} className="animate-pulse">
+  1315→                    <CardContent className="p-5">
+  1316→                      <div className="flex gap-4">
+  1317→                        <div className="h-14 w-14 rounded-full bg-muted" />
+  1318→                        <div className="flex-1 space-y-2">
+  1319→                          <div className="h-4 w-1/2 bg-muted rounded" />
+  1320→                          <div className="h-3 w-1/3 bg-muted rounded" />
+  1321→                          <div className="h-3 w-2/3 bg-muted rounded" />
+  1322→                        </div>
+  1323→                      </div>
+  1324→                    </CardContent>
+  1325→                  </Card>
+  1326→                ))}
+  1327→              </div>
+  1328→            ) : filteredDoctors.length === 0 ? (
+  1329→              <Card className="border-dashed">
+  1330→                <CardContent className="py-12 text-center">
+  1331→                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+  1332→                    <Search className="h-7 w-7 text-muted-foreground" />
+  1333→                  </div>
+  1334→                  <p className="mt-3 font-semibold">No doctors match your filters</p>
+  1335→                  <p className="text-sm text-muted-foreground mt-1">
+  1336→                    Try adjusting your filters or selecting a different specialty.
+  1337→                  </p>
+  1338→                  <Button
+  1339→                    variant="outline"
+  1340→                    className="mt-4"
+  1341→                    onClick={() => {
+  1342→                      setFilterToday(false)
+  1343→                      setFilterVideo(false)
+  1344→                      setFilterFemale(false)
+  1345→                      setMaxFee('any')
+  1346→                    }}
+  1347→                  >
+  1348→                    Clear Filters
+  1349→                  </Button>
+  1350→                </CardContent>
+  1351→              </Card>
+  1352→            ) : (
+  1353→              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+  1354→                {filteredDoctors.map((doc, idx) => (
+  1355→                  <DoctorCard
+  1356→                    key={doc.id}
+  1357→                    doctor={doc}
+  1358→                    index={idx}
+  1359→                    onBook={() => openBooking(doc)}
+  1360→                  />
+  1361→                ))}
+  1362→              </div>
+  1363→            )}
+  1364→          </motion.div>
+  1365→        )}
+  1366→      </AnimatePresence>
+  1367→
+  1368→      {/* ═══ 6. HEALTH CONCERN GUIDE ═══ */}
+  1369→      <motion.section
+  1370→        initial={{ opacity: 0, y: 12 }}
+  1371→        animate={{ opacity: 1, y: 0 }}
+  1372→        transition={{ duration: 0.4, delay: 0.1 }}
+  1373→        className="space-y-4"
+  1374→      >
+  1375→        <div className="flex items-center gap-2">
+  1376→          <HandHeart className="h-5 w-5 text-teal-600" />
+  1377→          <h2 className="text-xl font-bold">Health Concern Guide</h2>
+  1378→        </div>
+  1379→
+  1380→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+  1381→          {SPECIALTY_GUIDE.map((entry, idx) => {
+  1382→            const meta = SPECIALTY_MAP[entry.specialty]
+  1383→            const Icon = entry.icon
+  1384→            return (
+  1385→              <motion.div
+  1386→                key={entry.specialty}
+  1387→                initial={{ opacity: 0, y: 10 }}
+  1388→                animate={{ opacity: 1, y: 0 }}
+  1389→                transition={{ duration: 0.3, delay: idx * 0.05 }}
+  1390→              >
+  1391→                <Card className={cn('h-full border bg-card/80 backdrop-blur-sm transition-shadow hover:shadow-md', meta.borderColor)}>
+  1392→                  <CardContent className="p-4">
+  1393→                    <div className="flex items-center gap-2.5 mb-2">
+  1394→                      <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', meta.bgColor, meta.textColor)}>
+  1395→                        <Icon className="h-5 w-5" />
+  1396→                      </span>
+  1397→                      <div>
+  1398→                        <p className="font-semibold text-sm leading-tight">{meta.label}</p>
+  1399→                        <p className="text-[11px] text-muted-foreground">See a {meta.shortLabel} if:</p>
+  1400→                      </div>
+  1401→                    </div>
+  1402→                    <p className="text-sm text-muted-foreground leading-relaxed">{entry.whenToSee}</p>
+  1403→                  </CardContent>
+  1404→                </Card>
+  1405→              </motion.div>
+  1406→            )
+  1407→          })}
+  1408→        </div>
+  1409→
+  1410→        {/* Red Flag Symptoms */}
+  1411→        <Card className="border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50/50 dark:from-rose-950/40 dark:to-orange-950/20">
+  1412→          <CardHeader className="pb-3">
+  1413→            <CardTitle className="flex items-center gap-2 text-lg text-rose-800 dark:text-rose-200">
+  1414→              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-950">
+  1415→                <Flame className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+  1416→              </span>
+  1417→              Red Flag Symptoms
+  1418→            </CardTitle>
+  1419→            <CardDescription className="text-rose-700/80 dark:text-rose-300/80">
+  1420→              Seek <strong>immediate medical attention</strong> if you experience any of these:
+  1421→            </CardDescription>
+  1422→          </CardHeader>
+  1423→          <CardContent>
+  1424→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+  1425→              {RED_FLAG_SYMPTOMS.map((sym) => {
+  1426→                const Icon = sym.icon
+  1427→                return (
+  1428→                  <div
+  1429→                    key={sym.text}
+  1430→                    className="flex items-start gap-2.5 rounded-lg bg-white/70 dark:bg-card/60 border border-rose-100 dark:border-rose-900/50 px-3 py-2"
+  1431→                  >
+  1432→                    <Icon className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+  1433→                    <span className="text-sm text-rose-900 dark:text-rose-100">{sym.text}</span>
+  1434→                  </div>
+  1435→                )
+  1436→              })}
+  1437→            </div>
+  1438→            <div className="mt-3 flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300 bg-rose-100/60 dark:bg-rose-950/40 rounded-lg px-3 py-2">
+  1439→              <Siren className="h-4 w-4 shrink-0" />
+  1440→              <span>Do not wait — these symptoms may indicate a serious condition requiring urgent care.</span>
+  1441→            </div>
+  1442→          </CardContent>
+  1443→        </Card>
+  1444→      </motion.section>
+  1445→
+  1446→      {/* ═══ 7. APPOINTMENT BOOKING DIALOG ═══ */}
+  1447→      <Dialog open={!!bookingDoctor} onOpenChange={(open) => !open && closeBooking()}>
+  1448→        <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+  1449→          {bookingDoctor && !bookingConfirmed && (
+  1450→            <>
+  1451→              <DialogHeader>
+  1452→                <DialogTitle className="flex items-center gap-2">
+  1453→                  <CalendarIcon className="h-5 w-5 text-teal-600" />
+  1454→                  Book Appointment
+  1455→                </DialogTitle>
+  1456→                <DialogDescription>
+  1457→                  Choose a date and time that works for you.
+  1458→                </DialogDescription>
+  1459→              </DialogHeader>
+  1460→
+  1461→              {/* Doctor summary */}
+  1462→              <div className="flex items-start gap-3 rounded-xl border border-teal-100 dark:border-teal-900/50 bg-teal-50/50 dark:bg-teal-950/20 p-3">
+  1463→                <Avatar className="h-12 w-12">
+  1464→                  <AvatarFallback className={cn('bg-gradient-to-br text-white font-semibold', getAvatarGradient(bookingDoctor.name))}>
+  1465→                    {getInitials(bookingDoctor.name)}
+  1466→                  </AvatarFallback>
+  1467→                </Avatar>
+  1468→                <div className="min-w-0 flex-1">
+  1469→                  <p className="font-semibold leading-tight">{bookingDoctor.name}</p>
+  1470→                  <p className="text-xs text-muted-foreground leading-tight mt-0.5">{bookingDoctor.qualifications}</p>
+  1471→                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+  1472→                    <Badge variant="secondary" className={cn('text-[10px]', SPECIALTY_MAP[bookingDoctor.specialty].bgColor, SPECIALTY_MAP[bookingDoctor.specialty].textColor)}>
+  1473→                      {SPECIALTY_MAP[bookingDoctor.specialty].shortLabel}
+  1474→                    </Badge>
+  1475→                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+  1476→                      <Hospital className="h-3 w-3" /> {bookingDoctor.clinic}
+  1477→                    </span>
+  1478→                  </div>
+  1479→                </div>
+  1480→                <div className="text-right shrink-0">
+  1481→                  <p className="text-sm font-bold text-teal-700 dark:text-teal-300">₹{bookingDoctor.fee}</p>
+  1482→                  <p className="text-[10px] text-muted-foreground">consultation</p>
+  1483→                </div>
+  1484→              </div>
+  1485→
+  1486→              {/* Date picker */}
+  1487→              <div className="space-y-2">
+  1488→                <Label className="text-sm font-medium flex items-center gap-1.5">
+  1489→                  <CalendarIcon className="h-3.5 w-3.5 text-teal-600" /> Select Date
+  1490→                </Label>
+  1491→                <div className="rounded-lg border p-2 flex justify-center bg-background">
+  1492→                  <Calendar
+  1493→                    mode="single"
+  1494→                    selected={bookingDate}
+  1495→                    onSelect={setBookingDate}
+  1496→                    disabled={(date) => {
+  1497→                      const today = new Date()
+  1498→                      today.setHours(0, 0, 0, 0)
+  1499→                      const max = new Date(today)
+  1500→                      max.setDate(max.getDate() + 14)
+  1501→                      return date < today || date > max
+  1502→                    }}
+  1503→                    className="mx-auto"
+  1504→                  />
+  1505→                </div>
+  1506→              </div>
+  1507→
+  1508→              {/* Time slot */}
+  1509→              <div className="space-y-2">
+  1510→                <Label className="text-sm font-medium flex items-center gap-1.5">
+  1511→                  <Clock className="h-3.5 w-3.5 text-teal-600" /> Select Time Slot
+  1512→                </Label>
+  1513→                <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto p-0.5">
+  1514→                  {TIME_SLOTS.map((slot) => {
+  1515→                    const isSelected = bookingTime === slot
+  1516→                    return (
+  1517→                      <button
+  1518→                        key={slot}
+  1519→                        type="button"
+  1520→                        disabled={!bookingDate}
+  1521→                        onClick={() => setBookingTime(slot)}
+  1522→                        className={cn(
+  1523→                          'rounded-md border px-2 py-1.5 text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed',
+  1524→                          isSelected
+  1525→                            ? 'border-teal-500 bg-teal-600 text-white shadow-sm'
+  1526→                            : 'border-border bg-background hover:border-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/30'
+  1527→                        )}
+  1528→                      >
+  1529→                        {slot}
+  1530→                      </button>
+  1531→                    )
+  1532→                  })}
+  1533→                </div>
+  1534→                {!bookingDate && (
+  1535→                  <p className="text-[11px] text-muted-foreground">Pick a date to see available slots.</p>
+  1536→                )}
+  1537→              </div>
+  1538→
+  1539→              {/* Reason for visit */}
+  1540→              <div className="space-y-2">
+  1541→                <Label htmlFor="reason" className="text-sm font-medium flex items-center gap-1.5">
+  1542→                  <Pill className="h-3.5 w-3.5 text-teal-600" /> Reason for Visit
+  1543→                </Label>
+  1544→                <Textarea
+  1545→                  id="reason"
+  1546→                  placeholder="Briefly describe your symptoms or reason for the consultation..."
+  1547→                  value={bookingReason}
+  1548→                  onChange={(e) => setBookingReason(e.target.value)}
+  1549→                  rows={3}
+  1550→                  className="resize-none"
+  1551→                />
+  1552→              </div>
+  1553→
+  1554→              <DialogFooter className="gap-2">
+  1555→                <DialogClose asChild>
+  1556→                  <Button variant="outline">Cancel</Button>
+  1557→                </DialogClose>
+  1558→                <Button
+  1559→                  onClick={confirmBooking}
+  1560→                  disabled={!canConfirm}
+  1561→                  className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700"
+  1562→                >
+  1563→                  <CheckCircle2 className="h-4 w-4" />
+  1564→                  Confirm Appointment
+  1565→                </Button>
+  1566→              </DialogFooter>
+  1567→            </>
+  1568→          )}
+  1569→
+  1570→          {bookingDoctor && bookingConfirmed && (
+  1571→            <motion.div
+  1572→              initial={{ opacity: 0, scale: 0.95 }}
+  1573→              animate={{ opacity: 1, scale: 1 }}
+  1574→              transition={{ duration: 0.3 }}
+  1575→              className="py-6 text-center"
+  1576→            >
+  1577→              <motion.div
+  1578→                initial={{ scale: 0 }}
+  1579→                animate={{ scale: 1 }}
+  1580→                transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
+  1581→                className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30"
+  1582→              >
+  1583→                <CheckCircle2 className="h-9 w-9 text-white" />
+  1584→              </motion.div>
+  1585→              <DialogTitle className="mt-4 text-xl">Appointment booked!</DialogTitle>
+  1586→              <DialogDescription className="mt-1">
+  1587→                You&apos;ll receive a confirmation shortly.
+  1588→              </DialogDescription>
+  1589→
+  1590→              <div className="mt-4 rounded-xl border bg-muted/40 p-3 text-left space-y-1.5 text-sm">
+  1591→                <div className="flex items-center justify-between">
+  1592→                  <span className="text-muted-foreground">Doctor</span>
+  1593→                  <span className="font-medium">{bookingDoctor.name}</span>
+  1594→                </div>
+  1595→                <div className="flex items-center justify-between">
+  1596→                  <span className="text-muted-foreground">Date</span>
+  1597→                  <span className="font-medium">
+  1598→                    {bookingDate?.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+  1599→                  </span>
+  1600→                </div>
+  1601→                <div className="flex items-center justify-between">
+  1602→                  <span className="text-muted-foreground">Time</span>
+  1603→                  <span className="font-medium">{bookingTime}</span>
+  1604→                </div>
+  1605→                <div className="flex items-center justify-between">
+  1606→                  <span className="text-muted-foreground">Fee</span>
+  1607→                  <span className="font-medium text-teal-700 dark:text-teal-300">₹{bookingDoctor.fee}</span>
+  1608→                </div>
+  1609→                <Separator className="my-1" />
+  1610→                <div className="flex items-center justify-between">
+  1611→                  <span className="text-muted-foreground">Location</span>
+  1612→                  <span className="font-medium text-right text-xs">{bookingDoctor.clinic}, {bookingDoctor.city}</span>
+  1613→                </div>
+  1614→              </div>
+  1615→
+  1616→              <Button onClick={closeBooking} className="mt-5 w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700">
+  1617→                Done
+  1618→              </Button>
+  1619→            </motion.div>
+  1620→          )}
+  1621→        </DialogContent>
+  1622→      </Dialog>
+  1623→    </div>
+  1624→  )
+  1625→}
+  1626→
+  1627→// ─── Sub-component: Filter Toggle ─────────────────────────────────────────────
+  1628→
+  1629→function FilterToggle({
+  1630→  active,
+  1631→  onClick,
+  1632→  icon: Icon,
+  1633→  label,
+  1634→}: {
+  1635→  active: boolean
+  1636→  onClick: () => void
+  1637→  icon: React.ElementType
+  1638→  label: string
+  1639→}) {
+  1640→  return (
+  1641→    <button
+  1642→      type="button"
+  1643→      onClick={onClick}
+  1644→      className={cn(
+  1645→        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
+  1646→        active
+  1647→          ? 'border-teal-500 bg-teal-600 text-white shadow-sm'
+  1648→          : 'border-border bg-background hover:bg-accent'
+  1649→      )}
+  1650→    >
+  1651→      <Icon className="h-3 w-3" />
+  1652→      {label}
+  1653→      {active && <CheckCircle2 className="h-3 w-3" />}
+  1654→    </button>
+  1655→  )
+  1656→}
+  1657→
+  1658→// ─── Sub-component: Doctor Card ───────────────────────────────────────────────
+  1659→
+  1660→function DoctorCard({
+  1661→  doctor,
+  1662→  index,
+  1663→  onBook,
+  1664→}: {
+  1665→  doctor: Doctor
+  1666→  index: number
+  1667→  onBook: () => void
+  1668→}) {
+  1669→  const meta = SPECIALTY_MAP[doctor.specialty]
+  1670→  const Icon = meta.icon
+  1671→
+  1672→  return (
+  1673→    <motion.div
+  1674→      initial={{ opacity: 0, y: 16 }}
+  1675→      animate={{ opacity: 1, y: 0 }}
+  1676→      transition={{ duration: 0.35, delay: Math.min(index * 0.06, 0.4) }}
+  1677→    >
+  1678→      <Card className="h-full bg-card/80 backdrop-blur-sm border-border/70 hover:border-teal-200 dark:hover:border-teal-800 hover:shadow-lg transition-all">
+  1679→        <CardContent className="p-5">
+  1680→          {/* Top: avatar + name + rating */}
+  1681→          <div className="flex items-start gap-3">
+  1682→            <div className="relative shrink-0">
+  1683→              <Avatar className="h-14 w-14">
+  1684→                <AvatarFallback className={cn('bg-gradient-to-br text-white font-bold text-base', getAvatarGradient(doctor.name))}>
+  1685→                  {getInitials(doctor.name)}
+  1686→                </AvatarFallback>
+  1687→              </Avatar>
+  1688→              {doctor.onlineNow && (
+  1689→                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card" />
+  1690→              )}
+  1691→            </div>
+  1692→
+  1693→            <div className="min-w-0 flex-1">
+  1694→              <div className="flex items-start justify-between gap-2">
+  1695→                <div className="min-w-0">
+  1696→                  <h3 className="font-semibold text-base leading-tight truncate">{doctor.name}</h3>
+  1697→                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{doctor.qualifications}</p>
+  1698→                </div>
+  1699→                <Badge variant="secondary" className={cn('shrink-0 text-[10px]', meta.bgColor, meta.textColor, 'border', meta.borderColor)}>
+  1700→                  <Icon className="h-3 w-3" />
+  1701→                  {meta.shortLabel}
+  1702→                </Badge>
+  1703→              </div>
+  1704→
+  1705→              {/* Rating + experience + gender */}
+  1706→              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs">
+  1707→                <span className="flex items-center gap-1">
+  1708→                  <StarRating rating={doctor.rating} />
+  1709→                  <span className="font-semibold">{doctor.rating}</span>
+  1710→                  <span className="text-muted-foreground">({doctor.reviews} reviews)</span>
+  1711→                </span>
+  1712→                <span className="flex items-center gap-1 text-muted-foreground">
+  1713→                  <Award className="h-3 w-3" /> {doctor.experience} yrs
+  1714→                </span>
+  1715→                <span className="flex items-center gap-1 text-muted-foreground">
+  1716→                  <User className="h-3 w-3" /> {doctor.gender}
+  1717→                </span>
+  1718→              </div>
+  1719→            </div>
+  1720→          </div>
+  1721→
+  1722→          <Separator className="my-3" />
+  1723→
+  1724→          {/* Clinic + address */}
+  1725→          <div className="space-y-1.5 text-sm">
+  1726→            <div className="flex items-start gap-2">
+  1727→              <Hospital className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+  1728→              <span className="font-medium leading-tight">{doctor.clinic}</span>
+  1729→            </div>
+  1730→            <div className="flex items-start gap-2">
+  1731→              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+  1732→              <span className="text-muted-foreground leading-tight text-xs">
+  1733→                {doctor.address}, {doctor.city}
+  1734→              </span>
+  1735→            </div>
+  1736→            <div className="flex items-start gap-2">
+  1737→              <Navigation className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+  1738→              <span className="text-muted-foreground text-xs">{doctor.distance} km away</span>
+  1739→            </div>
+  1740→            <div className="flex items-start gap-2">
+  1741→              <Languages className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+  1742→              <span className="text-muted-foreground text-xs">{doctor.languages.join(', ')}</span>
+  1743→            </div>
+  1744→          </div>
+  1745→
+  1746→          <Separator className="my-3" />
+  1747→
+  1748→          {/* Bottom: fee + slot + actions */}
+  1749→          <div className="flex items-center justify-between gap-2 mb-3">
+  1750→            <div>
+  1751→              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Consultation Fee</p>
+  1752→              <p className="text-lg font-bold text-teal-700 dark:text-teal-300">₹{doctor.fee}</p>
+  1753→            </div>
+  1754→            <div className="text-right">
+  1755→              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Next Available</p>
+  1756→              <p className="text-sm font-semibold flex items-center gap-1 justify-end">
+  1757→                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+  1758→                {doctor.nextSlotDay}, {doctor.nextSlotTime}
+  1759→              </p>
+  1760→            </div>
+  1761→          </div>
+  1762→
+  1763→          {/* Badges row */}
+  1764→          <div className="flex flex-wrap gap-1.5 mb-3">
+  1765→            {doctor.availableToday && (
+  1766→              <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+  1767→                <CalendarIcon className="h-3 w-3" /> Available Today
+  1768→              </Badge>
+  1769→            )}
+  1770→            {doctor.videoConsult && (
+  1771→              <Badge variant="secondary" className="text-[10px] bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300">
+  1772→                <Video className="h-3 w-3" /> Video Consult
+  1773→              </Badge>
+  1774→            )}
+  1775→            {doctor.onlineNow && (
+  1776→              <Badge variant="secondary" className="text-[10px] bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
+  1777→                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online Now
+  1778→              </Badge>
+  1779→            )}
+  1780→          </div>
+  1781→
+  1782→          {/* Action buttons */}
+  1783→          <div className="grid grid-cols-3 gap-2">
+  1784→            <Button
+  1785→              onClick={onBook}
+  1786→              size="sm"
+  1787→              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700"
+  1788→            >
+  1789→              <CalendarIcon className="h-3.5 w-3.5" />
+  1790→              Book
+  1791→            </Button>
+  1792→            <Button
+  1793→              size="sm"
+  1794→              variant="secondary"
+  1795→              disabled={!doctor.videoConsult}
+  1796→              className={!doctor.videoConsult ? 'opacity-40' : ''}
+  1797→            >
+  1798→              <Video className="h-3.5 w-3.5" />
+  1799→              Video
+  1800→            </Button>
+  1801→            <Button size="sm" variant="outline">
+  1802→              <Phone className="h-3.5 w-3.5" />
+  1803→              Call
+  1804→            </Button>
+  1805→          </div>
+  1806→        </CardContent>
+  1807→      </Card>
+  1808→    </motion.div>
+  1809→  )
+  1810→}
+  1811→
