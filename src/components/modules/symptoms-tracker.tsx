@@ -46,6 +46,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
+import { toast } from 'sonner'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -332,6 +333,9 @@ export default function SymptomsModule() {
       await Promise.all(promises)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      console.error('Failed to save symptoms:', e)
+      toast.error('Could not save. Please try again.')
     } finally {
       setSaving(false)
     }

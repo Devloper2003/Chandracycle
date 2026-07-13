@@ -411,8 +411,8 @@ function CenterFab({
 
         <MessageCircle className="h-6 w-6" />
 
-        {/* Crown badge for premium users */}
-        {!premium && (
+        {/* Lock badge shown when user does not have premium */}
+        {premium && (
           <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white ring-2 ring-card">
             <Lock className="h-2 w-2" />
           </span>

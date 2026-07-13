@@ -326,9 +326,16 @@ export default function DashboardModule() {
                     </div>
                     <div className="text-center px-4 py-2 rounded-xl bg-orange-50 dark:bg-orange-950/30">
                       <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                        {cycleInfo.cycleLength - cycleInfo.cycleDay < 0
-                          ? cycleInfo.cycleLength
-                          : Math.max(0, cycleInfo.cycleLength - 14 - cycleInfo.cycleDay + 14)}
+                        {(() => {
+                          // Ovulation typically occurs 14 days before the next period.
+                          const ovulationDay = cycleInfo.cycleLength - 14
+                          let daysToOvulation = ovulationDay - cycleInfo.cycleDay
+                          if (daysToOvulation < 0) {
+                            // Already passed this cycle — show days until next ovulation
+                            daysToOvulation += cycleInfo.cycleLength
+                          }
+                          return Math.max(0, daysToOvulation)
+                        })()}
                       </p>
                       <p className="text-xs text-muted-foreground">Days to ovulation</p>
                     </div>

@@ -51,6 +51,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { useAppStore } from '@/lib/store'
 import PaypalCheckoutModal from '@/components/premium/paypal-checkout-modal'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -237,9 +238,11 @@ const TRUST_BADGES = [
 // ─── Plan Card Component ────────────────────────────────────────────────────
 
 function PlanCard({ plan, billingCycle, onChoosePlan }: { plan: Plan; billingCycle: BillingCycle; onChoosePlan: (plan: Plan) => void }) {
+  const hasPremium = useAppStore((s) => s.hasPremium())
   const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
   const isFree = plan.id === 'free'
-  const isCurrentPlan = plan.id === 'free' // Assume user is on free for now
+  // User is on "free" if they don't have premium; otherwise they're on "premium"
+  const isCurrentPlan = hasPremium ? plan.id === 'premium' : plan.id === 'free'
   const yearlyPerMonth = plan.yearlyPrice / 12
   const savings = plan.monthlyPrice > 0 && plan.yearlyPrice > 0
     ? Math.round(((plan.monthlyPrice * 12 - plan.yearlyPrice) / (plan.monthlyPrice * 12)) * 100)

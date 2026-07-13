@@ -67,6 +67,7 @@ import {
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { useAppStore } from '@/lib/store'
+import { toast } from 'sonner'
 import {
   PieChart,
   Pie,
@@ -667,6 +668,9 @@ function LogPeriodSection({
         setLogged(false)
         onLogged()
       }, 1500)
+    } catch (e) {
+      console.error('Failed to log cycle:', e)
+      toast.error('Could not save. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -688,6 +692,34 @@ function LogPeriodSection({
         }),
       })
       onLogged()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleLogSpotting = async () => {
+    if (!userId) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/symptoms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          category: 'spotting',
+          severity: 1,
+          date: todayIso,
+          notes: 'Spotting logged',
+        }),
+      })
+      if (res.ok) {
+        toast.success('Spotting logged for today')
+        onLogged()
+      } else {
+        toast.error('Could not log spotting. Please try again.')
+      }
+    } catch {
+      toast.error('Could not log spotting. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -739,6 +771,8 @@ function LogPeriodSection({
           <Button
             variant="outline"
             size="sm"
+            onClick={handleLogSpotting}
+            disabled={saving || !userId}
             className="gap-1.5 border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
           >
             <CircleDot className="h-3.5 w-3.5" />
@@ -868,6 +902,9 @@ function SymptomQuickLog({ userId }: { userId: string | undefined }) {
         setSaved(false)
         setSelectedSymptoms({})
       }, 1500)
+    } catch (e) {
+      console.error('Failed to save symptoms:', e)
+      toast.error('Could not save. Please try again.')
     } finally {
       setSaving(false)
     }

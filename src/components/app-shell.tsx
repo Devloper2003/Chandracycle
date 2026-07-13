@@ -432,7 +432,6 @@ export default function AppShell({ user, onLogout }: AppShellProps) {
                         {user.provider === 'google' ? <Gem className="h-2.5 w-2.5" /> : <ShieldCheck className="h-2.5 w-2.5" />}
                         {user.provider === 'google' ? 'Google' : user.provider === 'apple' ? 'Apple' : user.provider === 'mobile' ? 'Mobile' : 'Email'}
                       </Badge>
-                      <span className="text-[10px] text-muted-foreground">Member since {new Date().getFullYear()}</span>
                     </div>
                   </div>
 
@@ -459,7 +458,7 @@ export default function AppShell({ user, onLogout }: AppShellProps) {
           </header>
 
           {/* Mobile Topbar (below lg) */}
-          <MobileTopbar onTakeTour={() => setTourOpen(true)} />
+          <MobileTopbar onTakeTour={() => setTourOpen(true)} userId={user.id} />
 
           {/* Module Content — scrollable. Bottom padding on mobile for bottom nav. */}
           <main className="flex-1 overflow-y-auto">

@@ -50,6 +50,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { useAppStore } from '@/lib/store'
+import { toast } from 'sonner'
 
 // ─── Configuration (kept — educational content) ─────────────────────────────
 
@@ -606,6 +607,9 @@ function FertilityLoggingForm({
         setNotes('')
         onSaved()
       }, 1500)
+    } catch (e) {
+      console.error('Failed to save fertility data:', e)
+      toast.error('Could not save. Please try again.')
     } finally {
       setIsSaving(false)
     }

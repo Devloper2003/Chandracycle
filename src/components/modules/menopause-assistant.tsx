@@ -61,6 +61,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
+import { toast } from 'sonner'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -311,6 +312,9 @@ export default function MenopauseModule() {
       // Refresh history
       const fresh = await fetch(`/api/menopause?userId=${encodeURIComponent(userProfile.id)}`).then((r) => r.json())
       if (Array.isArray(fresh)) setHistory(fresh)
+    } catch (e) {
+      console.error('Failed to save menopause data:', e)
+      toast.error('Could not save. Please try again.')
     } finally {
       setSaving(false)
     }

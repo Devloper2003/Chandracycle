@@ -74,7 +74,6 @@ export default function MobileOtpForm({ onAuthed, remember }: MobileOtpFormProps
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || 'Failed to send OTP')
-        setLoading('send')
         setLoading(null)
         return
       }

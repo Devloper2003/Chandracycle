@@ -41,6 +41,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { toast } from 'sonner'
 
 // ─── CONFIGURATION (kept — phase metadata & educational content) ────────────
 
@@ -582,6 +583,9 @@ function HormoneLog({ userId }: { userId: string | undefined }) {
         setSelectedSymptoms([])
         setNotes('')
       }, 2500)
+    } catch (e) {
+      console.error('Failed to save hormone symptoms:', e)
+      toast.error('Could not save. Please try again.')
     } finally {
       setSaving(false)
     }

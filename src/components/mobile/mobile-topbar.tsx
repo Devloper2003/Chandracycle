@@ -2,10 +2,16 @@
 
 import * as React from 'react'
 import { motion } from 'framer-motion'
-import { Bell, Crown, Sparkles, HelpCircle } from 'lucide-react'
+import { Crown, Sparkles, HelpCircle } from 'lucide-react'
 import { useAppStore, ActiveModule } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import NotificationPanel from '@/components/notifications/notification-panel'
+
+interface MobileTopbarProps {
+  onTakeTour?: () => void
+  userId?: string
+}
 
 /* ─── Module labels map (kept in sync with page.tsx navItems) ─────────────── */
 
@@ -32,7 +38,7 @@ const MODULE_LABELS: Record<ActiveModule, string> = {
   settings: 'Settings',
 }
 
-export default function MobileTopbar({ onTakeTour }: { onTakeTour?: () => void }) {
+export default function MobileTopbar({ onTakeTour, userId }: MobileTopbarProps) {
   const activeModule = useAppStore((s) => s.activeModule)
   const setActiveModule = useAppStore((s) => s.setActiveModule)
   const hasPremium = useAppStore((s) => s.hasPremium())
@@ -87,14 +93,7 @@ export default function MobileTopbar({ onTakeTour }: { onTakeTour?: () => void }
             </motion.button>
           )}
 
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-card" />
-          </button>
+          {userId && <NotificationPanel userId={userId} />}
 
           {onTakeTour && (
             <motion.button

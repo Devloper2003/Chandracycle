@@ -414,6 +414,8 @@ export default function DoctorFinderModule() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [locating, setLocating] = useState(false)
   const suggestionsRef = React.useRef<HTMLDivElement | null>(null)
+  // AbortController ref so rapid typing cancels stale geocode requests
+  const suggestionsAbortRef = React.useRef<AbortController | null>(null)
 
   // Filter & sort state
   const [sortBy, setSortBy] = useState<'distance' | 'rating' | 'experience' | 'fee'>('distance')
@@ -436,14 +438,26 @@ export default function DoctorFinderModule() {
       setSuggestions([])
       return
     }
+    // Cancel any in-flight request so a slow earlier response can't
+    // overwrite the result of a newer one (rapid-typing race condition).
+    suggestionsAbortRef.current?.abort()
+    const controller = new AbortController()
+    suggestionsAbortRef.current = controller
     try {
-      const res = await fetch(`/api/doctors/geocode?q=${encodeURIComponent(q.trim())}`)
+      const res = await fetch(`/api/doctors/geocode?q=${encodeURIComponent(q.trim())}`, {
+        signal: controller.signal,
+      })
       if (res.ok) {
         const data = await res.json()
         setSuggestions(data.suggestions || [])
       }
-    } catch {
-      // silent
+    } catch (e: unknown) {
+      // AbortError is expected when a newer keystroke supersedes this request;
+      // swallow it silently. Anything else stays silent to match prior behavior.
+      const name = (e as { name?: string })?.name
+      if (name !== 'AbortError') {
+        // silent
+      }
     }
   }, [])
 
