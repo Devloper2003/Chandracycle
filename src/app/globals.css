@@ -168,10 +168,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Prevent horizontal scroll document-wide. Third-party widgets (e.g. Google
+     Identity Services iframe) and decorative orbs can extend beyond the
+     viewport; this guarantees no horizontal swipe/scroll on any screen. */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
   body {
     @apply bg-background text-foreground;
     position: relative;
-    min-height: 100vh;
+    min-height: 100dvh;
     /* Subtle multi-layer mesh gradient — premium, very low intensity.
        Painted above background-color; non-scrolling so it stays anchored. */
     background-image:
