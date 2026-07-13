@@ -473,14 +473,14 @@ export default function CommunityModule() {
                                 <div className="flex items-center gap-4 mt-3">
                                   <button
                                     onClick={() => toggleLike(post.id)}
-                                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors"
+                                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors h-9 px-1 -mx-1 rounded-md"
                                   >
                                     <Heart
                                       className={`h-3.5 w-3.5 ${post.liked ? 'fill-sky-500 text-sky-500' : ''}`}
                                     />
                                     {post.likes}
                                   </button>
-                                  <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors">
+                                  <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sky-500 transition-colors h-9 px-1 -mx-1 rounded-md">
                                     <MessageCircle className="h-3.5 w-3.5" />
                                     {post.comments}
                                   </button>

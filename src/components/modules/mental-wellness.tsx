@@ -591,7 +591,7 @@ function HeaderSection() {
           </Badge>
           <span className="text-xs text-white/70">{today}</span>
         </div>
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-violet-50 to-fuchsia-100 bg-clip-text text-transparent">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-violet-50 to-fuchsia-100 bg-clip-text text-transparent">
           Mind &amp; Soul
         </h1>
         <p className="mt-3 text-base md:text-lg text-violet-100/90 max-w-2xl">
@@ -659,7 +659,7 @@ function MoodCheckIn() {
           {/* Mood selector */}
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-3">Choose your mood</p>
-            <div className="grid grid-cols-5 gap-2 md:gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 md:gap-3">
               {MOODS.map((mood) => {
                 const isSelected = selectedMood === mood.level
                 return (

@@ -77,7 +77,7 @@ export default function MobileTopbar({ onTakeTour, userId }: MobileTopbarProps) 
               whileTap={{ scale: 0.9 }}
               onClick={() => setActiveModule('premium')}
               aria-label="ChandraCycle Premium active"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-yellow-500 text-white shadow-sm"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-yellow-500 text-white shadow-sm"
             >
               <Crown className="h-4 w-4" />
             </motion.button>
@@ -87,7 +87,7 @@ export default function MobileTopbar({ onTakeTour, userId }: MobileTopbarProps) 
               whileTap={{ scale: 0.9 }}
               onClick={() => setActiveModule('premium')}
               aria-label="Upgrade to ChandraCycle Premium"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300"
             >
               <Crown className="h-4 w-4" />
             </motion.button>
@@ -102,7 +102,7 @@ export default function MobileTopbar({ onTakeTour, userId }: MobileTopbarProps) 
               onClick={onTakeTour}
               aria-label="Take a guided tour"
               data-tour="replay"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-accent transition-colors"
             >
               <HelpCircle className="h-[18px] w-[18px]" />
             </motion.button>
@@ -116,8 +116,8 @@ export default function MobileTopbar({ onTakeTour, userId }: MobileTopbarProps) 
             data-tour="mobile-profile"
             className="ml-0.5"
           >
-            <Avatar className={cn('h-8 w-8 ring-2 ring-primary/20')}>
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+            <Avatar className={cn('h-10 w-10 ring-2 ring-primary/20')}>
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                 U
               </AvatarFallback>
             </Avatar>

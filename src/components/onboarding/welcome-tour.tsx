@@ -306,36 +306,39 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
   const CARD_MAX_HEIGHT = 280
   const GAP = 16
   const edge = 16
+  // Effective width accounts for small viewports so positioning math never
+  // pushes the tooltip off-screen on mobile (e.g. 320px wide phones).
+  const effectiveWidth = Math.min(CARD_WIDTH, (typeof window !== 'undefined' ? window.innerWidth : 1200) - edge * 2)
 
   const tooltipStyle: React.CSSProperties = rect
     ? (() => {
         const style: React.CSSProperties = {
           position: 'fixed',
-          width: CARD_WIDTH,
+          width: effectiveWidth,
           maxWidth: `calc(100vw - ${edge * 2}px)`,
           zIndex: 62,
         }
         switch (activePlacement) {
           case 'top': {
             style.top = Math.max(edge, rect.top - CARD_MAX_HEIGHT - GAP)
-            const proposedLeft = rect.left + rect.width / 2 - CARD_WIDTH / 2
+            const proposedLeft = rect.left + rect.width / 2 - effectiveWidth / 2
             style.left = Math.min(
               Math.max(edge, proposedLeft),
-              window.innerWidth - CARD_WIDTH - edge,
+              window.innerWidth - effectiveWidth - edge,
             )
             break
           }
           case 'bottom': {
             style.top = rect.bottom + GAP
-            const proposedLeft = rect.left + rect.width / 2 - CARD_WIDTH / 2
+            const proposedLeft = rect.left + rect.width / 2 - effectiveWidth / 2
             style.left = Math.min(
               Math.max(edge, proposedLeft),
-              window.innerWidth - CARD_WIDTH - edge,
+              window.innerWidth - effectiveWidth - edge,
             )
             break
           }
           case 'left': {
-            style.left = Math.max(edge, rect.left - CARD_WIDTH - GAP)
+            style.left = Math.max(edge, rect.left - effectiveWidth - GAP)
             const proposedTop = rect.top + rect.height / 2 - CARD_MAX_HEIGHT / 2
             style.top = Math.min(
               Math.max(edge, proposedTop),
@@ -345,7 +348,7 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
           }
           case 'right': {
             style.left = Math.min(
-              window.innerWidth - CARD_WIDTH - edge,
+              window.innerWidth - effectiveWidth - edge,
               rect.right + GAP,
             )
             const proposedTop = rect.top + rect.height / 2 - CARD_MAX_HEIGHT / 2
@@ -446,7 +449,7 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
                 <button
                   onClick={handleSkip}
                   aria-label="Skip tour"
-                  className="rounded-full p-1 hover:bg-white/25 transition-colors"
+                  className="rounded-full p-2.5 hover:bg-white/25 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -462,19 +465,23 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
               </p>
 
               {/* Progress dots */}
-              <div className="flex items-center gap-1.5 mt-4">
+              <div className="flex items-center gap-0.5 mt-4">
                 {TOUR_STEPS.map((s, i) => (
                   <button
                     key={s.id}
                     onClick={() => setStepIndex(i)}
                     aria-label={`Go to step ${i + 1}: ${s.title}`}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      i === stepIndex
-                        ? 'w-6 bg-gradient-to-r from-amber-500 to-rose-500'
-                        : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50',
-                    )}
-                  />
+                    className="h-8 w-8 flex items-center justify-center rounded-full transition-colors hover:bg-muted/40"
+                  >
+                    <span
+                      className={cn(
+                        'h-1.5 rounded-full transition-all',
+                        i === stepIndex
+                          ? 'w-6 bg-gradient-to-r from-amber-500 to-rose-500'
+                          : 'w-1.5 bg-muted-foreground/30',
+                      )}
+                    />
+                  </button>
                 ))}
               </div>
 

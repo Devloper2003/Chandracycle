@@ -1184,7 +1184,7 @@ function SkinTimeline() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-7 sm:grid-cols-14 gap-1.5">
+            <div className="grid grid-cols-7 sm:grid-cols-[repeat(14,minmax(0,1fr))] gap-1.5">
               {SKIN_TIMELINE.map((entry, idx) => (
                 <motion.div
                   key={entry.date}

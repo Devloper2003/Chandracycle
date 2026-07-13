@@ -290,7 +290,7 @@ export default function DashboardModule() {
         <Card className="glass overflow-hidden border-0 shadow-lg">
           <CardContent className="p-6">
             {cycleInfo ? (
-              <div className="flex flex-col lg:flex-row items-center gap-8">
+              <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8">
                 {/* Circular Progress Ring */}
                 <div className="flex-shrink-0">
                   <CycleProgressRing

@@ -313,7 +313,7 @@ export default function PregnancyModule() {
                   transition={{ type: 'spring', stiffness: 200, delay: 0.3 }}
                   className="inline-flex items-baseline gap-1"
                 >
-                  <span className="text-6xl font-bold text-purple-700">{currentWeek}</span>
+                  <span className="text-5xl sm:text-6xl font-bold text-purple-700">{currentWeek}</span>
                   <span className="text-2xl text-purple-500 font-medium">/40</span>
                 </motion.div>
                 <p className="text-sm text-purple-600 mt-1 font-medium">Weeks Pregnant</p>

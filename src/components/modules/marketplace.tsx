@@ -620,7 +620,7 @@ export default function MarketplaceModule() {
           products to showcase. */}
 
       {/* ─── 2. CATEGORY TABS ─────────────────────────────────────────────── */}
-      <div className="sticky top-[57px] z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-md border-y border-rose-100 dark:border-rose-900/30">
+      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-md border-y border-rose-100 dark:border-rose-900/30">
         <ScrollArea className="w-full whitespace-nowrap">
           <div className="flex gap-2 min-w-max pb-1">
             {CATEGORIES.map((cat) => {
@@ -846,7 +846,7 @@ export default function MarketplaceModule() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 shrink-0"
+                              className="h-9 w-9 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 shrink-0"
                               onClick={() => removeFromCart(item.product.id)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -858,20 +858,20 @@ export default function MarketplaceModule() {
                             <div className="inline-flex items-center rounded-lg border border-rose-200 dark:border-rose-900/40 overflow-hidden">
                               <button
                                 onClick={() => updateQty(item.product.id, -1)}
-                                className="h-7 w-7 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
+                                className="h-9 w-9 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
                                 aria-label="Decrease quantity"
                               >
-                                <Minus className="h-3 w-3" />
+                                <Minus className="h-3.5 w-3.5" />
                               </button>
                               <span className="w-8 text-center text-xs font-semibold tabular-nums">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => updateQty(item.product.id, 1)}
-                                className="h-7 w-7 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
+                                className="h-9 w-9 flex items-center justify-center hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 transition-colors"
                                 aria-label="Increase quantity"
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-3.5 w-3.5" />
                               </button>
                             </div>
 

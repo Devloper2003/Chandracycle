@@ -1040,7 +1040,7 @@ export default function DoctorFinderModule() {
                       <Filter className="h-3.5 w-3.5" /> Sort:
                     </span>
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                      <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectTrigger className="h-9 w-[140px] text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1085,7 +1085,7 @@ export default function DoctorFinderModule() {
                   <div className="flex items-center gap-1.5 ml-1">
                     <CircleDollarSign className="h-3.5 w-3.5 text-muted-foreground" />
                     <Select value={maxFee} onValueChange={(v) => setMaxFee(v as typeof maxFee)}>
-                      <SelectTrigger className="h-7 w-[110px] text-xs">
+                      <SelectTrigger className="h-9 w-[110px] text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

@@ -22,15 +22,11 @@ import {
   EyeOff,
   ArrowRight,
   Check,
-  Smartphone,
 } from 'lucide-react'
 import GoogleOAuthButton from './google-oauth-button'
 import GoogleSignInModal from './google-signin-modal'
-import AppleSignInModal from './apple-signin-modal'
-import MobileOtpForm from './mobile-otp-form'
 
 type Mode = 'login' | 'signup'
-type AuthMethod = 'email' | 'mobile'
 
 export interface SessionUser {
   id: string
@@ -73,38 +69,28 @@ const orbBase = 'absolute rounded-full blur-3xl pointer-events-none will-change-
 
 export default function AuthScreen({ onAuthed }: AuthScreenProps) {
   const [mode, setMode] = useState<Mode>('login')
-  const [authMethod, setAuthMethod] = useState<AuthMethod>('email')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
-  const [loading, setLoading] = useState<null | 'email' | 'google' | 'apple'>(null)
+  const [loading, setLoading] = useState<null | 'email' | 'google'>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [oauthConfig, setOauthConfig] = useState<{ google: { configured: boolean; clientId: string }; apple: { configured: boolean; clientId: string } } | null>(null)
+  const [googleConfigured, setGoogleConfigured] = useState(false)
   const [googleModalOpen, setGoogleModalOpen] = useState(false)
-  const [appleModalOpen, setAppleModalOpen] = useState(false)
 
-  // Fetch OAuth config
+  // Fetch OAuth config (Google only)
   useEffect(() => {
     let cancelled = false
     fetch('/api/auth/config')
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) {
-          setOauthConfig({
-            google: { configured: !!data.google?.configured, clientId: data.google?.clientId || '' },
-            apple: { configured: !!data.apple?.configured, clientId: data.apple?.clientId || '' },
-          })
+          setGoogleConfigured(!!data.google?.configured)
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          setOauthConfig({
-            google: { configured: false, clientId: '' },
-            apple: { configured: false, clientId: '' },
-          })
-        }
+        if (!cancelled) setGoogleConfigured(false)
       })
     return () => { cancelled = true }
   }, [])
@@ -212,48 +198,14 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
     }
   }, [remember, onAuthed])
 
-  const handleAppleModalSuccess = useCallback(async (account: { email: string; name: string }) => {
-    try {
-      const res = await fetch('/api/auth/apple', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          modalAccount: account,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error || 'Apple sign-in failed')
-        setLoading(null)
-        setAppleModalOpen(false)
-        return
-      }
-      if (data.token && remember) {
-        localStorage.setItem('chandracycle_token', data.token)
-      }
-      toast.success(`Signed in as ${data.user.email}`)
-      setAppleModalOpen(false)
-      onAuthed(data.user)
-    } catch {
-      toast.error('Network error during Apple sign-in.')
-      setLoading(null)
-      setAppleModalOpen(false)
-    }
-  }, [remember, onAuthed])
-
   const handleGoogleClick = useCallback(() => {
     if (loading) return
-    if (oauthConfig?.google.configured) {
+    if (googleConfigured) {
       // Real Google OAuth button is rendered below — it triggers its own flow
       return
     }
     setGoogleModalOpen(true)
-  }, [loading, oauthConfig])
-
-  const handleAppleClick = useCallback(() => {
-    if (loading) return
-    setAppleModalOpen(true)
-  }, [loading])
+  }, [loading, googleConfigured])
 
   return (
     <div className="relative min-h-screen w-full flex overflow-hidden">
@@ -377,30 +329,32 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
       </div>
 
       {/* ─── Right form panel ──────────────────────────────────────────────── */}
-      <div className="flex-1 lg:w-1/2 flex items-center justify-center p-5 sm:p-10 overflow-y-auto relative z-10">
+      {/* items-start on mobile so the form scrolls naturally from the top when it
+          exceeds viewport height; items-center on sm+ for vertical centering. */}
+      <div className="flex-1 lg:w-1/2 flex items-start sm:items-center justify-center p-4 sm:p-10 overflow-y-auto relative z-10">
         <motion.div
           initial="hidden"
           animate="show"
           variants={containerStagger}
-          className="w-full max-w-md py-6"
+          className="w-full max-w-md my-auto py-4 sm:py-6"
         >
           {/* Mobile premium header */}
           <motion.div
             variants={fadeUp}
-            className="lg:hidden flex flex-col items-center text-center mb-7"
+            className="lg:hidden flex flex-col items-center text-center mb-5 sm:mb-7"
           >
             <div className="relative mb-3">
               <div className="absolute inset-0 rounded-2xl bg-rose-400/50 blur-lg" aria-hidden />
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-600 text-white font-bold text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_16px_36px_-10px_rgba(217,70,119,0.6)] animate-float">
+              <div className="relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-600 text-white font-bold text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_16px_36px_-10px_rgba(217,70,119,0.6)] animate-float">
                 <span className="font-serif">C</span>
               </div>
             </div>
-            <span className="font-serif text-2xl font-bold tracking-tight text-foreground">ChandraCycle</span>
+            <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-foreground">ChandraCycle</span>
             <span className="text-[11px] text-muted-foreground leading-tight tracking-wide mt-0.5">AI Women&apos;s Health Companion</span>
           </motion.div>
 
           {/* Premium form card */}
-          <motion.div variants={fadeUp} className="card-premium p-6 sm:p-8">
+          <motion.div variants={fadeUp} className="card-premium p-5 sm:p-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
@@ -412,16 +366,15 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight font-serif">
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-1.5 sm:mt-2 text-sm text-muted-foreground">
                   {mode === 'login'
                     ? 'Sign in to continue your wellness journey.'
                     : 'Join thousands of women taking charge of their health.'}
                 </p>
 
-                {/* OAuth buttons */}
-                <div className="mt-6 space-y-3">
-                  {/* Google button: real OAuth if configured, else modal-based flow */}
-                  {oauthConfig?.google.configured ? (
+                {/* Google OAuth button: real OAuth if configured, else modal-based flow */}
+                <div className="mt-5 sm:mt-6">
+                  {googleConfigured ? (
                     <GoogleOAuthButton
                       onCredential={handleGoogleCredential}
                       loading={loading === 'google'}
@@ -443,25 +396,10 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                       <span>Continue with Google</span>
                     </Button>
                   )}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 rounded-xl border-border bg-card/80 backdrop-blur-sm hover:bg-accent hover:border-rose-300 dark:hover:border-rose-700 text-sm font-medium gap-2.5 transition-all hover:shadow-md"
-                    onClick={handleAppleClick}
-                    disabled={loading !== null}
-                  >
-                    {loading === 'apple' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <AppleIcon className="h-5 w-5" />
-                    )}
-                    <span>Continue with Apple</span>
-                  </Button>
                 </div>
 
                 {/* Divider */}
-                <div className="relative my-6">
+                <div className="relative my-4 sm:my-6">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-border" />
                   </div>
@@ -472,155 +410,121 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                   </div>
                 </div>
 
-                {/* Method tabs: Email | Mobile */}
-                <div className="flex p-1 mb-4 rounded-xl bg-muted/60 border border-border">
-                  <button
-                    type="button"
-                    onClick={() => setAuthMethod('email')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium transition-all ${
-                      authMethod === 'email'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                    <span>Email</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMethod('mobile')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-medium transition-all ${
-                      authMethod === 'mobile'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Smartphone className="h-3.5 w-3.5" />
-                    <span>Mobile OTP</span>
-                  </button>
-                </div>
-
-                {/* Conditional form by method */}
-                {authMethod === 'mobile' ? (
-                  <MobileOtpForm onAuthed={onAuthed} remember={remember} />
-                ) : (
-                  <div className="space-y-4">
-                    {mode === 'signup' && (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="name" className="text-sm font-medium">Full name</Label>
-                        <div className="relative">
-                          <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="name"
-                            type="text"
-                            placeholder="Your name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="pl-9 h-11 rounded-xl bg-card/70 border-border focus-visible:border-rose-400 transition-colors"
-                            onKeyDown={(e) => e.key === 'Enter' && handleEmailAuth()}
-                          />
-                        </div>
-                        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                      </div>
-                    )}
-
+                {/* Email / password form */}
+                <div className="space-y-4">
+                  {mode === 'signup' && (
                     <div className="space-y-1.5">
-                      <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
+                      <Label htmlFor="name" className="text-sm font-medium">Full name</Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          id="email"
-                          type="email"
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          id="name"
+                          type="text"
+                          placeholder="Your name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
                           className="pl-9 h-11 rounded-xl bg-card/70 border-border focus-visible:border-rose-400 transition-colors"
                           onKeyDown={(e) => e.key === 'Enter' && handleEmailAuth()}
                         />
                       </div>
-                      {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                      {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                     </div>
+                  )}
 
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                        {mode === 'login' && (
-                          <button
-                            type="button"
-                            className="text-xs text-primary hover:underline"
-                            onClick={() => toast.info('Password reset link would be sent to your email.')}
-                          >
-                            Forgot?
-                          </button>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="password"
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-9 pr-9 h-11 rounded-xl bg-card/70 border-border focus-visible:border-rose-400 transition-colors"
-                          onKeyDown={(e) => e.key === 'Enter' && handleEmailAuth()}
-                        />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-9 h-11 rounded-xl bg-card/70 border-border focus-visible:border-rose-400 transition-colors"
+                        onKeyDown={(e) => e.key === 'Enter' && handleEmailAuth()}
+                      />
+                    </div>
+                    {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                      {mode === 'login' && (
                         <button
                           type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => toast.info('Password reset link would be sent to your email.')}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          Forgot?
                         </button>
-                      </div>
-                      {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-                    </div>
-
-                    {mode === 'login' && (
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <Checkbox checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
-                        <span className="text-xs text-muted-foreground">Keep me signed in on this device</span>
-                      </label>
-                    )}
-
-                    <Button
-                      type="button"
-                      className="btn-premium w-full h-11 rounded-xl text-sm font-semibold gap-1.5"
-                      onClick={handleEmailAuth}
-                      disabled={loading !== null}
-                    >
-                      {loading === 'email' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          {mode === 'login' ? 'Sign in' : 'Create account'}
-                          <ArrowRight className="h-4 w-4" />
-                        </>
                       )}
-                    </Button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-9 pr-9 h-11 rounded-xl bg-card/70 border-border focus-visible:border-rose-400 transition-colors"
+                        onKeyDown={(e) => e.key === 'Enter' && handleEmailAuth()}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                   </div>
-                )}
 
-                {/* Sign in / Sign up toggle (only for email method) */}
-                {authMethod === 'email' && (
-                  <p className="mt-6 text-center text-sm text-muted-foreground">
-                    {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-                    <button
-                      type="button"
-                      className="font-medium text-primary hover:underline"
-                      onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-                    >
-                      {mode === 'login' ? 'Sign up' : 'Sign in'}
-                    </button>
-                  </p>
-                )}
+                  {mode === 'login' && (
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <Checkbox checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+                      <span className="text-xs text-muted-foreground">Keep me signed in on this device</span>
+                    </label>
+                  )}
 
-                <div className="mt-5 rounded-xl bg-muted/60 border border-border p-3">
+                  <Button
+                    type="button"
+                    className="btn-premium w-full h-11 rounded-xl text-sm font-semibold gap-1.5"
+                    onClick={handleEmailAuth}
+                    disabled={loading !== null}
+                  >
+                    {loading === 'email' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        {mode === 'login' ? 'Sign in' : 'Create account'}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Sign in / Sign up toggle */}
+                <p className="mt-5 sm:mt-6 text-center text-sm text-muted-foreground">
+                  {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+                  <button
+                    type="button"
+                    className="font-medium text-primary hover:underline"
+                    onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
+                  >
+                    {mode === 'login' ? 'Sign up' : 'Sign in'}
+                  </button>
+                </p>
+
+                <div className="mt-4 sm:mt-5 rounded-xl bg-muted/60 border border-border p-3">
                   <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
                     <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500 mt-0.5" />
                     <span>
-                      <span className="font-medium text-foreground">Secure sign-in:</span> Continue with Google/Apple
+                      <span className="font-medium text-foreground">Secure sign-in:</span> Continue with Google
                       opens a secure permission popup. Your password is never shared with ChandraCycle.
                     </span>
                   </p>
@@ -629,28 +533,20 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
             </AnimatePresence>
           </motion.div>
 
-          <p className="mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
+          <p className="mt-4 sm:mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
             By continuing you agree to ChandraCycle&apos;s Terms of Service and Privacy Policy.
             <br />Your health data is encrypted and never sold.
           </p>
         </motion.div>
       </div>
 
-      {/* OAuth popups (keyed by open state so they remount fresh each open) */}
+      {/* OAuth popup (keyed by open state so it remounts fresh each open) */}
       {googleModalOpen && (
         <GoogleSignInModal
           key={`google-${googleModalOpen}`}
           open={googleModalOpen}
           onClose={() => setGoogleModalOpen(false)}
           onSuccess={handleGoogleModalSuccess}
-        />
-      )}
-      {appleModalOpen && (
-        <AppleSignInModal
-          key={`apple-${appleModalOpen}`}
-          open={appleModalOpen}
-          onClose={() => setAppleModalOpen(false)}
-          onSuccess={handleAppleModalSuccess}
         />
       )}
     </div>
@@ -664,14 +560,6 @@ function GoogleIcon({ className }: { className?: string }) {
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z" />
       <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z" />
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38Z" />
-    </svg>
-  )
-}
-
-function AppleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M17.05 12.04c-.03-2.6 2.13-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.95.94-.82 0-2.06-.92-3.39-.89-1.74.03-3.35 1.01-4.25 2.57-1.82 3.15-.46 7.81 1.3 10.37.86 1.26 1.88 2.67 3.22 2.62 1.29-.05 1.78-.83 3.34-.83 1.56 0 2 .83 3.37.81 1.39-.03 2.27-1.28 3.12-2.55.98-1.45 1.38-2.86 1.4-2.93-.03-.01-2.69-1.03-2.72-4.09ZM14.6 4.59c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44Z" />
     </svg>
   )
 }

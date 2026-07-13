@@ -209,7 +209,7 @@ function CycleWheel({
       transition={{ duration: 0.6, ease: 'easeOut' }}
       className="flex flex-col items-center"
     >
-      <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px]">
+      <div className="relative w-[min(80vw,320px)] h-[min(80vw,320px)] sm:w-[380px] sm:h-[380px]">
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 400">
           <defs>
             <filter id="glow">

@@ -403,7 +403,7 @@ export default function PremiumModule({ onSubscribe }: { onSubscribe: () => void
         <div className="absolute -top-20 -right-20 h-72 w-72 rounded-full bg-yellow-300/40 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-purple-400/40 blur-3xl" />
 
-        <div className="relative z-10 p-8 sm:p-12 lg:p-16 text-center text-white">
+        <div className="relative z-10 p-6 sm:p-8 lg:p-12 text-center text-white">
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
