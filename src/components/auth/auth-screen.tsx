@@ -208,7 +208,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
   }, [loading, googleConfigured])
 
   return (
-    <div className="relative min-h-screen w-full flex overflow-hidden">
+    <div className="relative h-dvh w-full flex overflow-hidden">
       {/* ─── Premium animated mesh background (both panels share this) ─────── */}
       <div className="absolute inset-0 bg-animated-gradient opacity-95" />
       {/* Softening layer so foreground text remains readable in both themes */}
@@ -329,9 +329,11 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
       </div>
 
       {/* ─── Right form panel ──────────────────────────────────────────────── */}
-      {/* items-start on mobile so the form scrolls naturally from the top when it
-          exceeds viewport height; items-center on sm+ for vertical centering. */}
-      <div className="flex-1 lg:w-1/2 flex items-start sm:items-center justify-center p-4 sm:p-10 overflow-y-auto relative z-10">
+      {/* h-dvh bounds the panel to the dynamic viewport so overflow-y-auto
+          scrolls internally (fixes iOS Safari 100vh chrome-trap where bottom
+          content was unreachable). items-start + my-auto on the child centers
+          when content fits but falls back to top-aligned scroll when it doesn't. */}
+      <div className="flex-1 lg:w-1/2 h-dvh flex items-start justify-center p-4 sm:p-10 overflow-y-auto overscroll-contain relative z-10">
         <motion.div
           initial="hidden"
           animate="show"
