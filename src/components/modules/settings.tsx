@@ -935,6 +935,11 @@ export default function SettingsModule() {
               className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
               onClick={() => {
                 try {
+                  // Remove the per-user tour-seen flag so the tour auto-starts
+                  // on the next dashboard load. Also clear the legacy global
+                  // flag for back-compat with older sessions.
+                  const uid = userProfile?.id
+                  if (uid) localStorage.removeItem(`chandracycle_tour_seen_${uid}`)
                   localStorage.removeItem('chandracycle_tour_seen')
                 } catch {
                   // ignore — best-effort

@@ -58,8 +58,16 @@ export interface TourStep {
   mobilePlacement?: TourPlacement
 }
 
-/** localStorage key — shared with Settings "Replay tour" button. */
+/** localStorage key prefix — shared with Settings "Replay tour" button.
+ *  Per-user so a new signup always sees the tour even if another user
+ *  dismissed it on the same browser. */
 export const TOUR_SEEN_KEY = 'chandracycle_tour_seen'
+
+/** Build a per-user "tour seen" localStorage key. Falls back to the legacy
+ *  global key when no userId is available so existing flags still work. */
+export function getTourSeenKey(userId?: string | null): string {
+  return userId ? `${TOUR_SEEN_KEY}_${userId}` : TOUR_SEEN_KEY
+}
 
 const TOUR_STEPS: TourStep[] = [
   {
@@ -316,6 +324,7 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
           position: 'fixed',
           width: effectiveWidth,
           maxWidth: `calc(100vw - ${edge * 2}px)`,
+          maxHeight: 'calc(100dvh - 32px)',
           zIndex: 62,
         }
         switch (activePlacement) {
@@ -373,6 +382,7 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
         left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 'min(92vw, 440px)',
+        maxHeight: 'calc(100dvh - 32px)',
         zIndex: 62,
       }
 
@@ -431,7 +441,7 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
           transition={{ type: 'spring', stiffness: 260, damping: 22 }}
           style={tooltipStyle}
         >
-          <Card className="overflow-hidden border-amber-300/40 shadow-2xl shadow-rose-500/20">
+          <Card className="overflow-hidden border-amber-300/40 shadow-2xl shadow-rose-500/20 max-h-[calc(100dvh-32px)] flex flex-col">
             {/* Gradient header */}
             <div className="relative bg-gradient-to-r from-amber-500 via-rose-500 to-fuchsia-600 p-4 text-white">
               <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/15 blur-2xl pointer-events-none" />
@@ -459,7 +469,7 @@ export default function WelcomeTour({ open, onClose }: WelcomeTourProps) {
               </h3>
             </div>
 
-            <CardContent className="p-4">
+            <CardContent className="p-4 overflow-y-auto">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {activeBody}
               </p>

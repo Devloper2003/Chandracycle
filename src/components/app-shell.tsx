@@ -45,7 +45,7 @@ import type { SessionUser } from '@/components/auth/auth-screen'
 import NotificationPanel from '@/components/notifications/notification-panel'
 import MobileTopbar from '@/components/mobile/mobile-topbar'
 import MobileBottomNav from '@/components/mobile/mobile-bottom-nav'
-import WelcomeTour, { TOUR_SEEN_KEY } from '@/components/onboarding/welcome-tour'
+import WelcomeTour, { getTourSeenKey } from '@/components/onboarding/welcome-tour'
 
 // ─── Lazy-load all feature modules ───────────────────────────────────────────
 const DashboardModule = dynamic(() => import('@/components/modules/dashboard'), { loading: () => <ModuleSkeleton /> })
@@ -136,27 +136,35 @@ export default function AppShell({ user, onLogout }: AppShellProps) {
   }, [])
 
   // ── Auto-start first-time onboarding tour ────────────────────────────────
-  // Only fires once per browser (until the user clears the flag from Settings).
+  // Fires once per USER (not per browser) — a brand-new signup always sees
+  // the tour even if another account dismissed it on the same device.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    const tourKey = getTourSeenKey(user.id)
     let seen = false
     try {
-      seen = localStorage.getItem(TOUR_SEEN_KEY) === '1'
+      seen = localStorage.getItem(tourKey) === '1'
+      // Also clear any stale legacy global flag so it can't shadow new users.
+      if (localStorage.getItem('chandracycle_tour_seen') === '1' && !seen) {
+        localStorage.removeItem('chandracycle_tour_seen')
+      }
     } catch {
       // localStorage may be disabled (private mode) — skip auto-start.
       seen = true
     }
     if (seen) return
+    // 2s delay so the dashboard + lazy module finish rendering and the
+    // spotlight targets (data-tour="...") are present in the DOM.
     const timer = setTimeout(() => {
       setTourOpen(true)
-    }, 1500)
+    }, 2000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [user.id])
 
   const closeTour = () => {
     setTourOpen(false)
     try {
-      localStorage.setItem(TOUR_SEEN_KEY, '1')
+      localStorage.setItem(getTourSeenKey(user.id), '1')
     } catch {
       // ignore — best-effort persistence
     }
