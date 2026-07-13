@@ -208,31 +208,36 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
   }, [loading, googleConfigured])
 
   return (
-    <div className="relative h-dvh w-full flex overflow-hidden">
-      {/* ─── Premium animated mesh background (both panels share this) ─────── */}
-      <div className="absolute inset-0 bg-animated-gradient opacity-95" />
-      {/* Softening layer so foreground text remains readable in both themes */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/55 via-white/35 to-white/55 dark:from-black/45 dark:via-black/30 dark:to-black/55" />
+    <div className="relative min-h-dvh w-full flex flex-col lg:flex-row">
+      {/* ─── Background layer (fixed so it stays put during page scroll) ────── */}
+      {/* Wrapped in fixed+overflow-hidden so the negative-positioned orbs
+          below can never cause horizontal document scroll, while the main
+          content flows naturally via BODY scroll (the only reliable scroll
+          model on iOS Safari). */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
+        <div className="absolute inset-0 bg-animated-gradient opacity-95" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/55 via-white/35 to-white/55 dark:from-black/45 dark:via-black/30 dark:to-black/55" />
 
-      {/* ─── Floating blurred orbs (GPU-accelerated drift) ─────────────────── */}
-      <motion.div
-        aria-hidden
-        className={`${orbBase} top-[-10%] left-[-6%] h-[28rem] w-[28rem] bg-rose-400/40 dark:bg-rose-500/30`}
-        animate={{ x: [0, 28, -10, 0], y: [0, -22, 18, 0], scale: [1, 1.08, 0.96, 1] }}
-        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        aria-hidden
-        className={`${orbBase} bottom-[-12%] right-[-8%] h-[32rem] w-[32rem] bg-fuchsia-400/35 dark:bg-fuchsia-500/25`}
-        animate={{ x: [0, -32, 14, 0], y: [0, 24, -16, 0], scale: [1, 1.06, 0.98, 1] }}
-        transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        aria-hidden
-        className={`${orbBase} top-[38%] right-[18%] h-[20rem] w-[20rem] bg-amber-300/40 dark:bg-amber-400/25`}
-        animate={{ x: [0, 18, -22, 0], y: [0, 16, -10, 0], scale: [1, 0.94, 1.07, 1] }}
-        transition={{ duration: 19, repeat: Infinity, ease: 'easeInOut' }}
-      />
+        {/* ─── Floating blurred orbs (GPU-accelerated drift) ─────────────────── */}
+        <motion.div
+          aria-hidden
+          className={`${orbBase} top-[-10%] left-[-6%] h-[28rem] w-[28rem] bg-rose-400/40 dark:bg-rose-500/30`}
+          animate={{ x: [0, 28, -10, 0], y: [0, -22, 18, 0], scale: [1, 1.08, 0.96, 1] }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          aria-hidden
+          className={`${orbBase} bottom-[-12%] right-[-8%] h-[32rem] w-[32rem] bg-fuchsia-400/35 dark:bg-fuchsia-500/25`}
+          animate={{ x: [0, -32, 14, 0], y: [0, 24, -16, 0], scale: [1, 1.06, 0.98, 1] }}
+          transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          aria-hidden
+          className={`${orbBase} top-[38%] right-[18%] h-[20rem] w-[20rem] bg-amber-300/40 dark:bg-amber-400/25`}
+          animate={{ x: [0, 18, -22, 0], y: [0, 16, -10, 0], scale: [1, 0.94, 1.07, 1] }}
+          transition={{ duration: 19, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      </div>
 
       {/* ─── Left brand panel (hidden on mobile) ──────────────────────────── */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
@@ -329,16 +334,17 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
       </div>
 
       {/* ─── Right form panel ──────────────────────────────────────────────── */}
-      {/* h-dvh bounds the panel to the dynamic viewport so overflow-y-auto
-          scrolls internally (fixes iOS Safari 100vh chrome-trap where bottom
-          content was unreachable). items-start + my-auto on the child centers
-          when content fits but falls back to top-aligned scroll when it doesn't. */}
-      <div className="flex-1 lg:w-1/2 h-dvh flex items-start justify-center p-4 sm:p-10 overflow-y-auto overscroll-contain relative z-10">
+      {/* Uses natural BODY scroll (not a nested overflow-y-auto container)
+          because nested scroll containers are unreliable on iOS Safari.
+          min-h-dvh on root + items-center here centers the form when it fits
+          the viewport; when it is taller than the viewport the root grows and
+          the page scrolls from the top with no top-clipping. */}
+      <div className="flex-1 lg:w-1/2 min-h-dvh flex items-center justify-center p-4 sm:p-10 relative z-10">
         <motion.div
           initial="hidden"
           animate="show"
           variants={containerStagger}
-          className="w-full max-w-md my-auto py-4 sm:py-6"
+          className="w-full max-w-md py-6 sm:py-10"
         >
           {/* Mobile premium header */}
           <motion.div
