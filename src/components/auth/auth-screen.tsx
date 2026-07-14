@@ -344,16 +344,16 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
           initial="hidden"
           animate="show"
           variants={containerStagger}
-          className="w-full max-w-md py-6 sm:py-10"
+          className="w-full max-w-md py-4 sm:py-10"
         >
           {/* Mobile premium header */}
           <motion.div
             variants={fadeUp}
-            className="lg:hidden flex flex-col items-center text-center mb-5 sm:mb-7"
+            className="lg:hidden flex flex-col items-center text-center mb-4 sm:mb-7"
           >
-            <div className="relative mb-3">
+            <div className="relative mb-2">
               <div className="absolute inset-0 rounded-2xl bg-rose-400/50 blur-lg" aria-hidden />
-              <div className="relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-600 text-white font-bold text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_16px_36px_-10px_rgba(217,70,119,0.6)] animate-float">
+              <div className="relative flex h-11 w-11 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-600 text-white font-bold text-xl sm:text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_16px_36px_-10px_rgba(217,70,119,0.6)] animate-float">
                 <span className="font-serif">C</span>
               </div>
             </div>
@@ -362,7 +362,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
           </motion.div>
 
           {/* Premium form card */}
-          <motion.div variants={fadeUp} className="card-premium p-5 sm:p-8">
+          <motion.div variants={fadeUp} className="card-premium p-4 sm:p-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
@@ -371,7 +371,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.25 }}
               >
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight font-serif">
+                <h2 className="text-xl sm:text-3xl font-bold tracking-tight font-serif">
                   {mode === 'login' ? 'Welcome back' : 'Create your account'}
                 </h2>
                 <p className="mt-1.5 sm:mt-2 text-sm text-muted-foreground">
@@ -381,7 +381,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                 </p>
 
                 {/* Google OAuth button: real OAuth if configured, else modal-based flow */}
-                <div className="mt-5 sm:mt-6">
+                <div className="mt-4 sm:mt-6">
                   {googleConfigured ? (
                     <GoogleOAuthButton
                       onCredential={handleGoogleCredential}
@@ -419,7 +419,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                 </div>
 
                 {/* Email / password form */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {mode === 'signup' && (
                     <div className="space-y-1.5">
                       <Label htmlFor="name" className="text-sm font-medium">Full name</Label>
@@ -517,7 +517,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                 </div>
 
                 {/* Sign in / Sign up toggle */}
-                <p className="mt-5 sm:mt-6 text-center text-sm text-muted-foreground">
+                <p className="mt-4 sm:mt-6 text-center text-sm text-muted-foreground">
                   {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
                   <button
                     type="button"
@@ -528,7 +528,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
                   </button>
                 </p>
 
-                <div className="mt-4 sm:mt-5 rounded-xl bg-muted/60 border border-border p-3">
+                <div className="hidden sm:block mt-4 sm:mt-5 rounded-xl bg-muted/60 border border-border p-3">
                   <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
                     <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500 mt-0.5" />
                     <span>
@@ -541,7 +541,7 @@ export default function AuthScreen({ onAuthed }: AuthScreenProps) {
             </AnimatePresence>
           </motion.div>
 
-          <p className="mt-4 sm:mt-6 text-center text-[11px] text-muted-foreground leading-relaxed">
+          <p className="mt-4 sm:mt-6 text-center text-[11px] text-muted-foreground leading-relaxed pb-[env(safe-area-inset-bottom)]">
             By continuing you agree to ChandraCycle&apos;s Terms of Service and Privacy Policy.
             <br />Your health data is encrypted and never sold.
           </p>
