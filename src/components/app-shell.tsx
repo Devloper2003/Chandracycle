@@ -354,7 +354,7 @@ export default function AppShell({ user, onLogout }: AppShellProps) {
         {/* ─── Main Content ───────────────────────────────────────────────── */}
         <div className={cn('flex-1 min-w-0 flex flex-col h-full transition-all duration-300 ease-in-out', desktopMainMargin)}>
           {/* Desktop Top Bar (lg+ only) — luxury glass header */}
-          <header className="hidden lg:flex shrink-0 z-30 items-center justify-between gap-4 border-b border-border bg-card/70 backdrop-blur-xl px-6 py-3 relative">
+          <header className="hidden lg:flex shrink-0 z-30 items-center justify-between gap-4 border-b border-border bg-card/70 backdrop-blur-xl px-4 lg:px-5 py-2.5 relative">
             {/* Subtle top gradient line */}
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -470,7 +470,7 @@ export default function AppShell({ user, onLogout }: AppShellProps) {
 
           {/* Module Content — scrollable. Bottom padding on mobile for bottom nav. */}
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-6 lg:p-8 pb-28 lg:pb-8">
+            <div className="p-3 sm:p-4 lg:p-5 pb-28 lg:pb-8 max-w-7xl mx-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeModule}
