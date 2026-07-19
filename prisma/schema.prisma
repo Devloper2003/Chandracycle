@@ -3,18 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// UNIFIED SCHEMA — shared by both ChandraCycle (main app) and ChandraCycle-admin
+// Both apps connect to the same Neon PostgreSQL database.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ---- End users (registered on main website, managed by admin) ----
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
   avatar       String?
-  password     String?
-  phone        String?  @unique
-  provider     String   @default("email")
+  password     String?       // auth password (used by main website)
+  phone        String?
+  provider     String   @default("email")  // email | google | apple (auth provider)
   dateOfBirth  String?
   height       Float?
   weight       Float?
@@ -23,15 +29,31 @@ model User {
   lastPeriodStart String?
   onboardingComplete Boolean @default(false)
 
-  // Subscription / billing (PayPal)
-  subscriptionTier    String?  // "free" | "premium" | "plus"
-  subscriptionStatus  String?  // "active" | "cancelled" | "expired" | "trialing"
-  subscriptionPlan    String?  // "monthly" | "yearly"
+  // Location
+  city         String?
+  country      String?
+
+  // Account control (admin)
+  accountStatus String  @default("active") // active | suspended | banned | pending
+  banReason     String?
+  notes         String?
+  flagged       Boolean @default(false)
+  emailVerified Boolean @default(false)
+  lastLoginAt   DateTime?
+
+  // Subscription / billing
+  subscriptionTier    String?  // free | premium | plus
+  subscriptionStatus  String?  // active | cancelled | expired | trialing | suspended
+  subscriptionPlan    String?  // monthly | yearly
+  subscriptionStart   DateTime?
   subscriptionEnd     DateTime?
+  trialStartDate      DateTime?
+  trialEndDate        DateTime?
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Relations from main website
   cycles       Cycle[]
   symptoms     SymptomEntry[]
   moodEntries  MoodEntry[]
@@ -47,7 +69,209 @@ model User {
   appointments Appointment[]
   reports      Report[]
   notifications Notification[]
+  // Relations from admin
+  subscriptions Subscription[]
+  authSessions  AuthSession[]
 }
+
+// ---- Admin (operator) accounts ----
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("admin") // super_admin | admin | moderator
+  avatar       String?
+  lastLoginAt  DateTime?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+  sessions AdminSession[]
+}
+
+// ---- Admin login sessions (DB-backed) ----
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  adminId   String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  ipAddress String?
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+}
+
+// ---- End user auth sessions ----
+model AuthSession {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  deviceInfo  String?
+  ipAddress   String?
+  location    String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  revokedAt   DateTime?
+  revokedReason String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---- Subscription / payment records ----
+model Subscription {
+  id            String   @id @default(cuid())
+  userId        String
+  plan          String   // monthly | yearly
+  tier          String   @default("premium") // basic | premium
+  amount        Float
+  gst           Float
+  total         Float
+  currency      String   @default("INR")
+  status        String   @default("active") // active | cancelled | expired | refunded | suspended
+  startDate     DateTime @default(now())
+  endDate       DateTime
+  paymentMethod String?
+  transactionId String?
+  invoiceId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---- Site settings / feature flags (key-value) ----
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+// ---- Broadcast announcements ----
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("info") // info | warning | success | maintenance
+  audience  String   @default("all") // all | free | premium
+  active    Boolean  @default(true)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---- Audit trail of admin actions ----
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  adminName  String?
+  action     String
+  targetType String?
+  targetId   String?
+  targetLabel String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  admin AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+}
+
+// ---- Marketing campaigns & ads ----
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   @default("banner")
+  title       String
+  message     String
+  ctaText     String?
+  ctaLink     String?
+  imageUrl    String?
+  position    String   @default("top")
+  audience    String   @default("all")
+  status      String   @default("draft")
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  spent       Float    @default(0)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---- Backup & restore logs ----
+model BackupLog {
+  id          String   @id @default(cuid())
+  type        String
+  status      String
+  filename    String?
+  fileSize    Int?
+  tableCount  Int?
+  recordCount Int?
+  triggeredBy String?
+  adminId     String?
+  message     String?
+  createdAt   DateTime @default(now())
+}
+
+// ---- Payment gateway configuration ----
+model PaymentConfig {
+  id              String   @id @default(cuid())
+  gateway         String   @default("razorpay")
+  displayName     String   @default("Razorpay")
+  apiKey          String?
+  apiSecret       String?
+  merchantId      String?
+  webhookSecret   String?
+  webhookUrl      String?
+  paymentLinkUrl  String?
+  successUrl      String?
+  failureUrl      String?
+  mode            String   @default("test")
+  active          Boolean  @default(true)
+  currency        String   @default("INR")
+  supportedMethods String?
+  lastSyncedAt    DateTime?
+  lastSyncStatus  String?
+  lastSyncMessage String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ---- Payment transactions (synced from main app) ----
+model PaymentTransaction {
+  id              String   @id @default(cuid())
+  txnId           String?
+  orderId         String?
+  userId          String?
+  userEmail       String?
+  userName        String?
+  amount          Float
+  currency        String   @default("INR")
+  status          String   @default("created")
+  method          String?
+  gateway         String?
+  description     String?
+  errorMsg        String?
+  syncedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Main website health-tracking models
+// ═══════════════════════════════════════════════════════════════════════════
 
 model Cycle {
   id          String   @id @default(cuid())
@@ -71,8 +295,8 @@ model SymptomEntry {
   id        String   @id @default(cuid())
   userId    String
   date      String
-  category  String   // cramps, headache, bloating, acne, fatigue, backache, nausea, breast_tenderness
-  severity  Int      @default(1) // 1-5
+  category  String
+  severity  Int      @default(1)
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -86,9 +310,9 @@ model MoodEntry {
   id        String   @id @default(cuid())
   userId    String
   date      String
-  mood      String   // happy, calm, anxious, sad, irritable, energetic, tired, neutral
-  energy    Int      @default(3) // 1-5
-  stress    Int      @default(3) // 1-5
+  mood      String
+  energy    Int      @default(3)
+  stress    Int      @default(3)
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -103,7 +327,7 @@ model SleepEntry {
   userId      String
   date        String
   hoursSlept  Float
-  quality     Int      @default(3) // 1-5
+  quality     Int      @default(3)
   bedTime     String?
   wakeTime    String?
   notes       String?
@@ -143,7 +367,7 @@ model PCOSRecord {
   sleepIssues     Boolean @default(false)
   riskScore       Float?
   exerciseMinutes Int     @default(0)
-  dietQuality     Int     @default(3) // 1-5
+  dietQuality     Int     @default(3)
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -157,8 +381,8 @@ model FertilityData {
   userId              String
   date                String
   basalTemp           Float?
-  cervicalMucus       String?  // dry, sticky, creamy, watery, eggwhite
-  opkResult           String?  // negative, positive
+  cervicalMucus       String?
+  opkResult           String?
   fertilityScore      Float?
   ovulationConfirmed  Boolean  @default(false)
   intercourse         Boolean  @default(false)
@@ -179,7 +403,7 @@ model PregnancyData {
   weight          Float?
   bloodPressure   String?
   babySize        String?
-  symptoms        String?  // JSON array of symptoms
+  symptoms        String?
   mood            String?
   appointmentDue  String?
   vaccinationDue  String?
@@ -196,14 +420,14 @@ model MenopauseData {
   id              String   @id @default(cuid())
   userId          String
   date            String
-  hotFlashes      Int      @default(0) // count per day
+  hotFlashes      Int      @default(0)
   nightSweats     Int      @default(0)
   moodChanges     Boolean  @default(false)
   sleepIssues     Boolean  @default(false)
   vaginalDryness  Boolean  @default(false)
   jointPain       Boolean  @default(false)
   weightChange    Float?
-  anxiety         Int      @default(0) // 0-5
+  anxiety         Int      @default(0)
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -215,7 +439,7 @@ model MenopauseData {
 model ChatMessage {
   id        String   @id @default(cuid())
   userId    String
-  role      String   // user, assistant
+  role      String
   content   String
   createdAt DateTime @default(now())
 
@@ -228,7 +452,7 @@ model CommunityPost {
   userId    String
   title     String
   content   String
-  category  String   // general, pcos, fertility, pregnancy, menopause, mental_health
+  category  String
   isAnonymous Boolean @default(true)
   likes     Int      @default(0)
   createdAt DateTime @default(now())
@@ -260,8 +484,8 @@ model Appointment {
   specialty   String
   date        String
   time        String
-  type        String   // in_person, video, chat
-  status      String   @default("upcoming") // upcoming, completed, cancelled
+  type        String
+  status      String   @default("upcoming")
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -273,10 +497,10 @@ model Appointment {
 model Report {
   id          String   @id @default(cuid())
   userId      String
-  type        String   // daily, weekly, monthly, annual
+  type        String
   startDate   String
   endDate     String
-  content     String   // JSON string with report data
+  content     String
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -288,7 +512,7 @@ model Notification {
   userId    String
   title     String
   message   String
-  type      String   // period_reminder, medication, appointment, insight, community
+  type      String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
